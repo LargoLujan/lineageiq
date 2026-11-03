@@ -1,0 +1,67 @@
+.git
+.gitignore
+
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+*.p12
+*.crt
+*.cer
+secrets/
+credentials/
+tokens/
+auth/
+
+# Local tool/auth state
+.azure/
+.fabric/
+.codex/
+.tmp/
+.vscode/settings.json
+
+# Dependencies and caches
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+env/
+playwright-report/
+test-results/
+analysis/visual-validation/
+
+# Generated/private project data
+analysis/
+runs/
+data/
+_fabric_exports/
+frontend/*/data/
+frontend/*/standalone.html
+archive/*/data/
+archive/*/standalone.html
+graph/*.csv
+diagrams/*.mmd
+index/*.csv
+index/*.md
+config/*.csv
+docs/conversations/
+docs/00_work_log.md
+docs/[1-9][0-9]_*.md
+docs/probe_*.md
+
+# Archives/logs/build output
+dist/
+build/
+out/
+generated/
+*.log
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tgz

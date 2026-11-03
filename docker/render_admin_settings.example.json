@@ -1,0 +1,54 @@
+{
+  "tenant_id": "<your-entra-tenant-id>",
+  "entra_client_id": "<your-app-registration-client-id>",
+  "admin_emails": ["<person-with-full-admin-panel-access>"],
+  "full_scan_emails": ["<person-allowed-to-trigger-full-tenant-scans>"],
+  "allow_anonymous_scans": false,
+  "lakehouse": {
+    "workspace_name": "",
+    "workspace_id": "",
+    "lakehouse_name": "",
+    "lakehouse_id": "",
+    "capacity_name": "",
+    "sql_endpoint_connection_string": "",
+    "item_type": "Warehouse",
+    "auto_upload_after_scan": false,
+    "auth_mode": "service_principal",
+    "web_read_mode": "warehouse",
+    "sp_tenant_id": "",
+    "sp_client_id": "",
+    "sp_client_secret_ref": ""
+  },
+  "discovery_pipeline": {
+    "mode": "fabric_pipeline",
+    "workspace_id": "",
+    "pipeline_item_id": "",
+    "sp_tenant_id": "",
+    "sp_client_id": "",
+    "sp_client_secret_ref": ""
+  },
+  "onelake_data": {
+    "mode": "onelake",
+    "workspace_name": "",
+    "workspace_id": "",
+    "lakehouse_name": "",
+    "lakehouse_id": "",
+    "sp_tenant_id": "",
+    "sp_client_id": "",
+    "sp_client_secret_ref": "",
+    "auto_publish_after_scan": false
+  },
+  "external_sources": [],
+  "api_keys": [],
+  "notifications": {
+    "smtp_host": "",
+    "smtp_port": 587,
+    "smtp_use_tls": true,
+    "smtp_user": "",
+    "smtp_password_ref": "",
+    "from_address": "",
+    "subscribers": []
+  },
+  "certified_items": [],
+  "business_glossary": []
+}

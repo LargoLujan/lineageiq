@@ -1,0 +1,142 @@
+# Repository hygiene
+# This repository should keep code, scripts, templates, and public docs only.
+# Local Fabric/SQL evidence, notebook exports, run logs, conversations, and
+# generated standalone bundles must stay local.
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.local
+*.local.*
+*.secret
+*.secrets
+*.key
+*.pem
+
+# Local session/runtime state (machine- and session-specific, never shared)
+.claude/scheduled_tasks.lock
+*.pfx
+*.p12
+*.crt
+*.cer
+*.der
+*.kdbx
+*.ppk
+id_rsa*
+id_ed25519*
+secrets/
+credentials/
+tokens/
+auth/
+
+# Local auth/tool state
+.azure/
+.fabric/
+.msal*/
+.codex/
+.tmp/
+.vscode/settings.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# Node / Playwright
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+playwright-report/
+test-results/
+analysis/visual-validation/
+
+# Python / PowerShell caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+backend/scripts/__pycache__/
+
+# Build and package output
+dist/
+build/
+out/
+generated/
+*.log
+*.tmp
+*.bak
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+
+# Fabric / SQL generated evidence and local exports
+analysis/**
+!analysis/.gitkeep
+runs/**
+!runs/.gitkeep
+data/**
+!data/.gitkeep
+_fabric_exports/**
+
+# Indexed environment data. Keep schemas/templates elsewhere, not real indexes.
+index/*.csv
+index/*.md
+!index/*.example.csv
+!index/.gitkeep
+
+# Graph and diagram outputs with real workspace/item/object names
+graph/*.csv
+diagrams/*.mmd
+!graph/.gitkeep
+!diagrams/.gitkeep
+
+# Local configuration containing real source systems or object mappings
+config/*.csv
+!config/*.example.csv
+config/*.json
+!config/*.example.json
+!config/.gitkeep
+docker/render_admin_settings.json
+!docker/render_admin_settings.example.json
+
+# Static explorer generated data and heavy standalone bundles
+frontend/**/data/**
+!frontend/**/data/.gitkeep
+frontend/**/standalone.html
+archive/**/data/**
+!archive/**/data/.gitkeep
+archive/**/standalone.html
+
+# Project memory and operational evidence docs. Design docs themselves
+# (docs/10_*.md through docs/99_*.md) are NOT excluded -- they're real
+# architecture history for the ~90+ script pipeline and are meant to be
+# version-controlled (see docs/102_admin_panel_and_user_auth.md, Fase 4);
+# only the day-by-day work log and generated one-off probe reports below
+# are genuinely ephemeral/reproducible-from-data.
+docs/conversations/**
+!docs/conversations/.gitkeep
+docs/probe_*.md
+
+# Generated scan/probe reports can embed real emails, hostnames,
+# workspace/pipeline names and item GUIDs from whatever tenant they were
+# run against -- keep them local. Not a comment on the scripts themselves,
+# which are fine to run -- their OUTPUT just doesn't belong in a public
+# repo without being regenerated from synthetic data first (see
+# backend/scripts/generate_demo_data.py for that pattern).
+
+# One-off investigation scripts tied to real environment/business data
+docs/investigations/**
+!docs/investigations/.gitkeep

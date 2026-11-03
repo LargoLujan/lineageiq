@@ -1,0 +1,14 @@
+{
+  "tenant_id": "00000000-0000-0000-0000-000000000000",
+  "workspace_name": "",
+  "workspace_id": "",
+  "lakehouse_name": "",
+  "lakehouse_id": "",
+  "capacity_name": "",
+  "sql_endpoint_connection_string": "",
+  "item_type": "Warehouse",
+  "auth_mode": "service_principal",
+  "sp_tenant_id": "",
+  "sp_client_id": "",
+  "sp_client_secret_ref": "WAREHOUSE_SP_CLIENT_SECRET"
+}

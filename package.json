@@ -1,0 +1,13 @@
+{
+  "name": "lineageiq",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LineageIQ -- local validation tooling for the Fabric lineage explorer.",
+  "author": "Manuel Luján Vilchez",
+  "scripts": {
+    "test:visual": "playwright test --config=playwright.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.0"
+  }
+}

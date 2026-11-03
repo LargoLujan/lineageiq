@@ -1,0 +1,81 @@
+# Lean image for hosting the lineage viewer on a low-resource PaaS
+# (Render), with no local PowerShell/az-cli/Fabric-cli dependency.
+# Deliberately NOT the top-level Dockerfile (which provisions the full
+# devcontainer toolchain) -- none of that is needed here: scans are
+# triggered by calling an existing Fabric Data Pipeline over HTTPS
+# (fabric_pipeline.py), and all reads come live from the Warehouse SQL
+# endpoint (warehouse.py) and a Lakehouse's OneLake Files area
+# (onelake_data.py), both via a service principal -- see config/
+# admin_settings.json's discovery_pipeline/lakehouse.web_read_mode/
+# onelake_data blocks. This image ships NO baked lineage data snapshot
+# (no index/*.csv, no frontend/semantic-lineage/data/*.json): everything
+# the frontend needs is fetched at request time and cached under
+# analysis/onelake_cache (see onelake_data.py), so a scan triggered from
+# the web is reflected without a redeploy.
+#
+# Set these in the Render dashboard's Environment tab (never committed):
+#   FABRIC_API_SP_CLIENT_SECRET  -- the service principal's client secret
+#   ADMIN_EMAILS                 -- comma-separated, who gets admin panel access
+#   FULL_SCAN_EMAILS             -- comma-separated, who can trigger full scans
+# The last two seed docker/render_admin_settings.json's empty admin_emails/
+# full_scan_emails on first load (see admin_settings.py's _seed_emails_
+# from_env) -- kept out of that file, and out of this repo, on purpose: no
+# real name/email ever needs to be committed just to configure this.
+#
+# Build from the REPO ROOT so the COPY paths below line up with what
+# backend/scripts/lineage_web/paths.py's REPO_ROOT expects at runtime
+# (four directories up from lineage_web/paths.py -- /app here):
+#   docker build -f Dockerfile.render -t fabric-lineage-viewer .
+FROM python:3.12-slim-bookworm
+
+WORKDIR /app
+
+# warehouse.py's live-Warehouse read path needs an actual ODBC driver, not
+# just pyodbc's Python bindings -- installed here from Microsoft's own apt
+# repo (msodbcsql18; unixodbc-dev is needed at pyodbc's import/connect
+# time, not just to build it). Driver version is NOT hardcoded anywhere
+# that reads it back -- warehouse.py's _pick_odbc_driver() picks whatever
+# pyodbc.drivers() reports installed, same defensive pattern as fabric_
+# notebooks/NB_*.py's own pick_odbc_driver() (see docs/105_fabric_native_
+# discovery_setup.md for why a hardcoded version number broke on a
+# different runtime once already).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl gnupg2 unixodbc unixodbc-dev \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && . /etc/os-release \
+    && curl -fsSL "https://packages.microsoft.com/config/debian/${VERSION_ID}/prod.list" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
+    && apt-get purge -y --auto-remove curl gnupg2 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-web.txt requirements-mcp.txt ./
+RUN pip install --no-cache-dir -r requirements-web.txt -r requirements-mcp.txt
+
+COPY backend/scripts/lineage_web_server.py backend/scripts/lineage_web_server.py
+COPY backend/scripts/mcp_http_server.py backend/scripts/mcp_http_server.py
+COPY backend/scripts/mcp_server_remote.py backend/scripts/mcp_server_remote.py
+COPY backend/scripts/lineage_web backend/scripts/lineage_web
+COPY frontend/semantic-lineage frontend/semantic-lineage
+COPY docker/render_admin_settings.json config/admin_settings.json
+COPY docker/gzip_data.py docker/gzip_data.py
+
+# Pre-compress the static app shell (index.html/app.js/css/vendor) once,
+# at build time -- see docker/gzip_data.py's own docstring and handler.py's
+# _serve_static. The live-fetched data/*.json payloads are pre-gzipped on
+# their own refresh cadence instead, by onelake_data.py itself.
+RUN python docker/gzip_data.py frontend/semantic-lineage
+
+# Everything above needs root (installing apt/odbc packages, pip installs,
+# the build-time gzip pass); the actual running server never does, so it
+# shouldn't have it either (2026-08-17 security audit: this container had
+# no USER directive at all, so the HTTP-serving process ran as root by
+# default -- unnecessary root inside the container even though the
+# container itself isn't privileged). chown covers config/ and wherever
+# onelake_data.py's runtime cache/admin_settings.json writes land, since
+# both are created under /app at runtime by this same user.
+RUN useradd --no-create-home --uid 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8765
+CMD ["python", "backend/scripts/lineage_web_server.py", "--directory", "frontend/semantic-lineage"]

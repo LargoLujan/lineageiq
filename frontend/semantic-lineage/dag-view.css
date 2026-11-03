@@ -1,0 +1,143 @@
+/* Roadmap Fase 4 (2026-08-31): the 2D DAG lineage diagram (dag-view.js).
+   The full-screen shell (.graph-map-view/.graph-map-backdrop/.graph-map-
+   topbar/.graph-map-body/.graph-map-sidebar/.graph-map-search-*) is reused
+   directly from graph-map.css -- #dagView/#dagViewBackdrop carry those same
+   classes in index.html, so only the parts unique to this view (the SVG
+   canvas, nodes, edges, hop control) get their own rules here. */
+
+.dag-view-hops {
+  align-items: center;
+  color: var(--muted, #6b7280);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.dag-view-hops select {
+  background: var(--panel-solid, #fff);
+  border: 1px solid var(--border, #d8dde3);
+  border-radius: 6px;
+  color: var(--ink, #111827);
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+.dag-view-canvas {
+  /* .graph-map-body (graph-map.css) is a flex row with .graph-map-sidebar
+     as a fixed-width flex:none child -- this needs flex:1 1 auto itself
+     (matching .graph-map-canvas there) to actually claim the remaining
+     width/height instead of collapsing to its content size. */
+  cursor: grab;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.dag-view-canvas-panning {
+  cursor: grabbing;
+}
+
+.dag-view-svg {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.dag-view-status {
+  color: var(--muted, #6b7280);
+  font-size: 13px;
+  left: 50%;
+  max-width: 420px;
+  position: absolute;
+  text-align: center;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.dag-view-arrow-marker path {
+  fill: var(--border-2, #b9c0c9);
+}
+
+.dag-edge {
+  fill: none;
+  stroke: var(--border-2, #b9c0c9);
+  stroke-width: 1.6;
+}
+
+.dag-node {
+  cursor: pointer;
+}
+
+.dag-node-rect {
+  stroke-width: 2;
+  transition: filter 120ms ease;
+}
+
+.dag-node:hover .dag-node-rect,
+.dag-node:focus-visible .dag-node-rect {
+  filter: brightness(0.96) saturate(1.15);
+}
+
+.dag-node:focus-visible {
+  outline: none;
+}
+
+.dag-node:focus-visible .dag-node-rect {
+  stroke-width: 3;
+}
+
+.dag-node-accent {
+  pointer-events: none;
+}
+
+.dag-node-name {
+  fill: var(--ink, #111827);
+  font-size: 12.5px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.dag-node-name-anchor {
+  fill: #ffffff;
+}
+
+.dag-node-sub {
+  fill: var(--muted, #6b7280);
+  font-size: 10.5px;
+  pointer-events: none;
+}
+
+.dag-node-sub-anchor {
+  fill: #d1d5db;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dag-node-rect {
+    fill: var(--panel-solid, #1c1f26) !important;
+  }
+
+  :root:not([data-theme="light"]) .dag-node-anchor .dag-node-rect {
+    fill: #f3f4f6 !important;
+  }
+
+  :root:not([data-theme="light"]) .dag-node-name-anchor,
+  :root:not([data-theme="light"]) .dag-node-sub-anchor {
+    fill: #111827;
+  }
+}
+
+:root[data-theme="dark"] .dag-node-rect {
+  fill: var(--panel-solid, #1c1f26) !important;
+}
+
+:root[data-theme="dark"] .dag-node-anchor .dag-node-rect {
+  fill: #f3f4f6 !important;
+}
+
+:root[data-theme="dark"] .dag-node-name-anchor,
+:root[data-theme="dark"] .dag-node-sub-anchor {
+  fill: #111827;
+}

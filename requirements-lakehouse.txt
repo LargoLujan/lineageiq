@@ -1,0 +1,10 @@
+# Dependencies for scripts/64_upload_bronze_to_onelake.py and the Bronze/
+# Silver/Gold Lakehouse bypass (see docs/101_medallion_lakehouse_provisioning.md).
+# These may already be installed on some machines via other Azure/Fabric
+# tooling -- this file makes the dependency explicit and owned by this
+# project instead of relying on that coincidence.
+#
+# Install with: pip install -r requirements-lakehouse.txt
+azure-identity==1.25.3
+azure-storage-file-datalake==12.25.0
+pandas==2.2.3

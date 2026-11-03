@@ -1,0 +1,23 @@
+# Dependencies for scripts/lineage_web_server.py (the shared lineage
+# viewer + scan-trigger + admin/auth API). Everything else it uses is
+# Python stdlib. msal previously only reached this process as an
+# undeclared transitive dependency of azure-cli-core on machines that
+# happened to have Azure CLI installed -- this file makes it an explicit,
+# pinned dependency of THIS project instead of relying on that coincidence
+# (see docs/102_admin_panel_and_user_auth.md, Fase 2).
+#
+# Install with: pip install -r requirements-web.txt
+msal==1.36.0
+# lineage_web/warehouse.py's optional live-Warehouse read path (opt-in via
+# the admin panel's lakehouse.web_read_mode). Also needs the Microsoft
+# ODBC Driver for SQL Server installed on this machine -- same driver
+# 70_extract_control_framework_lineage.py already requires; not needed at
+# all if web_read_mode stays "local_files" (the default).
+pyodbc==5.1.0
+# lineage_web/onelake_data.py's optional live-OneLake read path for the
+# big generated JSON payloads (opt-in via the admin panel's onelake_data.
+# mode). Same packages, same pinned versions, as requirements-lakehouse.txt
+# (64_upload_bronze_to_onelake.py's equivalent local upload direction) --
+# not needed at all if onelake_data.mode stays "local_files" (the default).
+azure-identity==1.25.3
+azure-storage-file-datalake==12.25.0

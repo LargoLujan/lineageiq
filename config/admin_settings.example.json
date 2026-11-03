@@ -1,0 +1,66 @@
+{
+  "tenant_id": "<your-entra-tenant-id>",
+  "entra_client_id": "",
+  "admin_emails": ["you@yourdomain.com"],
+  "full_scan_emails": ["you@yourdomain.com"],
+  "users": [
+    {
+      "email": "you@yourdomain.com",
+      "full_name": "",
+      "job_title": "",
+      "is_admin": true,
+      "can_full_scan": true,
+      "can_install": false
+    }
+  ],
+  "install_emails": [],
+  "allow_anonymous_scans": false,
+  "lakehouse": {
+    "workspace_name": "",
+    "workspace_id": "",
+    "lakehouse_name": "",
+    "lakehouse_id": "",
+    "capacity_name": "",
+    "sql_endpoint_connection_string": "",
+    "item_type": "Warehouse",
+    "auto_upload_after_scan": false,
+    "auth_mode": "service_principal",
+    "sp_tenant_id": "",
+    "sp_client_id": "",
+    "sp_client_secret_ref": "WAREHOUSE_SP_CLIENT_SECRET",
+    "web_read_mode": "warehouse"
+  },
+  "discovery_pipeline": {
+    "mode": "fabric_pipeline",
+    "workspace_id": "",
+    "pipeline_item_id": "",
+    "sp_tenant_id": "",
+    "sp_client_id": "",
+    "sp_client_secret_ref": "DISCOVERY_PIPELINE_SP_CLIENT_SECRET"
+  },
+  "onelake_data": {
+    "mode": "onelake",
+    "workspace_name": "",
+    "workspace_id": "",
+    "lakehouse_name": "",
+    "lakehouse_id": "",
+    "sp_tenant_id": "",
+    "sp_client_id": "",
+    "sp_client_secret_ref": "ONELAKE_DATA_SP_CLIENT_SECRET",
+    "auto_publish_after_scan": false
+  },
+  "capacity_metrics": {
+    "workspace_name": "",
+    "workspace_id": "",
+    "dataset_name": "",
+    "dataset_id": "",
+    "auth_mode": "user_session",
+    "sp_tenant_id": "",
+    "sp_client_id": "",
+    "sp_client_secret_ref": "CAPACITY_METRICS_SP_CLIENT_SECRET"
+  },
+  "external_sources": [],
+  "api_keys": [],
+  "certified_items": [],
+  "business_glossary": []
+}

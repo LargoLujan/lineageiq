@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <title>Corporate Lineage Explorer</title>
+    <link rel="stylesheet" href="./styles.css?v=20260612-phase10" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <p>Microsoft Fabric</p>
+          <h1>Corporate Lineage Explorer</h1>
+        </div>
+        <div class="top-actions">
+          <label class="search-box">
+            <span>Buscar</span>
+            <input id="globalSearch" type="search" placeholder="Workspace, item, origen..." autocomplete="off" />
+          </label>
+          <button id="resetButton" type="button">Reset</button>
+        </div>
+      </header>
+
+      <nav id="criteriaTabs" class="criteria-tabs" aria-label="Criterios"></nav>
+
+      <section id="metrics" class="metrics" aria-label="Resumen"></section>
+
+      <section class="workspace-layout">
+        <aside class="side-panel">
+          <div class="panel-title">
+            <div>
+              <h2>Workspaces</h2>
+              <p id="workspaceSubtitle">0 visibles</p>
+            </div>
+            <span id="workspaceTotal" class="count-pill">0</span>
+          </div>
+
+          <div class="filter-stack">
+            <label>
+              <span>Entorno</span>
+              <select id="environmentFilter"></select>
+            </label>
+            <label>
+              <span>Tipo</span>
+              <select id="itemTypeFilter"></select>
+            </label>
+            <label>
+              <span>Evidencia</span>
+              <select id="evidenceFilter">
+                <option value="all">Todas</option>
+                <option value="confirmed">Confirmada</option>
+                <option value="needs_review">A revisar</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="workspace-actions">
+            <button id="clearWorkspaceButton" type="button">Todos</button>
+            <button id="expandAllButton" type="button">Expandir</button>
+            <button id="collapseAllButton" type="button">Contraer</button>
+          </div>
+
+          <div id="workspaceList" class="workspace-list" aria-label="Lista de workspaces"></div>
+        </aside>
+
+        <section class="main-panel">
+          <div class="panel-title main-title">
+            <div>
+              <h2 id="treeTitle">Linaje corporativo</h2>
+              <p id="treeSubtitle">0 elementos</p>
+            </div>
+            <button id="drawerToggle" type="button">Detalles</button>
+          </div>
+          <div id="lineageTree" class="lineage-tree" aria-live="polite"></div>
+        </section>
+
+        <aside id="detailDrawer" class="detail-drawer">
+          <div class="panel-title">
+            <div>
+              <h2>Detalles</h2>
+              <p id="detailSubtitle">Sin selección</p>
+            </div>
+          </div>
+          <div id="detailContent" class="detail-content"></div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="./app.js?v=20260612-phase10"></script>
+  </body>
+</html>

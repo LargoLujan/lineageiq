@@ -1,0 +1,701 @@
+/* Graph Map Mode (Fase G) -- a self-contained, dark "data mesh" canvas view
+   that takes over the main content area (diagram + detail + workspace
+   index) while active. Deliberately scoped to this view only: the rest of
+   the app stays on its existing light theme (see styles.css :root), this
+   is not an app-wide dark mode. Kept in its own file, separate from
+   styles.css, so this feature's styling can grow without adding to an
+   already large stylesheet. */
+
+/* Dark "space" look stays the default -- it's how this view has always
+   looked, and the astronomical metaphor (galaxies, clusters) reads best
+   against near-black. A light "daylight sky" variant is available for
+   anyone who picks Light (or whose system prefers light in Auto mode),
+   see the light overrides below -- same variable names, so nothing else
+   in this file needs to change to support both. */
+:root {
+  --graph-map-bg: #0b0f16;
+  --graph-map-bg-elevated: #121826;
+  --graph-map-bg-elevated-rgb: 18, 24, 38;
+  --graph-map-border: #232c3d;
+  --graph-map-border-rgb: 35, 44, 61;
+  --graph-map-ink: #e7ecf5;
+  --graph-map-muted: #8894a8;
+  --graph-map-accent: #4f9dff;
+  --graph-map-accent-rgb: 79, 157, 255;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --graph-map-bg: #eef2f8;
+    --graph-map-bg-elevated: #ffffff;
+    --graph-map-bg-elevated-rgb: 255, 255, 255;
+    --graph-map-border: #d7deea;
+    --graph-map-border-rgb: 215, 222, 234;
+    --graph-map-ink: #17202a;
+    --graph-map-muted: #64748b;
+    --graph-map-accent: #2563eb;
+    --graph-map-accent-rgb: 37, 99, 235;
+  }
+}
+:root[data-theme="light"] {
+  --graph-map-bg: #eef2f8;
+  --graph-map-bg-elevated: #ffffff;
+  --graph-map-bg-elevated-rgb: 255, 255, 255;
+  --graph-map-border: #d7deea;
+  --graph-map-border-rgb: 215, 222, 234;
+  --graph-map-ink: #17202a;
+  --graph-map-muted: #64748b;
+  --graph-map-accent: #2563eb;
+  --graph-map-accent-rgb: 37, 99, 235;
+}
+
+/* G.9 fix: a bare `.class { display: flex }` rule beats the browser's
+   default `[hidden] { display: none }` UA rule (author stylesheets always
+   win over UA ones, regardless of source order), so any element that is
+   both one of these classes AND toggled via the `hidden` attribute stayed
+   visibly rendered (as an empty flex bar/banner) the whole time -- caught
+   live via a screenshot showing the "Volver al grafo completo" banner
+   outside of focused mode. `.class[hidden]` is more specific than `.class`
+   alone, so it reliably wins instead. */
+.graph-map-breadcrumbs[hidden],
+.graph-map-view[hidden] {
+  display: none;
+}
+
+/* H.3: a true full-screen popup (position: fixed, its own backdrop, above
+   everything including the app's own topbar/header) instead of an inline
+   section swapped into the page's normal flow -- the inline version left
+   the app's persistent header sitting above it and squeezed the map into
+   whatever space remained, which is what read as "doesn't fit here" in
+   the first place. */
+.graph-map-backdrop {
+  background: rgba(6, 9, 15, 0.72);
+  inset: 0;
+  position: fixed;
+  z-index: 899;
+}
+
+.graph-map-backdrop[hidden] {
+  display: none;
+}
+
+.graph-map-view {
+  background: var(--graph-map-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  color: var(--graph-map-ink);
+  display: flex;
+  flex-direction: column;
+  inset: 16px;
+  overflow: hidden;
+  position: fixed;
+  z-index: 900;
+}
+
+/* Circular reveal from the click that opened Mapa3D (2026-08-18, see
+   open() in graph-map.js) -- --reveal-x/--reveal-y are set inline per
+   open; a plain scale transform would look wrong here since this view
+   fills nearly the whole screen, so it clip-path-reveals from that point
+   instead, same "travels from the button" intent as the .modal-panel
+   grow-in animation in styles.css. */
+@keyframes graph-map-view-reveal {
+  from { clip-path: circle(0% at var(--reveal-x, 50%) var(--reveal-y, 50%)); }
+  to { clip-path: circle(150% at var(--reveal-x, 50%) var(--reveal-y, 50%)); }
+}
+
+.graph-map-view.graph-map-view-reveal-in {
+  animation: graph-map-view-reveal 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-map-view.graph-map-view-reveal-in {
+    animation: none;
+  }
+}
+
+.graph-map-topbar {
+  align-items: center;
+  background: var(--graph-map-bg-elevated);
+  border-bottom: 1px solid var(--graph-map-border);
+  display: flex;
+  flex: none;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+}
+
+.graph-map-topbar h2 {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.graph-map-view .icon-button {
+  color: var(--graph-map-ink);
+}
+
+.graph-map-topbar-controls {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  position: relative;
+}
+
+.graph-map-viewmode {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.graph-map-viewmode span {
+  color: var(--graph-map-muted);
+  font-size: 11px;
+}
+
+.graph-map-viewmode select,
+.graph-map-topbar-controls > button {
+  background: var(--graph-map-bg);
+  border: 1px solid var(--graph-map-border);
+  border-radius: var(--radius-sm);
+  color: var(--graph-map-ink);
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.graph-map-topbar-controls > button {
+  cursor: pointer;
+}
+
+.graph-map-topbar-controls > button[aria-expanded="true"] {
+  border-color: var(--graph-map-accent);
+  color: var(--graph-map-accent);
+}
+
+.graph-map-filter-panel {
+  background: var(--graph-map-bg-elevated);
+  border: 1px solid var(--graph-map-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-3);
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 220px;
+  z-index: 30;
+}
+
+.graph-map-filter-panel-actions {
+  border-bottom: 1px solid var(--graph-map-border);
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+}
+
+.graph-map-filter-panel-actions button {
+  background: none;
+  border: none;
+  color: var(--graph-map-accent);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.graph-map-filter-row {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.graph-map-filter-row label {
+  cursor: pointer;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-map-filter-row .graph-map-filter-count {
+  color: var(--graph-map-muted);
+  flex: none;
+  font-size: 10px;
+}
+
+.graph-map-legend {
+  background: rgba(var(--graph-map-bg-elevated-rgb), 0.88);
+  border: 1px solid var(--graph-map-border);
+  border-radius: var(--radius-md);
+  bottom: var(--space-3);
+  left: var(--space-3);
+  max-height: min(360px, calc(100% - var(--space-6, 48px)));
+  overflow-y: auto;
+  padding: 8px 10px;
+  position: absolute;
+  width: 200px;
+  z-index: 5;
+}
+
+.graph-map-legend-row {
+  align-items: center;
+  display: flex;
+  font-size: 11px;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.graph-map-legend-row-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-map-legend-row-count {
+  color: var(--graph-map-muted);
+  flex: none;
+  font-size: 10px;
+}
+
+/* H.2: swatches approximate each type's real Cytoscape node shape (see
+   NODE_TYPE_META/SOURCE_TYPE_META in graph-map.js) via clip-path/border-
+   radius, so the legend visually matches what's actually on the canvas
+   instead of a plain color dot that told the user nothing about shape. */
+.graph-map-legend-swatch {
+  flex: none;
+  height: 10px;
+  width: 10px;
+}
+
+.gm-shape-ellipse {
+  border-radius: 50%;
+}
+
+.gm-shape-rectangle {
+  border-radius: 0;
+}
+
+.gm-shape-round-rectangle {
+  border-radius: 3px;
+}
+
+.gm-shape-bottom-round-rectangle {
+  border-radius: 0 0 4px 4px;
+}
+
+.gm-shape-cut-rectangle {
+  clip-path: polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%);
+}
+
+.gm-shape-barrel {
+  border-radius: 45% / 50%;
+}
+
+.gm-shape-diamond,
+.gm-shape-round-diamond {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.gm-shape-rhomboid {
+  clip-path: polygon(25% 0, 100% 0, 75% 100%, 0 100%);
+}
+
+.gm-shape-tag,
+.gm-shape-round-tag {
+  clip-path: polygon(0 0, 65% 0, 100% 50%, 65% 100%, 0 100%);
+}
+
+.gm-shape-pentagon,
+.gm-shape-round-pentagon {
+  clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+}
+
+.gm-shape-hexagon,
+.gm-shape-concave-hexagon {
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+
+.gm-shape-heptagon {
+  clip-path: polygon(50% 0%, 91% 21%, 100% 61%, 68% 100%, 32% 100%, 0% 61%, 9% 21%);
+}
+
+.gm-shape-octagon,
+.gm-shape-round-octagon {
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+}
+
+.gm-shape-triangle,
+.gm-shape-round-triangle {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.gm-shape-vee {
+  clip-path: polygon(0 0, 50% 45%, 100% 0, 100% 25%, 50% 70%, 0 25%);
+}
+
+.gm-shape-star {
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.gm-shape-portal {
+  border-radius: 50%;
+}
+
+/* External-origin legend group: a native <details>/<summary> collapsible
+   (free +/- expand affordance, no extra JS) so the real per-source-type
+   breakdown (SQL/SharePoint/Dataverse/...) doesn't turn the legend into a
+   long flat list by default -- requested explicitly. */
+.graph-map-legend-origin-group {
+  margin: 0;
+}
+
+.graph-map-legend-origin-summary {
+  cursor: pointer;
+  list-style: none;
+  margin: 0;
+}
+
+.graph-map-legend-origin-summary::-webkit-details-marker {
+  display: none;
+}
+
+.graph-map-legend-origin-summary::before {
+  color: var(--graph-map-muted);
+  content: '▸';
+  display: inline-block;
+  flex: none;
+  font-size: 9px;
+  margin-right: 2px;
+  transition: transform 0.15s ease;
+  width: 8px;
+}
+
+.graph-map-legend-origin-group[open] > .graph-map-legend-origin-summary::before {
+  transform: rotate(90deg);
+}
+
+.graph-map-legend-origin-subrow {
+  padding-left: 14px;
+}
+
+/* H.2: lightweight hover tooltip -- a quick "what is this" summary
+   without opening the full click-to-select detail panel. Positioned by
+   JS next to the cursor on 'mousemove' over a node. */
+.graph-map-tooltip {
+  background: rgba(var(--graph-map-bg-elevated-rgb), 0.96);
+  border: 1px solid var(--graph-map-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  max-width: 260px;
+  padding: 6px 8px;
+  pointer-events: none;
+  position: absolute;
+  z-index: 50;
+}
+
+.graph-map-tooltip strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-map-tooltip span {
+  color: var(--graph-map-muted);
+}
+
+.graph-map-topbar-controls > button {
+  cursor: pointer;
+}
+
+.graph-map-breadcrumbs {
+  align-items: center;
+  background: var(--graph-map-bg-elevated);
+  border-bottom: 1px solid var(--graph-map-border);
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px var(--space-4);
+}
+
+.graph-map-breadcrumbs button {
+  background: none;
+  border: none;
+  color: var(--graph-map-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+.graph-map-breadcrumbs button:hover,
+.graph-map-breadcrumbs button:last-child {
+  color: var(--graph-map-accent);
+}
+
+.graph-map-breadcrumbs .graph-map-breadcrumb-sep {
+  color: var(--graph-map-border);
+  font-size: 11px;
+}
+
+.graph-map-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Tanda 8: found via automated click testing that .graph-map-detail's
+     `position: absolute` (below) had no positioned ancestor closer than
+     .graph-map-view (position: fixed), so it stretched from the VIEW's own
+     top -- covering the topbar's rightmost buttons in a real, if narrow,
+     overlap -- instead of starting below the topbar like its own comment
+     ("floats over the canvas") already intended. Pre-existing, not
+     introduced by the 3D rewrite; fixed here since it was already found. */
+  position: relative;
+}
+
+.graph-map-sidebar {
+  background: var(--graph-map-bg-elevated);
+  border-right: 1px solid var(--graph-map-border);
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  min-height: 0;
+  width: 260px;
+}
+
+.graph-map-search-box {
+  border-bottom: 1px solid var(--graph-map-border);
+  flex: none;
+  padding: var(--space-3);
+}
+
+.graph-map-search-box input {
+  background: var(--graph-map-bg);
+  border: 1px solid var(--graph-map-border);
+  border-radius: var(--radius-sm);
+  color: var(--graph-map-ink);
+  font-size: 13px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.graph-map-search-box input:focus-visible {
+  border-color: var(--graph-map-accent);
+}
+
+.graph-map-search-results {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.graph-map-search-result {
+  align-items: baseline;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(var(--graph-map-border-rgb), 0.6);
+  color: var(--graph-map-ink);
+  cursor: pointer;
+  display: flex;
+  gap: 6px;
+  padding: 7px var(--space-3);
+  text-align: left;
+  width: 100%;
+}
+
+.graph-map-search-result:hover,
+.graph-map-search-result:focus-visible {
+  background: rgba(var(--graph-map-accent-rgb), 0.12);
+}
+
+.graph-map-search-result .graph-map-result-label {
+  flex: 1 1 auto;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-map-search-result .graph-map-result-type {
+  color: var(--graph-map-muted);
+  flex: none;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.graph-map-search-empty {
+  color: var(--graph-map-muted);
+  font-size: 12px;
+  padding: var(--space-3);
+}
+
+.graph-map-canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+
+/* ForceGraph3D (Tanda 8) takes exclusive ownership of the element it's
+   mounted on -- it clears any existing children on init, which used to
+   wipe out the legend/tooltip/focused-banner overlays when they were
+   nested directly inside .graph-map-canvas (verified live: 3 children
+   before open(), 1 -- ForceGraph3D's own wrapper -- after). This dedicated
+   sub-container is the ONLY thing ever passed to ForceGraph3D; the
+   overlays stay its siblings, absolutely positioned over it exactly like
+   before. */
+.graph-map-engine {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+/* ForceGraph3D (Tanda 8) injects its own WebGL <canvas> into this div and
+   sizes it via JS from the div's own measured rect on open/resize -- needs
+   an explicit block-level ancestor with real height, which
+   .graph-map-canvas (flex: 1 1 auto inside a flex column) provides. */
+
+.graph-map-empty-state {
+  color: var(--graph-map-muted);
+  font-size: 13px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Floats over the canvas (not a flex sibling that resizes it) so opening/
+   closing it never has to trigger a Cytoscape cy.resize(). */
+.graph-map-detail {
+  background: var(--graph-map-bg-elevated);
+  border-left: 1px solid var(--graph-map-border);
+  bottom: 0;
+  box-shadow: -12px 0 24px rgba(0, 0, 0, 0.35);
+  overflow-y: auto;
+  padding: var(--space-4);
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 300px;
+}
+
+.graph-map-detail-header {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.graph-map-detail-header h3 {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.3;
+  margin: 0;
+  word-break: break-word;
+}
+
+.graph-map-detail-type-badge {
+  background: rgba(var(--graph-map-accent-rgb), 0.16);
+  border-radius: var(--radius-full);
+  color: var(--graph-map-accent);
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-3);
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+.graph-map-detail-fields {
+  display: grid;
+  gap: 2px var(--space-2);
+  grid-template-columns: auto 1fr;
+  margin: 0 0 var(--space-3);
+}
+
+.graph-map-detail-fields dt {
+  color: var(--graph-map-muted);
+  font-size: 11px;
+  padding: 3px 0;
+}
+
+.graph-map-detail-fields dd {
+  font-size: 12px;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: 3px 0;
+}
+
+.graph-map-detail-counts {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.graph-map-detail-counts strong {
+  color: var(--graph-map-ink);
+  font-size: 16px;
+}
+
+.graph-map-detail-counts span {
+  color: var(--graph-map-muted);
+  font-size: 11px;
+}
+
+.graph-map-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--space-4);
+}
+
+.graph-map-detail-actions button,
+.graph-map-detail-actions a {
+  background: var(--graph-map-bg);
+  border: 1px solid var(--graph-map-border);
+  border-radius: var(--radius-sm);
+  color: var(--graph-map-ink);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 5px 8px;
+  text-decoration: none;
+}
+
+.graph-map-detail-actions button:hover,
+.graph-map-detail-actions a:hover {
+  border-color: var(--graph-map-accent);
+  color: var(--graph-map-accent);
+}
+
+.graph-map-detail-list h4 {
+  color: var(--graph-map-muted);
+  font-size: 11px;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.graph-map-detail-list ul {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+
+.graph-map-detail-list li {
+  border-bottom: 1px solid rgba(var(--graph-map-border-rgb), 0.6);
+  font-size: 11px;
+  padding: 4px 0;
+}
+
+.graph-map-detail-list .graph-map-detail-list-more {
+  color: var(--graph-map-muted);
+}
