@@ -5,6 +5,7 @@
 **A read-only lineage, catalogue and governance mapper for Microsoft Fabric, with a 2D/3D graph UI, a REST API and MCP servers for AI agents.**
 
 [![CI](https://github.com/LargoLujan/lineageiq/actions/workflows/ci.yml/badge.svg)](https://github.com/LargoLujan/lineageiq/actions/workflows/ci.yml)
+[![Demo image](https://github.com/LargoLujan/lineageiq/actions/workflows/demo-image.yml/badge.svg)](https://github.com/LargoLujan/lineageiq/pkgs/container/lineageiq)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-pwsh-5391FE?logo=powershell&logoColor=white)
@@ -23,7 +24,13 @@
 
 </div>
 
-Microsoft Fabric shows lineage at item level, and Microsoft Purview documents only item-level lineage for Fabric items other than Power BI, so questions such as "which notebooks write this table" or "what breaks if this view changes" are hard to answer. LineageIQ discovers every workspace and item it can read, extracts dependencies from notebook code, pipeline definitions and semantic model TMDL down to the source-object level (tables, views, stored procedures, files), and serves the result as an interactive graph, a governance panel, a REST API and Model Context Protocol (MCP) tools. Discovery is strictly read-only. The project is a work in progress (`package.json` version 0.1.0); it ships with a synthetic demo tenant so you can run it without any Fabric access.
+Microsoft Fabric shows lineage at item level, and Microsoft Purview documents only item-level lineage for Fabric items other than Power BI, so questions such as "which notebooks write this table" or "what breaks if this view changes" are hard to answer. LineageIQ discovers every workspace and item it can read, extracts dependencies from notebook code, pipeline definitions and semantic model TMDL down to the source-object level (tables, views, stored procedures, files), and serves the result as an interactive graph, a governance panel, a REST API and Model Context Protocol (MCP) tools. Discovery is strictly read-only. The project is a work in progress (`package.json` version 0.1.0); it ships with a synthetic demo tenant so you can run it without any Fabric access, in one command with Docker:
+
+```bash
+docker run --rm -p 8765:8765 ghcr.io/largolujan/lineageiq:latest
+```
+
+Then open `http://localhost:8765`. See [Try the Demo Image](#try-the-demo-image) for the MCP tools.
 
 ## Table of Contents
 
@@ -35,6 +42,7 @@ Microsoft Fabric shows lineage at item level, and Microsoft Purview documents on
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+  - [Try the Demo Image](#try-the-demo-image)
   - [Quick Start With Demo Data](#quick-start-with-demo-data)
   - [Pointing It at Your Own Tenant](#pointing-it-at-your-own-tenant)
   - [Running With Docker](#running-with-docker)
@@ -153,7 +161,7 @@ lineageiq/
 │   ├── python/                          # pytest unit tests
 │   ├── visual/                          # Playwright specs
 │   └── powershell/                      # Pester tests
-├── docker/  Dockerfile  Dockerfile.render  docker-compose.yml  .devcontainer/
+├── docker/  Dockerfile  Dockerfile.demo  Dockerfile.render  docker-compose.yml  .devcontainer/
 ├── .github/workflows/ci.yml             # CI pipeline
 ├── requirements-web.txt  requirements-mcp.txt  requirements-lakehouse.txt
 ├── package.json  playwright.config.js
@@ -186,6 +194,29 @@ pip install -r requirements-mcp.txt        # MCP servers, including the /mcp end
 pip install -r requirements-lakehouse.txt  # bronze upload to OneLake (64_upload_bronze_to_onelake.py)
 npm install                                # Playwright, for the visual tests only
 ```
+
+### Try the Demo Image
+
+The quickest way to see LineageIQ is the prebuilt demo image on GitHub Container Registry. It contains only the public code and the synthetic "Contoso" tenant described below, needs no Fabric access or credentials, and serves reads only:
+
+```bash
+docker run --rm -p 8765:8765 ghcr.io/largolujan/lineageiq:latest
+```
+
+Open `http://localhost:8765`; the "Demo data" menu in the top-right corner switches the UI to English. To query the same demo data with the MCP tools from Claude Desktop, Claude Code or any other MCP client, register the stdio server inside the image:
+
+```json
+{
+  "mcpServers": {
+    "lineageiq-demo": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/largolujan/lineageiq:latest", "python", "backend/scripts/mcp_server.py"]
+    }
+  }
+}
+```
+
+Then ask, for example, "what feeds the RPT_Sales_Dashboard report?". The image is built from `Dockerfile.demo` by `.github/workflows/demo-image.yml`, which smoke-tests the web UI, the demo data and the MCP server before publishing it on each release. To build it yourself, run `docker build -f Dockerfile.demo -t lineageiq-demo .` from the repository root.
 
 ### Quick Start With Demo Data
 
@@ -224,7 +255,7 @@ Open `http://127.0.0.1:8765`. The explorer opens directly, with no sign-in scree
 
 ### Running With Docker
 
-The top-level `Dockerfile` builds a full toolchain image (Python 3.12, PowerShell, Azure CLI, Fabric CLI, Node.js, Chromium, Graphviz), and `docker-compose.yml` mounts the repository and starts the web viewer automatically on port 8765:
+For the demo alone, use the published image (see [Try the Demo Image](#try-the-demo-image)). The top-level `Dockerfile` builds a full toolchain image (Python 3.12, PowerShell, Azure CLI, Fabric CLI, Node.js, Chromium, Graphviz), and `docker-compose.yml` mounts the repository and starts the web viewer automatically on port 8765:
 
 ```bash
 docker compose build fabric-mapper

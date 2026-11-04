@@ -1,0 +1,63 @@
+# LineageIQ demo image: the lineage viewer, its REST API and the MCP tools,
+# running against the built-in synthetic "Contoso" tenant that
+# backend/scripts/generate_demo_data.py creates at build time.
+#
+# No Fabric access, no credentials, no tunnel and no real data: the image only
+# contains the public source code plus deterministic, fictional demo data.
+# LINEAGE_DEMO_MODE=1 opens the viewer without sign-in for reads only; scans,
+# admin settings, API keys, comments and favourites stay refused.
+#
+#   docker run --rm -p 8765:8765 ghcr.io/largolujan/lineageiq:latest
+#   # then open http://localhost:8765
+#
+# MCP tools over stdio (for Claude Desktop, Claude Code or any MCP client):
+#   docker run -i --rm ghcr.io/largolujan/lineageiq:latest python backend/scripts/mcp_server.py
+#
+# The remote /mcp endpoint is disabled here (--no-mcp-http): it requires an
+# admin-issued API key, and demo mode has no admin session to issue one.
+#
+# Never mount or point this image at a real tenant's data: demo mode makes
+# every catalogue and lineage read public. For real tenants use the
+# top-level Dockerfile or Dockerfile.render (see README, "Running With Docker").
+#
+# Build from the repository root:
+#   docker build -f Dockerfile.demo -t lineageiq-demo .
+FROM python:3.12-slim
+
+LABEL org.opencontainers.image.title="LineageIQ demo" \
+      org.opencontainers.image.description="Object-level lineage, reverse impact and MCP tools for Microsoft Fabric, running on a synthetic demo tenant." \
+      org.opencontainers.image.source="https://github.com/LargoLujan/lineageiq" \
+      org.opencontainers.image.licenses="MIT"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# The viewer and the demo generator only need the standard library; the MCP
+# SDK is the one extra, for the stdio MCP server.
+COPY requirements-mcp.txt ./
+RUN pip install -r requirements-mcp.txt
+
+COPY backend/scripts backend/scripts
+COPY frontend/semantic-lineage frontend/semantic-lineage
+
+# Deterministic synthetic tenant: writes index/, analysis/ and
+# frontend/semantic-lineage/data/ inside the image (all git-ignored paths).
+RUN mkdir -p config index analysis frontend/semantic-lineage/data \
+    && python backend/scripts/generate_demo_data.py
+
+# The server never needs root.
+RUN useradd --no-create-home --uid 1000 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+ENV LINEAGE_DEMO_MODE=1
+EXPOSE 8765
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/', timeout=4)"
+
+CMD ["python", "backend/scripts/lineage_web_server.py", "--bind", "0.0.0.0", "--directory", "frontend/semantic-lineage", "--no-mcp-http"]
