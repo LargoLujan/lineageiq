@@ -276,7 +276,7 @@ const i18n = {
     back: 'Volver',
     focus: 'Índice WS',
     details: 'Detalles',
-    inspect: 'Inspeccion',
+    inspect: 'Inspección',
     impact: 'Impacto',
     schedule: 'Planificación',
     selectAll: 'Todos',
@@ -291,7 +291,7 @@ const i18n = {
     deploymentStage: 'Etapa',
     stageFilter: 'Workspaces del deployment',
     stageFilterAll: 'Todos',
-    stageFilterHint: 'Sin seleccion: todos',
+    stageFilterHint: 'Sin selección: todos',
     deploymentEnvironmentFilter: 'Filtro DEV/QA/PRO',
     noDeploymentPipeline: 'Sin deployment pipeline',
     assignedStages: 'etapas asignadas',
@@ -880,7 +880,7 @@ const i18n = {
       pdfSummary: 'Resumen del detalle',
       pdfGenerated: 'Generado',
       pdfView: 'Vista',
-      pdfSelection: 'Seleccion',
+      pdfSelection: 'Selección',
       pdfAdditionalRows: 'Filas adicionales resumidas'
     }
   },
@@ -3196,8 +3196,8 @@ function applyLayoutState() {
   els.focusButton.classList.toggle('active', state.focusMode);
   els.focusButton.textContent = state.focusMode ? '›' : '‹';
   els.focusButton.title = state.focusMode
-    ? (state.lang === 'es' ? 'Abrir indice' : 'Open index')
-    : (state.lang === 'es' ? 'Cerrar indice' : 'Close index');
+    ? (state.lang === 'es' ? 'Abrir índice' : 'Open index')
+    : (state.lang === 'es' ? 'Cerrar índice' : 'Close index');
   els.focusButton.setAttribute('aria-label', els.focusButton.title);
   els.focusButton.setAttribute('aria-expanded', state.focusMode ? 'false' : 'true');
   els.detailsToggleButton.classList.toggle('active', !state.showDetails);
@@ -3505,9 +3505,52 @@ function initTheme() {
   setTheme(stored);
 }
 
+// Static chrome in index.html ships in English (the default language) and
+// nothing else rewrites these tooltips/aria-labels, so they are translated
+// here: [selector, attribute, Spanish, English].
+const STATIC_ATTR_LABELS = [
+  ['#themeAutoButton', 'title', 'Automático (según el sistema)', 'Automatic (follow system)'],
+  ['#themeLightButton', 'title', 'Claro', 'Light'],
+  ['#themeDarkButton', 'title', 'Oscuro', 'Dark'],
+  ['#inspectionMapCloseButton', 'title', 'Cerrar mapa', 'Close map'],
+  ['#planningMapCloseButton', 'title', 'Cerrar', 'Close'],
+  ['#inspectionMapPngButton', 'title', 'Diagrama PNG', 'PNG diagram'],
+  ['#inspectionMapExcelButton', 'title', 'Descargar Excel', 'Download Excel'],
+  ['#graphMapDetail', 'aria-label', 'Detalle del nodo', 'Node detail'],
+  ['#dagView', 'aria-label', 'Diagrama de linaje (DAG)', 'Lineage diagram (DAG)'],
+  ['#dagView .graph-map-sidebar', 'aria-label', 'Buscar item', 'Find item'],
+  ['#graphMapView .graph-map-sidebar', 'aria-label', 'Índice de nodos', 'Node index'],
+  ['#dagViewCloseButton', 'aria-label', 'Cerrar', 'Close'],
+  ['#graphMapCloseButton', 'aria-label', 'Cerrar', 'Close'],
+  ['#planningEvidenceModalCloseButton', 'aria-label', 'Cerrar', 'Close'],
+  ['#sensitivityDetailCloseButton', 'aria-label', 'Cerrar', 'Close'],
+  ['#workspaceAccessCloseButton', 'aria-label', 'Cerrar', 'Close'],
+  ['#tenantAdminWorkspacesCloseButton', 'aria-label', 'Cerrar', 'Close'],
+  ['#installerWizardCloseButton', 'aria-label', 'Cerrar', 'Close'],
+  ['#workspaceCreateCloseButton', 'aria-label', 'Cerrar', 'Close'],
+  ['#planningEvidenceModal', 'aria-label', 'Planificación detallada', 'Planning details'],
+  ['#sensitivityDetailModal', 'aria-label', 'Detalle de sensibilidad', 'Sensitivity detail'],
+  ['#workspaceAccessModal', 'aria-label', 'Personas con acceso', 'People with access'],
+  ['#tenantAdminWorkspacesModal', 'aria-label', 'Workspaces de un administrador', 'Workspaces of an administrator'],
+  ['#installerWizardModal', 'aria-label', 'Instalar en otro tenant', 'Install into another tenant'],
+  ['#workspaceCreateModal', 'aria-label', 'Dar de alta un workspace', 'Register a workspace'],
+  ['#privacyPanel', 'aria-label', 'Privacidad', 'Privacy'],
+];
+
+function applyStaticLabels() {
+  const es = state.lang === 'es';
+  STATIC_ATTR_LABELS.forEach(([selector, attr, esText, enText]) => {
+    const el = document.querySelector(selector);
+    if (el) el.setAttribute(attr, es ? esText : enText);
+  });
+}
+
 function setLanguage(lang) {
   state.lang = lang;
   document.documentElement.lang = lang;
+  if (els.langEsButton) els.langEsButton.classList.toggle('active', lang === 'es');
+  if (els.langEnButton) els.langEnButton.classList.toggle('active', lang === 'en');
+  applyStaticLabels();
   applyAuthGateLanguage();
   renderUserBadgeName();
   // Graph Map Mode (graph-map.js) and the DAG view own their own rendering
@@ -3666,6 +3709,7 @@ function renderLabels() {
   });
   els.langEsButton.classList.toggle('active', state.lang === 'es');
   els.langEnButton.classList.toggle('active', state.lang === 'en');
+  applyStaticLabels();
   renderModeBar();
   const es = state.lang === 'es';
   if (els.adminButton) els.adminButton.title = es ? 'Panel de administración' : 'Admin panel';
@@ -6869,7 +6913,7 @@ function buildPlanningGraph(selected) {
   // pendiente", "Destino pendiente", "Objetos ejecutados", "Archivos", an
   // abfss: fragment...) names NOTHING a person can act on -- as canvas
   // cards they read as noise (a user report). Their object detail
-  // stays available in Inspeccion; planning simply does not draw a store
+  // stays available in Inspección; planning simply does not draw a store
   // card for them.
   function planningStoreSourceIsPlaceholder(source) {
     const database = text(source.database).trim();
@@ -8755,7 +8799,7 @@ function buildImpactExcelHtml(node) {
     ['object_name', d.name],
     ['object_type', d.type],
     ['impact_scope', state.lang === 'es' ? 'Alcance impacto' : 'Impact scope'],
-    ['impact_category', state.lang === 'es' ? 'Categoria' : 'Category'],
+    ['impact_category', state.lang === 'es' ? 'Categoría' : 'Category'],
     ['affected_workspace', d.workspace],
     ['affected_item_type', d.type],
     ['affected_item_name', d.name],
@@ -10621,6 +10665,11 @@ function applyAuthVisibility() {
   // still separately controls disabling it while a scan is running --
   // this only controls whether it exists in the DOM view at all.
   if (els.fullScanButton) els.fullScanButton.hidden = !authState.canFullScan;
+  // Scanning needs a Microsoft session, which the anonymous demo cannot
+  // have, so the whole scan panel (workspace picker, Scan, Full scan, scan
+  // history) is hidden there instead of offering buttons that only answer
+  // "Sign in with your Microsoft account". Outside the demo nothing changes.
+  if (els.localScanPanel) els.localScanPanel.hidden = anonymousDemo;
   applyAvatarInitialsOnly();
   if (authState.signedIn) {
     loadProfilePhoto();
@@ -12629,7 +12678,7 @@ function renderAdminApiKeysTab() {
         <p class="admin-field-hint">${es
           ? 'La pantalla exacta de cada producto cambia con el tiempo -- lo único estable es "URL + cabecera Authorization". Detalle actualizado en docs/110_mcp_remote_setup.md, incluyendo:'
           : "Each product's exact screen changes over time -- the only stable part is \"URL + Authorization header\". Up-to-date detail in docs/110_mcp_remote_setup.md, including:"}</p>
-        <pre class="admin-code-block">claude mcp add --transport http fabric-lineage ${escapeHtml(mcpUrl)} --header "Authorization: Bearer &lt;tu-api-key&gt;"</pre>
+        <pre class="admin-code-block">claude mcp add --transport http lineageiq ${escapeHtml(mcpUrl)} --header "Authorization: Bearer &lt;tu-api-key&gt;"</pre>
         <p class="admin-field-hint">${es ? '(Claude Code -- para Claude Desktop/claude.ai, Cursor, Windsurf, ChatGPT y Copilot, ver el documento.)' : '(Claude Code -- for Claude Desktop/claude.ai, Cursor, Windsurf, ChatGPT, and Copilot, see the doc.)'}</p>
       </details>
       <details class="admin-help-details">
@@ -12639,7 +12688,7 @@ function renderAdminApiKeysTab() {
           : "Download this script and register it as a local MCP server -- it calls this same server's API over HTTP, so it doesn't need the repo or Fabric access either."}</p>
         <div><a href="/mcp_server_remote.py" download="mcp_server_remote.py" class="admin-button-secondary admin-download-link">${es ? '⬇ Descargar mcp_server_remote.py' : '⬇ Download mcp_server_remote.py'}</a></div>
         <pre class="admin-code-block">pip install mcp
-claude mcp add fabric-lineage -- python3 mcp_server_remote.py --base-url ${escapeHtml(mcpBaseUrl)}</pre>
+claude mcp add lineageiq -- python3 mcp_server_remote.py --base-url ${escapeHtml(mcpBaseUrl)}</pre>
         <p class="admin-field-hint">${es
           ? 'Con este script, cada herramienta pide la clave como argumento -- pásasela al agente en la conversación cuando la pida.'
           : 'With this script, every tool asks for the key as an argument -- give it to the agent in the conversation when it asks.'}</p>
@@ -13168,8 +13217,8 @@ function renderAdminDiscoveryPipelineTab() {
       </div>
       <div id="adminPipelineSpCard" class="admin-card">
         <h4 class="admin-card-title">${es ? 'Cuenta de servicio (opcional)' : 'Service principal (optional)'}${adminInfoIconHtml(es
-          ? 'Opcional desde 2026-07-24: con solo el workspace y el ID del pipeline rellenos, un escaneo lanzado por alguien con sesión iniciada usa su propio inicio de sesión (el mismo mecanismo de "Iniciar sesión con Microsoft") -- no hace falta registrar ninguna app en Entra. Solo rellena esto si además quieres poder disparar el pipeline sin que nadie tenga sesión iniciada.'
-          : 'Optional (2026-07-24): with just the workspace and pipeline id filled in, a scan started by a signed-in user uses their own sign-in (the same "Sign in with Microsoft" mechanism) -- no Entra app registration needed. Only fill this in if you also want to be able to trigger the pipeline with nobody signed in at all.')}</h4>
+          ? 'Opcional: con solo el workspace y el ID del pipeline rellenos, un escaneo lanzado por alguien con sesión iniciada usa su propio inicio de sesión (el mismo mecanismo de "Iniciar sesión con Microsoft") -- no hace falta registrar ninguna app en Entra. Solo rellena esto si además quieres poder disparar el pipeline sin que nadie tenga sesión iniciada.'
+          : 'Optional: with just the workspace and pipeline id filled in, a scan started by a signed-in user uses their own sign-in (the same "Sign in with Microsoft" mechanism) -- no Entra app registration needed. Only fill this in if you also want to be able to trigger the pipeline with nobody signed in at all.')}</h4>
         <div class="admin-field"><label>${es ? 'Tenant ID (vacío = el de arriba)' : 'Tenant ID (blank = the one above)'}</label><input type="text" id="adminPipelineSpTenantId" value="${escapeHtml(pipeline.sp_tenant_id || '')}" /></div>
         <div class="admin-field"><label>${es ? 'Client ID (App registration)' : 'Client ID (App registration)'}</label><input type="text" id="adminPipelineSpClientId" value="${escapeHtml(pipeline.sp_client_id || '')}" /></div>
         <div class="admin-field">
@@ -13724,7 +13773,7 @@ function renderNotificationsTab() {
         <label>${es ? 'Variable de entorno con la contraseña' : 'Password env var name'}${adminInfoIconHtml(es ? 'Nunca la contraseña en sí -- solo el nombre de la variable de entorno donde vive.' : 'Never the password itself -- only the name of the environment variable it lives in.')}</label>
         <input type="text" id="adminSmtpPasswordRef" value="${escapeHtml(notif.smtp_password_ref || '')}" placeholder="SMTP_PASSWORD" />
       </div>
-      <div class="admin-field"><label>${es ? 'Remitente' : 'From address'}</label><input type="text" id="adminSmtpFrom" value="${escapeHtml(notif.from_address || '')}" placeholder="${es ? 'fabric-lineage@tuempresa.com' : 'fabric-lineage@yourcompany.com'}" /></div>
+      <div class="admin-field"><label>${es ? 'Remitente' : 'From address'}</label><input type="text" id="adminSmtpFrom" value="${escapeHtml(notif.from_address || '')}" placeholder="${es ? 'lineageiq@tuempresa.com' : 'lineageiq@yourcompany.com'}" /></div>
       <button type="button" class="admin-save-button" data-admin-save="notifications-smtp">${es ? 'Guardar' : 'Save'}</button>
     </div>
 
@@ -18126,6 +18175,7 @@ function wireLocalScanPanel() {
 
 function initLocalScanPanel() {
   if (!els.localScanPanel) return;
+  if (isAnonymousDemo()) return; // scanning is not available in the demo (panel hidden)
 
   wireLocalScanPanel();
   fetchLocalScanWorkspaces();
@@ -18273,6 +18323,10 @@ async function init() {
   // into, so the gate only applies to the live, server-backed app where
   // these globals are never set ahead of time.
   const isStandalone = Boolean(window.LINEAGE_EXPLORER_DATA || window.SEMANTIC_LINEAGE_DATA);
+  // Make every static label, the <html lang> (read by dag-view.js) and the
+  // language buttons match state.lang from the first frame, not only after
+  // someone presses ES/EN.
+  setLanguage(state.lang);
   renderLockedShell();
   await initAuthArea();
   if (!isStandalone && !authState.signedIn && !authState.demoMode) {

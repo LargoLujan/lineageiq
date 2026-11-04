@@ -32,7 +32,7 @@
 # service account, that native helper only gives limited scope (Dataset/
 # Lakehouse/Notebook/Workspace.ReadWrite.All -- it does not cover listing all the
 # tenant's workspaces or reading capacity/domain metadata). Confirmed
-# 2026-07-24 against the NotebookUtils credentials documentation. That is why
+# against the NotebookUtils credentials documentation. That is why
 # this notebook does its own confidential client login (same
 # pattern as backend/scripts/lineage_web/warehouse.py and
 # scripts/67_upload_bronze_to_warehouse.ps1), using a secret read from
@@ -72,7 +72,7 @@ SP_CLIENT_ID = "<client-id>"
 
 # -- No longer read from Key Vault (blocked: the "Key Vault Secrets
 # User" role is missing for the SP and nobody was available to grant it) NOR from a pipeline
-# parameter (tested 2026-08-12: a Fabric type conversion failure when passing
+# parameter (tested: a Fabric type conversion failure when passing
 # SpClientSecret as a parameter leaked the value in plain text
 # inside the job's own failureReason -- never again that way). Instead,
 # a private file in the Files area of the workspace's own Lakehouse,
@@ -244,7 +244,7 @@ def admins_to_text(role_assignments):
 #
 # `workspaces/{id}/roleAssignments` (self-scoped, used further down until
 # now) only sees the workspaces where the SP itself has an explicit role --
-# confirmed live (2026-08-14): almost all workspaces returned
+# confirmed live: almost all workspaces returned
 # "InsufficientPrivileges". `admin/workspaces/{id}/users` is the real
 # admin equivalent (same pattern that already fixed items
 # discovery with admin/items), but unlike that one,
@@ -509,7 +509,7 @@ def discover_items(header_provider, workspace_rows, workspace_name_filter):
         if not filter_set or w["workspace_name"].strip().lower() in filter_set
     }
 
-    # `workspaces/{id}/items` is role-scoped -- confirmed live (2026-08-13)
+    # `workspaces/{id}/items` is role-scoped -- confirmed live
     # that on a tenant this SP isn't individually a member of most
     # workspaces of, almost all came back "Unauthorized" even though
     # workspace discovery itself (admin/workspaces) saw the whole tenant
@@ -642,8 +642,8 @@ def token_struct(token):
 
 def pick_odbc_driver():
     # Fabric's managed Spark runtime doesn't always ship the same ODBC
-    # driver major version as a local dev machine (confirmed live,
-    # 2026-08-11: "ODBC Driver 17 for SQL Server" -- file not found).
+    # driver major version as a local dev machine (confirmed live:
+    # "ODBC Driver 17 for SQL Server" -- file not found).
     # Picks whichever "ODBC Driver NN for SQL Server" is actually
     # installed, newest major version first, instead of a fixed guess.
     available = sorted(

@@ -1,5 +1,5 @@
 """Lineage-usage analytics -- what the admin panel's
-"Analíticas" tab is named for: real usage of the EXPLORER (which items people look at, how often,
+"Analytics" tab is named for: real usage of the EXPLORER (which items people look at, how often,
 by whom) instead of just raw server-request counts (still shown too, see
 observability.py, since it's cheap and already useful for debugging).
 
@@ -81,7 +81,7 @@ def get_usage_analytics(top_n=10, days=30):
     except warehouse.WarehouseError as exc:
         return {"found": False, "reason": f"Warehouse read failed: {exc}"}
     if not rows:
-        return {"found": False, "reason": "No hay eventos de uso registrados todavía."}
+        return {"found": False, "reason": "No usage events have been recorded yet."}
 
     item_view_counts = {}
     events_by_day = {}
@@ -132,7 +132,7 @@ def get_mcp_usage_analytics(days=30):
         return {"found": False, "reason": f"Warehouse read failed: {exc}"}
     mcp_rows = [row for row in rows if row.get("event_type") == "mcp_tool_call"]
     if not mcp_rows:
-        return {"found": False, "reason": "No hay llamadas MCP registradas todavía."}
+        return {"found": False, "reason": "No MCP calls have been recorded yet."}
 
     calls_by_tool = {}
     calls_by_caller = {}

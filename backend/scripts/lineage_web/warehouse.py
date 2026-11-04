@@ -322,8 +322,8 @@ def query_bronze_table(table_name, use_cache=True):
     settings, lakehouse = _lakehouse_settings()
     if not _destination_fields_present(lakehouse):
         raise WarehouseNotConfiguredError(
-            "Live Warehouse reads are enabled but the SQL endpoint/Lakehouse name "
-            "aren't fully filled in on the admin panel's Lakehouse tab."
+            "This view reads from the Warehouse, which is not configured on this server: "
+            "fill in the SQL endpoint and Lakehouse name on the admin panel's Lakehouse tab."
         )
 
     connection = _connect(settings, lakehouse)

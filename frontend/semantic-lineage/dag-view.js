@@ -51,11 +51,11 @@
   var els = {};
 
   // document.documentElement.lang is kept current by app.js's setLanguage()
-  // on every switch (see index.html's <html lang="es">, the default) --
+  // on every switch (see index.html's <html lang="en">, the default) --
   // reading it live here means no separate sync mechanism is needed beyond
   // the onLanguageChange() hook re-rendering already-visible text below.
   function lang() {
-    return (document.documentElement.lang || 'es').startsWith('en') ? 'en' : 'es';
+    return (document.documentElement.lang || 'en').startsWith('en') ? 'en' : 'es';
   }
 
   var TEXT = {

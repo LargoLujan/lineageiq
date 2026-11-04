@@ -60,7 +60,7 @@ this server's behavior matches mcp_server.py's).
 
 Run directly for a smoke test: `python3 backend/scripts/mcp_server_remote.py
 --base-url http://127.0.0.1:8765` (stdio mode, waits for an MCP client).
-Register with Claude Code via `claude mcp add fabric-lineage-remote --
+Register with Claude Code via `claude mcp add lineageiq-remote --
 python3 <path-to-this-file> --base-url <url>` (see README).
 """
 
@@ -78,7 +78,7 @@ from mcp.server.fastmcp import FastMCP
 
 BASE_URL = (os.environ.get("FABRIC_LINEAGE_API_BASE_URL") or "http://127.0.0.1:8765").rstrip("/")
 
-mcp = FastMCP("fabric-lineage-remote")
+mcp = FastMCP("lineageiq-remote")
 
 
 def _request(method: str, path: str, params: dict[str, Any] | None = None, body: dict[str, Any] | None = None, api_key: str = "") -> dict[str, Any]:

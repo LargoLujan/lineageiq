@@ -68,7 +68,7 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 # The service account's own secret is no longer read from Key Vault
-# (blocked) NOR from a pipeline parameter (tested 2026-08-12: it leaked
+# (blocked) NOR from a pipeline parameter (tested: it leaked
 # the value in plain text when the type conversion failed -- never again
 # that way). Private file in the Files area of the workspace Lakehouse,
 # read with notebookutils.fs.head(). AKV_ENDPOINT is kept only for the
@@ -149,8 +149,8 @@ def token_struct(token):
 
 def pick_odbc_driver():
     # Fabric's managed Spark runtime doesn't always ship the same ODBC
-    # driver major version as a local dev machine (confirmed live,
-    # 2026-08-11: "ODBC Driver 17 for SQL Server" -- file not found).
+    # driver major version as a local dev machine (confirmed live:
+    # "ODBC Driver 17 for SQL Server" -- file not found).
     # Picks whichever "ODBC Driver NN for SQL Server" is actually
     # installed, newest major version first, instead of a fixed guess.
     available = sorted(

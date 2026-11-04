@@ -68,8 +68,8 @@ def _build_openapi_spec():
     return {
         "openapi": "3.0.3",
         "info": {
-            "title": "Fabric Lineage Mapper API",
-            "version": "1.0.0",
+            "title": "LineageIQ API",
+            "version": "0.2.0",
             "description": (
                 "Scan trigger, Entra ID device-code sign-in, admin configuration, "
                 "and a read-only workspaces/items/objects/lineage query API over "

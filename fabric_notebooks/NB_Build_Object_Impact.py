@@ -61,7 +61,7 @@ WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 # Read/write Lakehouse for the large JSON files -- same item as
 # NB_Build_Lineage_Explorer. Our own secret is also read from here
 # (SP_SECRET_ONELAKE_PATH): no longer from Key Vault (blocked) nor from a
-# pipeline parameter (tested 2026-08-12: it leaked the value in plain
+# pipeline parameter (tested: it leaked the value in plain
 # text when the type conversion failed -- never again that way).
 ONELAKE_WORKSPACE_NAME = "<your-workspace>"
 ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
@@ -165,7 +165,7 @@ def read_onelake_json(onelake_relative_path):
         f"{ONELAKE_LAKEHOUSE_NAME}.Lakehouse/{onelake_relative_path}"
     )
     # notebookutils.fs.head() silently truncates well below whatever
-    # max_bytes you pass it (confirmed live, 2026-08-12: a 165KB
+    # max_bytes you pass it (confirmed live: a 165KB
     # lineage-explorer.json came back cut at ~100KB -- "head" is a preview
     # API, not a full-read one, regardless of its own parameter name).
     # spark.read.text(..., wholetext=True) reads the whole file as a

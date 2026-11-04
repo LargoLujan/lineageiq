@@ -217,7 +217,7 @@ def trigger_pipeline_run(workspace_name_filter="", session=None, extra_parameter
     optional {name: value} dict merged into executionData.parameters
     alongside WorkspaceNameFilter -- e.g. {"TargetColumnsFilter": "..."}
     for NB_Discover_Column_Sensitivity.py's own new parameter (see that
-    notebook's "## Parámetros" cell). Same "harmless if undefined on the
+    notebook's parameters cell). Same "harmless if undefined on the
     Fabric side" property as WorkspaceNameFilter -- an admin who hasn't
     added this parameter to their real pipeline yet (a manual Fabric step,
     same as every other pipeline-wiring change this project makes) just
@@ -279,7 +279,7 @@ def test_connection(pipeline_config, session=None):
     the config straight from the admin panel's form (possibly unsaved yet),
     the same shape external_sources._test_lakehouse_connection and
     handler.py's /api/admin/lakehouse/test already use for their own
-    "Probar conexión" buttons. Acquires a token the same way a real run
+    "Test connection" buttons. Acquires a token the same way a real run
     would -- delegated session first, service principal as fallback -- and
     reads the pipeline item's own metadata (GET .../items/{id}) to confirm
     both the workspace/item ids and the caller's access, with no side
@@ -304,7 +304,7 @@ def test_connection(pipeline_config, session=None):
     effect" promise true."""
     settings = _load_admin_settings()
     if not _fields_present(pipeline_config):
-        return {"ok": False, "message": "Faltan campos: workspace o pipeline."}
+        return {"ok": False, "message": "Missing fields: workspace or pipeline."}
     token = _acquire_delegated_fabric_token(session, settings) if session else ""
     if not token:
         if not _sp_fields_present(pipeline_config):
@@ -314,7 +314,7 @@ def test_connection(pipeline_config, session=None):
         except FabricPipelineError as exc:
             return {"ok": False, "message": str(exc)}
         except Exception as exc:  # noqa: BLE001 - MSAL performs authority/OIDC discovery in its constructor and can raise a plain ValueError (bad tenant id, unreachable host) instead of a FabricPipelineError; a "test" button must always return a JSON verdict, never crash the request with no response
-            return {"ok": False, "message": f"No se pudo verificar: {exc}"}
+            return {"ok": False, "message": f"Could not verify: {exc}"}
 
     url = f"{FABRIC_API_BASE}/workspaces/{pipeline_config['workspace_id']}/items/{pipeline_config['pipeline_item_id']}"
     try:
@@ -322,7 +322,7 @@ def test_connection(pipeline_config, session=None):
     except FabricPipelineError as exc:
         return {"ok": False, "message": str(exc)}
     except Exception as exc:  # noqa: BLE001 - same "always return a verdict" reasoning as above (e.g. a raw URLError/socket error _request doesn't already wrap)
-        return {"ok": False, "message": f"No se pudo verificar: {exc}"}
+        return {"ok": False, "message": f"Could not verify: {exc}"}
     item_name = payload.get("displayName", "")
     item_type = payload.get("type", "")
     return {"ok": True, "message": f"Conecta correctamente: {item_type} \"{item_name}\".", "item_name": item_name, "item_type": item_type}

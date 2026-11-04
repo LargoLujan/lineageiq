@@ -43,7 +43,7 @@ is a direct function call here and an HTTP request there).
 
 Run directly for a smoke test: `python3 backend/scripts/mcp_server.py` (stdio mode,
 waits for an MCP client). Register with Claude Code via `claude mcp add
-fabric-lineage -- python3 <path-to-this-file>` (see README).
+lineageiq -- python3 <path-to-this-file>` (see README).
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ INDEX_DIR = REPO_ROOT / "index"
 DATA_DIR = REPO_ROOT / "frontend" / "semantic-lineage" / "data"
 SCAN_STATE_DIR = REPO_ROOT / "analysis" / "single_workspace_scan"
 
-mcp = FastMCP("fabric-lineage")
+mcp = FastMCP("lineageiq")
 
 _SCAN_ERROR_STATUS = {
     "sign_in_required": "This action requires a valid api_key (ask an admin to create one via the admin panel's API Keys tab), or an admin must enable allow_anonymous_scans.",

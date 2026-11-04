@@ -582,7 +582,7 @@ def _get_privacy_coverage_map(settings=None, use_cache=True):
     except warehouse.WarehouseError as exc:
         return {"found": False, "reason": f"Warehouse read failed: {exc}"}
     if not column_rows:
-        return {"found": False, "reason": "No hay catálogo de columnas todavía -- ejecuta un escaneo (NB_Extract_Object_Column_Catalog.py)."}
+        return {"found": False, "reason": "No column catalog yet -- run a scan (NB_Extract_Object_Column_Catalog.py)."}
     try:
         sql_catalog_rows = warehouse.query_bronze_table("bronze_sql_endpoint_object_catalog")
     except warehouse.WarehouseError:
@@ -870,7 +870,7 @@ def _get_column_sensitivity_samples_lookup():
     """{(workspace, table, column) key -> {sample_values, sample_size,
     categories_matched}} from dbo.bronze_column_sensitivity_samples (see
     fabric_notebooks/NB_Discover_Column_Sensitivity.py's
-    rewrite -- the "CAMBIO DE POLÍTICA DE PRIVACIDAD" that started storing
+    rewrite -- the privacy-policy change that started storing
     real example values, in their OWN table, separate from the percentage
     -only bronze_column_sensitivity_content). Tolerant of the table not
     existing yet (a notebook that hasn't been re-run since this shipped) --
@@ -1032,8 +1032,8 @@ def _get_sql_security_overview():
     point-lookup dicts keyed for joining against a specific sensitivity
     sample, not for tabular display of everything discovered. Same
     "not live-tested yet" caveat as that function: these two bronze tables
-    have never been populated by a real NB_Extract_SQL_Endpoint_Catalog.py
-    run in this session, so `scanned` will read False until one has."""
+    stay empty until NB_Extract_SQL_Endpoint_Catalog.py has run against the
+    tenant, so `scanned` reads False until then."""
     try:
         column_security_rows = warehouse.query_bronze_table("bronze_column_security")
     except warehouse.WarehouseError:

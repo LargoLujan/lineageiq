@@ -63,7 +63,7 @@ from lineage_web.auth import _valid_api_key
 
 BASE_URL = (os.environ.get("FABRIC_LINEAGE_API_BASE_URL") or "http://127.0.0.1:8765").rstrip("/")
 
-mcp = FastMCP("fabric-lineage-http")
+mcp = FastMCP("lineageiq-http")
 
 # Set by _ApiKeyAuthMiddleware for the lifetime of one HTTP request, read by
 # every tool below when it makes its own downstream REST API call --
@@ -498,7 +498,7 @@ class _ApiKeyAuthMiddleware:
                 "headers": [
                     (b"content-type", b"application/json"),
                     (b"content-length", str(len(body)).encode("latin-1")),
-                    (b"www-authenticate", b'Bearer realm="fabric-lineage-mcp"'),
+                    (b"www-authenticate", b'Bearer realm="lineageiq-mcp"'),
                 ],
             })
             await send({"type": "http.response.body", "body": body})

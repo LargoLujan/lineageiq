@@ -8,7 +8,8 @@ is safe to include in a public/commercial repository.
 Usage:
     python backend/scripts/generate_demo_data.py
 
-It writes the minimal input CSVs that backend/scripts/11_build_lineage_
+It writes the input CSVs (including run history, schedules, role
+assignments and the execution analysis files) that backend/scripts/11_build_lineage_
 explorer_fast.py, 17_build_object_impact_index_fast.py, 21_build_reverse_
 impact_package_fast.py and build_graph_map_index.py need, and then
 invokes those four scripts to produce the final JSON files read by the
@@ -26,6 +27,7 @@ import csv
 import subprocess
 import sys
 import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -33,7 +35,7 @@ NAMESPACE = uuid.UUID("6f1e6a4e-3b7a-4b1a-9e7d-2f6a8c1d9b0e")
 
 
 def gid(name):
-    """GUID determinista: el mismo nombre siempre da el mismo ID."""
+    """Deterministic GUID: the same name always yields the same ID."""
     return str(uuid.uuid5(NAMESPACE, name))
 
 
@@ -44,7 +46,7 @@ def write_csv(path, fieldnames, rows):
         writer.writeheader()
         for row in rows:
             writer.writerow({key: row.get(key, "") for key in fieldnames})
-    print(f"[demo-data] {path.relative_to(REPO_ROOT)}: {len(rows)} fila(s)")
+    print(f"[demo-data] {path.relative_to(REPO_ROOT)}: {len(rows)} row(s)")
 
 
 # ---------------------------------------------------------------------------
@@ -268,59 +270,264 @@ def build_semantic_view_candidates_csv():
     write_csv(REPO_ROOT / "analysis/semantic_model_view_candidates.csv", fieldnames, rows)
 
 
-def build_executions_csv():
-    fieldnames = [
-        "record_type", "workspace_name", "item_name", "item_type", "qualified_name", "job_type",
-        "trigger_type", "schedule_id", "schedule_enabled", "scheduled_time", "schedule_timezone",
-        "schedule_frequency", "schedule_config", "job_instance_id", "root_activity_id", "start_time",
-        "end_time", "duration_seconds", "status", "failure_reason", "source_system", "evidence",
-        "technical_id", "notes",
-    ]
-    pipelines = [
-        ("Contoso-Sales_Prod", "DataPipeline", "PL_Sales_Daily_Refresh", "06:00", "480"),
-        ("Contoso-Finance_Prod", "DataPipeline", "PL_Finance_Monthly_Close", "05:00", "1200"),
-    ]
+# Run profile per executable item:
+# (item, job_type, base_duration_seconds, run_count, failed_run_indexes, manual_run_indexes)
+RUN_PROFILES = [
+    (("Contoso-Sales_Prod", "Notebook", "NB_Load_Salesforce_Bronze"), "RunNotebook", 210, 14, (), (2, 9)),
+    (("Contoso-Sales_Prod", "Notebook", "NB_Sales_Silver_Transform"), "RunNotebook", 340, 14, (5,), (5,)),
+    (("Contoso-Sales_Prod", "Notebook", "NB_Sales_Gold_Aggregate"), "RunNotebook", 420, 14, (), ()),
+    (("Contoso-Sales_Prod", "DataPipeline", "PL_Sales_Daily_Refresh"), "Pipeline", 1020, 14, (5,), (5,)),
+    (("Contoso-Sales_Prod", "CopyJob", "Copy_CRM_Contacts"), "CopyJob", 150, 14, (3, 7, 11), (7,)),
+    (("Contoso-Sales_Prod", "SemanticModel", "SM_Sales_Performance"), "Refresh", 95, 14, (), ()),
+    (("Contoso-Finance_Prod", "Notebook", "NB_Finance_ERP_Ingest"), "RunNotebook", 780, 12, (1, 4, 6, 10), (4, 6)),
+    (("Contoso-Finance_Prod", "DataPipeline", "PL_Finance_Monthly_Close"), "Pipeline", 1500, 12, (4,), (4,)),
+    (("Contoso-Finance_Prod", "SemanticModel", "SM_Finance_Overview"), "Refresh", 120, 12, (), ()),
+    (("Contoso-HR_Dev", "Notebook", "NB_HR_Employee_Sync"), "RunNotebook", 75, 10, (2,), tuple(range(10))),
+    (("Contoso-HR_Dev", "SemanticModel", "SM_HR_Headcount"), "Refresh", 40, 10, (), tuple(range(10))),
+]
+
+# (item, scheduled_time, enabled, frequency)
+SCHEDULES = [
+    (("Contoso-Sales_Prod", "DataPipeline", "PL_Sales_Daily_Refresh"), "06:00", True, "type=Daily; interval=1"),
+    (("Contoso-Sales_Prod", "CopyJob", "Copy_CRM_Contacts"), "05:30", True, "type=Daily; interval=1"),
+    (("Contoso-Finance_Prod", "DataPipeline", "PL_Finance_Monthly_Close"), "05:00", True, "type=Monthly; interval=1"),
+    (("Contoso-HR_Dev", "Notebook", "NB_HR_Employee_Sync"), "22:00", False, "type=Weekly; interval=1"),
+]
+
+SCHEDULE_TIMEZONE = "UTC"
+RUN_HISTORY_START = datetime(2026, 1, 5, 6, 0, 0)
+
+EXECUTION_FIELDS = [
+    "record_type", "workspace_name", "item_name", "item_type", "qualified_name", "job_type",
+    "trigger_type", "schedule_id", "schedule_enabled", "scheduled_time", "schedule_timezone",
+    "schedule_frequency", "schedule_config", "job_instance_id", "root_activity_id", "start_time",
+    "end_time", "duration_seconds", "status", "failure_reason", "source_system", "evidence",
+    "technical_id", "notes",
+]
+
+
+def _iso(moment):
+    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _median(values):
+    ordered = sorted(values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[mid]
+    return (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def _fmt(value):
+    return f"{round(value, 3):g}"
+
+
+def build_execution_rows():
+    """Deterministic run history: one job_instance row per run plus one
+    schedule row per configured schedule (same shape as 06_discover_
+    executions.ps1). Durations vary +/-25% around the item's base value,
+    derived from uuid5 so they never change between runs."""
     rows = []
-    for workspace, item_type, item_name, scheduled_time, duration in pipelines:
-        item_q = qname(workspace, item_type, item_name)
+    for item, job_type, base, run_count, failed_idx, manual_idx in RUN_PROFILES:
+        workspace, item_type, item_name = item
+        item_q = qname(*item)
+        for n in range(run_count):
+            jitter = (int(gid(f"jitter:{item_q}:{n}")[:4], 16) % 51 - 25) / 100.0
+            failed = n in failed_idx
+            duration = round(base * (1 + jitter) * (0.35 if failed else 1.0))
+            start = RUN_HISTORY_START + timedelta(days=n * 2)
+            manual = n in manual_idx
+            if manual:
+                start += timedelta(hours=5, minutes=17)
+            rows.append({
+                "record_type": "job_instance",
+                "workspace_name": workspace,
+                "item_name": item_name,
+                "item_type": item_type,
+                "qualified_name": item_q,
+                "job_type": job_type,
+                "trigger_type": "Manual" if manual else "Scheduled",
+                "job_instance_id": gid(f"run:{item_q}:{n}"),
+                "root_activity_id": gid(f"run:{item_q}:{n}:root"),
+                "start_time": _iso(start),
+                "end_time": _iso(start + timedelta(seconds=duration)),
+                "duration_seconds": str(duration),
+                "status": "Failed" if failed else "Completed",
+                "failure_reason": "Synthetic demo failure: upstream source timeout." if failed else "",
+                "source_system": "Demo data generator",
+                "evidence": "Synthetic demo run history.",
+                "technical_id": gid(item_q),
+            })
+    for item, scheduled_time, enabled, frequency in SCHEDULES:
+        workspace, item_type, item_name = item
+        item_q = qname(*item)
+        job_type = next(p[1] for p in RUN_PROFILES if p[0] == item)
         rows.append({
             "record_type": "schedule",
             "workspace_name": workspace,
             "item_name": item_name,
             "item_type": item_type,
             "qualified_name": item_q,
-            "job_type": "Pipeline",
+            "job_type": job_type,
             "trigger_type": "Scheduled",
             "schedule_id": gid(f"schedule:{item_q}"),
-            "schedule_enabled": "True",
+            "schedule_enabled": "True" if enabled else "False",
             "scheduled_time": scheduled_time,
-            "schedule_timezone": "UTC",
-            "schedule_frequency": "type=Daily; interval=1",
+            "schedule_timezone": SCHEDULE_TIMEZONE,
+            "schedule_frequency": frequency,
             "source_system": "Demo data generator",
             "evidence": "Synthetic demo schedule.",
             "technical_id": gid(item_q),
-            "notes": "",
         })
-        rows.append({
-            "record_type": "job_instance",
-            "workspace_name": workspace,
-            "item_name": item_name,
-            "item_type": item_type,
+    return rows
+
+
+def build_executions_csv():
+    rows = build_execution_rows()
+    write_csv(REPO_ROOT / "index/executions.csv", EXECUTION_FIELDS, rows)
+    return rows
+
+
+def build_execution_analysis_csvs(execution_rows):
+    """analysis/execution_duration_by_item.csv, failure_hotspots.csv and
+    schedule_review_candidates.csv -- aggregated from the job rows with the
+    same columns and rules as 06_discover_executions.ps1 and
+    07_optimize_orchestration.ps1 (hotspot = at least 3 failed runs)."""
+    jobs = [r for r in execution_rows if r["record_type"] == "job_instance"]
+    schedules = [r for r in execution_rows if r["record_type"] == "schedule"]
+
+    groups = {}
+    for row in jobs:
+        groups.setdefault((row["qualified_name"], row["job_type"]), []).append(row)
+
+    duration_rows = []
+    for (item_q, job_type), group in groups.items():
+        first = group[0]
+        completed = [r for r in group if r["status"] == "Completed"]
+        durations = [float(r["duration_seconds"]) for r in completed]
+        latest = max(group, key=lambda r: r["start_time"])
+        duration_rows.append({
+            "workspace_name": first["workspace_name"],
+            "item_name": first["item_name"],
+            "item_type": first["item_type"],
             "qualified_name": item_q,
-            "job_type": "Pipeline",
-            "trigger_type": "Scheduled",
-            "job_instance_id": gid(f"run:{item_q}:1"),
-            "root_activity_id": gid(f"run:{item_q}:1:root"),
-            "start_time": "2026-01-15T06:00:00Z",
-            "end_time": "2026-01-15T06:08:00Z",
-            "duration_seconds": duration,
-            "status": "Completed",
-            "source_system": "Demo data generator",
-            "evidence": "Synthetic demo run history.",
-            "technical_id": gid(item_q),
-            "notes": "",
+            "job_type": job_type,
+            "run_count": len(group),
+            "completed_count": len(completed),
+            "failed_count": sum(1 for r in group if r["status"] == "Failed"),
+            "cancelled_count": 0,
+            "scheduled_count": sum(1 for r in group if r["trigger_type"] == "Scheduled"),
+            "manual_count": sum(1 for r in group if r["trigger_type"] == "Manual"),
+            "latest_start_time": latest["start_time"],
+            "latest_end_time": latest["end_time"],
+            "min_duration_seconds": _fmt(min(durations)),
+            "avg_duration_seconds": _fmt(sum(durations) / len(durations)),
+            "median_duration_seconds": _fmt(_median(durations)),
+            "max_duration_seconds": _fmt(max(durations)),
+            "last_status": latest["status"],
         })
-    write_csv(REPO_ROOT / "index/executions.csv", fieldnames, rows)
+    duration_rows.sort(key=lambda r: (float(r["max_duration_seconds"]), r["run_count"]), reverse=True)
+    duration_fields = [
+        "workspace_name", "item_name", "item_type", "qualified_name", "job_type", "run_count",
+        "completed_count", "failed_count", "cancelled_count", "scheduled_count", "manual_count",
+        "latest_start_time", "latest_end_time", "min_duration_seconds", "avg_duration_seconds",
+        "median_duration_seconds", "max_duration_seconds", "last_status",
+    ]
+    write_csv(REPO_ROOT / "analysis/execution_duration_by_item.csv", duration_fields, duration_rows)
+
+    hotspots = []
+    for row in duration_rows:
+        if row["failed_count"] < 3:
+            continue
+        hotspots.append({
+            **{k: row[k] for k in (
+                "workspace_name", "item_name", "item_type", "qualified_name", "job_type", "run_count",
+                "completed_count", "failed_count", "avg_duration_seconds", "max_duration_seconds",
+                "latest_start_time", "latest_end_time", "last_status")},
+            "failure_rate": round(row["failed_count"] / max(1, row["run_count"]), 4),
+            "recommendation_hint": "Stabilize before optimizing schedule or parallelism.",
+        })
+    hotspots.sort(key=lambda r: (r["failed_count"], r["failure_rate"], float(r["max_duration_seconds"])), reverse=True)
+    for rank, row in enumerate(hotspots, start=1):
+        row["rank"] = rank
+    hotspot_fields = [
+        "workspace_name", "item_name", "item_type", "qualified_name", "job_type", "run_count",
+        "completed_count", "failed_count", "failure_rate", "avg_duration_seconds",
+        "max_duration_seconds", "latest_start_time", "latest_end_time", "last_status",
+        "recommendation_hint", "rank",
+    ]
+    write_csv(REPO_ROOT / "analysis/failure_hotspots.csv", hotspot_fields, hotspots)
+
+    duration_by_qn = {}
+    for row in duration_rows:
+        duration_by_qn.setdefault(row["qualified_name"], row)
+    review_by_qn = {}
+    for row in schedules:
+        entry = review_by_qn.setdefault(row["qualified_name"], {"enabled": 0, "disabled": 0, "times": [], "zones": []})
+        entry["enabled" if row["schedule_enabled"] == "True" else "disabled"] += 1
+        if row["scheduled_time"] not in entry["times"]:
+            entry["times"].append(row["scheduled_time"])
+        if row["schedule_timezone"] not in entry["zones"]:
+            entry["zones"].append(row["schedule_timezone"])
+    review_rows = []
+    for item_q, entry in review_by_qn.items():
+        duration = duration_by_qn.get(item_q)
+        review_rows.append({
+            "qualified_name": item_q,
+            "workspace_name": duration["workspace_name"] if duration else item_q.split(" / ")[0],
+            "item_name": duration["item_name"] if duration else item_q.split(" / ")[-1],
+            "item_type": duration["item_type"] if duration else "",
+            "enabled_schedules": entry["enabled"],
+            "disabled_schedules": entry["disabled"],
+            "schedule_times": "; ".join(entry["times"]),
+            "schedule_timezones": "; ".join(entry["zones"]),
+            "run_count": duration["run_count"] if duration else 0,
+            "failed_count": duration["failed_count"] if duration else 0,
+            "avg_duration_seconds": duration["avg_duration_seconds"] if duration else 0,
+            "recommendation_hint": "Review disabled schedules and confirm only intentional schedules are enabled.",
+        })
+    review_rows.sort(key=lambda r: (r["enabled_schedules"], r["disabled_schedules"], r["failed_count"]), reverse=True)
+    review_fields = [
+        "qualified_name", "workspace_name", "item_name", "item_type", "enabled_schedules",
+        "disabled_schedules", "schedule_times", "schedule_timezones", "run_count", "failed_count",
+        "avg_duration_seconds", "recommendation_hint",
+    ]
+    write_csv(REPO_ROOT / "analysis/schedule_review_candidates.csv", review_fields, review_rows)
+
+
+# (workspace, principal_name, principal_email, principal_type, role)
+ROLE_ASSIGNMENTS = [
+    ("Contoso-Sales_Prod", "Data Engineering Team", "", "Group", "Admin"),
+    ("Contoso-Sales_Prod", "Alice Example", "alice@contoso.com", "User", "Member"),
+    ("Contoso-Sales_Prod", "Bob Example", "bob@contoso.com", "User", "Contributor"),
+    ("Contoso-Sales_Prod", "Sales Analysts", "", "Group", "Viewer"),
+    ("Contoso-Finance_Prod", "Data Engineering Team", "", "Group", "Admin"),
+    ("Contoso-Finance_Prod", "Carol Example", "carol@contoso.com", "User", "Member"),
+    ("Contoso-Finance_Prod", "Finance Controllers", "", "Group", "Viewer"),
+    ("Contoso-HR_Dev", "Alice Example", "alice@contoso.com", "User", "Admin"),
+    ("Contoso-HR_Dev", "Dave Example", "dave@example.com", "User", "Contributor"),
+    ("Contoso-HR_Dev", "HR Reviewers", "", "Group", "Viewer"),
+]
+
+
+def build_role_assignments_csv():
+    fieldnames = [
+        "workspace_name", "principal_id", "principal_name", "principal_email",
+        "principal_type", "role", "status", "evidence",
+    ]
+    rows = []
+    for workspace, name, email, principal_type, role in ROLE_ASSIGNMENTS:
+        rows.append({
+            "workspace_name": workspace,
+            "principal_id": gid(f"principal:{name}"),
+            "principal_name": name,
+            "principal_email": email,
+            "principal_type": principal_type,
+            "role": role,
+            "status": "discovered",
+            "evidence": "Synthetic demo role assignment.",
+        })
+    write_csv(REPO_ROOT / "index/workspace_role_assignments.csv", fieldnames, rows)
 
 
 # The Markdown reports written by 17 and 21 go to analysis/ (ignored by
@@ -352,10 +559,10 @@ def run_build_scripts():
         [sys.executable, str(REPO_ROOT / "backend/scripts/build_graph_map_index.py")],
     ]
     for cmd in scripts:
-        print(f"[demo-data] Ejecutando: {' '.join(cmd)}")
+        print(f"[demo-data] Running: {' '.join(cmd)}")
         result = subprocess.run(cmd, cwd=REPO_ROOT)
         if result.returncode != 0:
-            raise SystemExit(f"Fallo al ejecutar {cmd[1]} (exit code {result.returncode})")
+            raise SystemExit(f"Failed to run {cmd[1]} (exit code {result.returncode})")
 
 
 def main():
@@ -364,9 +571,12 @@ def main():
     build_dependencies_csv()
     build_object_lineage_csv()
     build_semantic_view_candidates_csv()
-    build_executions_csv()
+    execution_rows = build_executions_csv()
+    # Before the build scripts: 11 reads failure_hotspots / schedule_review.
+    build_execution_analysis_csvs(execution_rows)
+    build_role_assignments_csv()
     run_build_scripts()
-    print("[demo-data] Listo. Datos de demo sintéticos (tenant ficticio 'Contoso') generados.")
+    print("[demo-data] Done. Synthetic demo data (fictitious 'Contoso' tenant) generated.")
 
 
 if __name__ == "__main__":

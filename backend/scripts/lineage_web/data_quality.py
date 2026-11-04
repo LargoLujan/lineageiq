@@ -93,7 +93,7 @@ def _evaluate_rule(rule, by_table, by_column):
     if meta["scope"] == "column":
         column_row = by_column.get((table_key, _norm(rule.get("column_name", ""))))
         if column_row is None:
-            return {**result, "status": "not_profiled", "actual_value": None, "message": "Esta columna todavía no se ha perfilado (NB_Discover_Column_Profile.py no la ha visto)."}
+            return {**result, "status": "not_profiled", "actual_value": None, "message": "This column has not been profiled yet (NB_Discover_Column_Profile.py has not seen it)."}
         if rule_type == "null_percentage_max":
             actual = float(column_row.get("null_percentage") or 0.0)
             passed = actual <= float(threshold)
@@ -106,7 +106,7 @@ def _evaluate_rule(rule, by_table, by_column):
         # per column, not per table), so any matching row carries it.
         table_rows = by_table.get(table_key) or []
         if not table_rows:
-            return {**result, "status": "not_profiled", "actual_value": None, "message": "Esta tabla todavía no se ha perfilado (NB_Discover_Column_Profile.py no la ha visto)."}
+            return {**result, "status": "not_profiled", "actual_value": None, "message": "This table has not been profiled yet (NB_Discover_Column_Profile.py has not seen it)."}
         actual = int(table_rows[0].get("row_count") or 0)
         passed = actual >= float(threshold)
 
@@ -117,7 +117,7 @@ def _evaluate_rule(rule, by_table, by_column):
 def _get_data_quality_overview(settings):
     rules = settings.get("data_quality_rules") or []
     if not rules:
-        return {"found": False, "reason": "No hay reglas de calidad definidas todavía -- créalas en el panel admin (pestaña Calidad de datos)."}
+        return {"found": False, "reason": "No data-quality rules are defined yet -- create them in the admin panel (Data quality tab)."}
 
     rows = _profile_rows()
     by_table, by_column = _index_profile_rows(rows)

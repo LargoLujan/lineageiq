@@ -170,7 +170,7 @@ def test_connection(config, session=None):
 
     settings = _load_admin_settings()
     if not _fields_present(config):
-        return {"ok": False, "message": "Faltan campos: workspace o modelo semántico."}
+        return {"ok": False, "message": "Missing fields: workspace or semantic model."}
     try:
         token = _get_token(settings, config, session=session)
     except CapacityMetricsError as exc:
@@ -187,7 +187,7 @@ def test_connection(config, session=None):
 
 def discover_installation(session, settings):
     """Best-effort auto-discovery of an already-installed Capacity Metrics
-    app, for the "Detectar automáticamente" button -- works whether this is
+    app, for the "Auto-detect" button -- works whether this is
     a brand-new tenant where an admin just finished the manual install, or
     an existing one where it's been there for a year (same UI either way,
     per the admin panel's own capacity-tab help block). Needs the signed-in
@@ -207,21 +207,21 @@ def discover_installation(session, settings):
     workspace/dataset by name or id manually, same fallback every other
     picker in this project already has."""
     if not session:
-        return {"found": False, "reason": "No hay sesión de administrador activa para explorar tus workspaces."}
+        return {"found": False, "reason": "No active admin session to browse your workspaces."}
     from .auth import _acquire_scoped_token
     from .constants import FABRIC_TOKEN_SCOPES
     from .fabric_api import _fetch_my_workspaces
 
     fabric_token = _acquire_scoped_token(session, settings, FABRIC_TOKEN_SCOPES) or session.get("access_token")
     if not fabric_token:
-        return {"found": False, "reason": "No se pudo obtener un token de Fabric para tu sesión."}
+        return {"found": False, "reason": "Could not get a Fabric token for your session."}
     workspaces, error = _fetch_my_workspaces(fabric_token)
     if error or not workspaces:
-        return {"found": False, "reason": error or "No se encontraron workspaces accesibles."}
+        return {"found": False, "reason": error or "No accessible workspaces were found."}
 
     powerbi_token = _acquire_delegated_powerbi_token(session, settings)
     if not powerbi_token:
-        return {"found": False, "reason": "No se pudo obtener un token de Power BI para tu sesión."}
+        return {"found": False, "reason": "Could not get a Power BI token for your session."}
 
     candidates = [w for w in workspaces if "capacity" in w["workspace_name"].lower()]
     for workspace in candidates:
@@ -244,9 +244,9 @@ def discover_installation(session, settings):
     return {
         "found": False,
         "reason": (
-            "No se encontró ningún workspace con \"capacity\" en el nombre que contenga un modelo semántico "
-            "\"Fabric Capacity Metrics\" entre los workspaces a los que tienes acceso. Si la app ya está "
-            "instalada bajo otro nombre, introduce el workspace y el modelo semántico a mano."
+            "None of the workspaces you can access has \"capacity\" in its name and a \"Fabric Capacity Metrics\" "
+            "semantic model. If the app is installed under another name, enter the workspace and the "
+            "semantic model by hand."
         ),
     }
 

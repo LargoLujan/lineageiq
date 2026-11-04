@@ -448,6 +448,7 @@ def main():
     mcp_process = None
     if args.no_mcp_http:
         LineageWebHandler.mcp_http_port = None
+        LineageWebHandler.mcp_http_disabled = True
     else:
         mcp_port = args.mcp_port or (args.port + 1)
         mcp_process = _spawn_mcp_http_server(f"http://127.0.0.1:{args.port}", mcp_port)

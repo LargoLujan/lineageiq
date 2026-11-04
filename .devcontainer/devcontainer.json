@@ -1,5 +1,5 @@
 {
-  "name": "Fabric Lineage Mapper",
+  "name": "LineageIQ",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "lineageiq",
   "workspaceFolder": "/workspace",

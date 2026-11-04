@@ -25,7 +25,7 @@
 # Build from the REPO ROOT so the COPY paths below line up with what
 # backend/scripts/lineage_web/paths.py's REPO_ROOT expects at runtime
 # (four directories up from lineage_web/paths.py -- /app here):
-#   docker build -f Dockerfile.render -t fabric-lineage-viewer .
+#   docker build -f Dockerfile.render -t lineageiq-viewer .
 FROM python:3.12-slim-bookworm
 
 WORKDIR /app

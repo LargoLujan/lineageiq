@@ -69,7 +69,7 @@ WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 # local machine; this notebook publishes the same thing from inside Fabric).
 # Also reused to read the service principal's own secret
 # (SP_SECRET_ONELAKE_PATH further down) -- it is no longer read from Key
-# Vault (blocked) NOR from a pipeline parameter (tested 2026-08-12:
+# Vault (blocked) NOR from a pipeline parameter (tested: 
 # it leaked the value in plain text when the type conversion failed -- never
 # again that way).
 ONELAKE_WORKSPACE_NAME = "<your-workspace>"
@@ -1019,7 +1019,7 @@ def add_columns_to_source(source, by_full_key, schemas_by_name_key):
             object_row["columns"] = columns
 
 
-# A VariableLibrary's own variables (2026-08-25) -- same "child rows keyed
+# A VariableLibrary's own variables -- same "child rows keyed
 # by the parent item's qualified_name" shape as the column catalog above,
 # just keyed directly by qualified_name instead of a server/database/
 # schema/object tuple since a variable belongs to exactly one item.
@@ -1421,7 +1421,7 @@ CORE_MODE_KEY_BY_ITEM_TYPE = {
     # fallback below would otherwise map Fabric's "Environment" item type
     # (a Spark compute environment item) to that exact same key, silently
     # overwriting the workspace's stage string with a list of items on
-    # every workspace that has one. Found live 2026-07-11: this crashed
+    # every workspace that has one. Found live: this crashed
     # 17_build_object_impact_index_fast.py once it started iterating every
     # real mode instead of a fixed 4-type subset that happened to avoid the
     # collision by omission, not by design.
@@ -1523,8 +1523,8 @@ def build_item_node(item, ctx, memo):
     # here, once per report/notebook/etc. that uses it, used to duplicate
     # potentially hundreds of KB of nested source-object/column data per
     # reference (a real semantic model with a couple of large SQL sources
-    # can carry 400KB+ of embedded columns on its own). Found live
-    # 2026-07-11: this was ~50% of a very large lineage-explorer.json a
+    # can carry 400KB+ of embedded columns on its own). Found live:
+    # this was ~50% of a very large lineage-explorer.json a
     # tenant-wide scan produced, on top of the (separately fixed) "all"
     # duplication. app.js resolves qualified_name back to the model's own
     # full node client-side once, right after parsing (see

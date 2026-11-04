@@ -256,7 +256,7 @@ def test_connection(config):
     ever reads a FILE that must already have been published), this
     confirms the workspace/Lakehouse Files area itself is reachable with
     the configured credential, even before the first real publish (this was the one Setup
-    tab with a credential/connection but no safe "Probar conexión" --
+    tab with a credential/connection but no safe "Test connection" --
     only a real "Publicar datos ahora"). Same "no side effect, always
     return a JSON verdict" contract as fabric_pipeline.test_connection
     and external_sources._test_lakehouse_connection. Takes the config
@@ -264,11 +264,11 @@ def test_connection(config):
     those two."""
     settings = _load_admin_settings()
     if not _fields_present(config):
-        return {"ok": False, "message": "Faltan campos: workspace o Lakehouse."}
+        return {"ok": False, "message": "Missing fields: workspace or Lakehouse."}
     try:
         from azure.storage.filedatalake import DataLakeServiceClient
     except ImportError as exc:
-        return {"ok": False, "message": f"azure-storage-file-datalake no está instalado: {exc}"}
+        return {"ok": False, "message": f"azure-storage-file-datalake is not installed: {exc}"}
 
     try:
         credential = _credential(settings, config)
@@ -279,7 +279,7 @@ def test_connection(config):
     except OneLakeDataError as exc:
         return {"ok": False, "message": str(exc)}
     except Exception as exc:  # noqa: BLE001 - any SDK/network failure (bad workspace/Lakehouse name, no access, ...) must still return a verdict, not crash the request -- same reasoning as fabric_pipeline.test_connection's own broad catch
-        return {"ok": False, "message": f"No se pudo verificar: {exc}"}
+        return {"ok": False, "message": f"Could not verify: {exc}"}
     return {"ok": True, "message": f"Conecta correctamente con {config['workspace_name']} / {config['lakehouse_name']}.Lakehouse/Files."}
 
 

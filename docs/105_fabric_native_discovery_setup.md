@@ -82,7 +82,7 @@ Run the core notebooks in this order. Each notebook reads tables written by the 
 Notes:
 
 - Notebook 6 is the only step that connects from Fabric to SQL servers **outside** Fabric. It needs a network route from your capacity to those servers (for example a data gateway). A server it cannot reach is recorded as a gap and the rest of the notebook continues.
-- The install wizard lists the same 12 notebooks in a slightly different order. Use the order above: it follows the dependencies stated in each notebook header.
+- The install wizard lists the same 12 notebooks in this same order, which follows the dependencies stated in each notebook header.
 - Chain the activities with **On success** so a failed step stops the run.
 - A pipeline run writes the Warehouse tables and the Lakehouse JSON files directly. It does not trigger "Copy data now" or "Publish data now", and it does not produce a scan diff in the admin panel's modification history.
 
@@ -93,13 +93,13 @@ Notebook 8 reads the tables written by the four catalogue notebooks (connections
 | Notebook | Depends on | Writes |
 | --- | --- | --- |
 | `NB_Discover_Fabric_Connections` | none | `bronze_fabric_connections` |
-| `NB_Extract_SQL_Endpoint_Catalog` | `NB_Discover_Fabric_Connections` | `bronze_sql_endpoint_object_catalog` (+ status table) |
+| `NB_Extract_SQL_Endpoint_Catalog` | `NB_Discover_Fabric_Connections` | `bronze_sql_endpoint_object_catalog`, `bronze_column_security`, `bronze_row_level_security` (+ status table) |
 | `NB_Extract_Object_Column_Catalog` | 3, 4, 5, `NB_Extract_SQL_Endpoint_Catalog` | `bronze_object_column_catalog` (+ status table) |
-| `NB_Extract_Control_Framework_Lineage` | `NB_Extract_SQL_Endpoint_Catalog` | `bronze_control_framework_lineage_candidates` (+ gaps table) |
+| `NB_Extract_Control_Framework_Lineage` | 1, 7 (optional), `NB_Extract_SQL_Endpoint_Catalog` | `bronze_control_framework_lineage_candidates` (+ gaps table) |
 | `NB_Harden_Object_Lineage_Candidates` | 2, 3, 4, 5 | Rewrites the three candidate tables in place; adds review and summary tables |
 | `NB_Backfill_Object_Source_Targets` | 3, 4, 5, `NB_Extract_SQL_Endpoint_Catalog` | Rewrites the three candidate tables in place; adds a summary table |
-| `NB_Discover_Column_Profile` | none | `bronze_column_profile` (column statistics for Lakehouse tables) |
-| `NB_Discover_Column_Sensitivity` | none | `bronze_column_sensitivity_content` (and `bronze_column_sensitivity_samples` only when sample storage is on) |
+| `NB_Discover_Column_Profile` | 1 | `bronze_column_profile` (column statistics for Lakehouse tables) |
+| `NB_Discover_Column_Sensitivity` | 1 | `bronze_column_sensitivity_content` (and `bronze_column_sensitivity_samples` only when sample storage is on) |
 | `NB_Bronze_Silver_Gold_Build` | see [101](101_medallion_lakehouse_provisioning.md) | A separate Bronze, Silver and Gold build with Spark; not part of this chain |
 
 The column profile and sensitivity notebooks only read Lakehouses where the service principal already has a data role. In `NB_Discover_Column_Sensitivity`, `STORE_REAL_SAMPLE_VALUES` is `False` by default: no real cell values are stored, only counts and percentages. Turn it on only if your data policy allows it.
@@ -111,7 +111,7 @@ Create one **String** pipeline parameter named `WorkspaceNameFilter` with an emp
 | Parameter | Used by | Meaning |
 | --- | --- | --- |
 | `WorkspaceNameFilter` | Notebooks 1 to 7, 11, 12 and the optional catalogue notebooks that have a parameters cell | Empty means the whole tenant. Otherwise a list of workspace names separated by `;`. Only those workspaces are rediscovered and the other workspaces' rows are kept. `NB_Discover_Semantic_Model_Lineage` honours a single exact name only. |
-| `TargetColumnsFilter` | `NB_Discover_Column_Sensitivity` only | Limits content sampling to the listed columns. Optional. A pipeline without this parameter ignores it. |
+| `TargetColumnsFilter` | `NB_Discover_Column_Sensitivity` only | Limits content sampling to the listed tables, as `workspace::table` pairs separated by `;` (table granularity, not column). Optional. A pipeline without this parameter ignores it. |
 
 Notebooks 8, 9 and 10, `NB_Discover_Fabric_Connections`, `NB_Harden_Object_Lineage_Candidates`, `NB_Backfill_Object_Source_Targets` and `NB_Discover_Column_Profile` have no parameters cell. They always process everything.
 

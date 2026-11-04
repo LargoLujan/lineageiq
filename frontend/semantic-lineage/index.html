@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Cache-Control" content="no-store" />
-    <title>Fabric Lineage Explorer</title>
+    <title>LineageIQ | Lineage mapper for Microsoft Fabric</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css?v=20261104-hidden-attr" />
     <link rel="stylesheet" href="./graph-map.css?v=20260708-theme" />
     <link rel="stylesheet" href="./dag-view.css?v=20260831-dag-view" />
@@ -16,7 +17,7 @@
       <header class="topbar">
         <div class="topbar-brand">
           <span class="topbar-brand-mark" aria-hidden="true">◆</span>
-          <span class="topbar-brand-name">Fabric Lineage Explorer</span>
+          <span class="topbar-brand-name">LineageIQ</span>
         </div>
         <div class="toolbar" aria-label="Global controls">
           <button id="graphMapButton" class="graph-map-3d-button" type="button" aria-pressed="false" aria-controls="graphMapView" title="Graph Map Mode">
@@ -33,7 +34,7 @@
                 <circle cx="12" cy="12" r="2.4" class="graph-map-launch-icon-node graph-map-launch-icon-node-center" />
               </g>
             </svg>
-            <span id="graphMapButtonLabel" class="graph-map-3d-button-label">Grafo</span>
+            <span id="graphMapButtonLabel" class="graph-map-3d-button-label">Graph</span>
           </button>
           <!-- DAG view, wired in dag-view.js/
                dag-view.css. It used to carry a `hidden` attribute, but the
@@ -41,40 +42,40 @@
                the button was always on screen, and the README and the demo
                document this view. Now that styles.css honours `hidden`,
                the attribute is gone so the button stays visible. -->
-          <button id="dagViewButton" class="graph-map-3d-button" type="button" aria-pressed="false" aria-controls="dagView" title="Diagrama de linaje (DAG)">
+          <button id="dagViewButton" class="graph-map-3d-button" type="button" aria-pressed="false" aria-controls="dagView" title="Lineage diagram (DAG)">
             <svg class="dag-view-launch-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
               <path d="M7 12H9.6M15.6 7l2.3-1.9M15.6 17l2.3 1.9" class="dag-view-launch-icon-edge" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
               <rect x="1" y="9" width="6" height="6" rx="1.6" class="dag-view-launch-icon-node" />
               <rect x="15.8" y="1.2" width="6" height="6" rx="1.6" class="dag-view-launch-icon-node" />
               <rect x="15.8" y="16.8" width="6" height="6" rx="1.6" class="dag-view-launch-icon-node" />
             </svg>
-            <span id="dagViewButtonLabel" class="graph-map-3d-button-label">Flujo</span>
+            <span id="dagViewButtonLabel" class="graph-map-3d-button-label">Flow</span>
           </button>
-          <button id="notificationsButton" class="graph-map-3d-button notifications-button" type="button" hidden aria-haspopup="dialog" aria-controls="notificationsPanel" aria-expanded="false" title="Notificaciones">
+          <button id="notificationsButton" class="graph-map-3d-button notifications-button" type="button" hidden aria-haspopup="dialog" aria-controls="notificationsPanel" aria-expanded="false" title="Notifications">
             <svg class="notifications-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
               <rect x="3" y="5.5" width="18" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6" />
               <path class="notifications-icon-flap" d="M4 6.7l8 6.3 8-6.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <span id="notificationsButtonLabel" class="graph-map-3d-button-label">Avisos</span>
+            <span id="notificationsButtonLabel" class="graph-map-3d-button-label">Alerts</span>
             <span id="notificationsBadge" class="notifications-badge" hidden>0</span>
           </button>
           <div id="notificationsPanel" class="notifications-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Notifications"></div>
-          <button id="governanceButton" class="graph-map-3d-button" type="button" hidden title="Gobernanza">
+          <button id="governanceButton" class="graph-map-3d-button" type="button" hidden title="Governance">
             <span class="governance-button-icon" aria-hidden="true">♟️</span>
-            <span id="governanceButtonLabel" class="graph-map-3d-button-label">Gobernanza</span>
+            <span id="governanceButtonLabel" class="graph-map-3d-button-label">Governance</span>
           </button>
           <!-- Privacy/data-subject-rights
                locator, gated to admins like Gobernanza right above it. -->
-          <button id="privacyButton" class="graph-map-3d-button" type="button" hidden aria-haspopup="dialog" aria-controls="privacyPanel" aria-expanded="false" title="Privacidad">
+          <button id="privacyButton" class="graph-map-3d-button" type="button" hidden aria-haspopup="dialog" aria-controls="privacyPanel" aria-expanded="false" title="Privacy">
             <svg class="privacy-lock-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
               <path class="privacy-lock-shackle" d="M8,11 V7 A4,4 0 0 1 16,7 V11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
               <rect class="privacy-lock-body" x="5" y="11" width="14" height="10" rx="2.3" />
               <circle class="privacy-lock-keyhole" cx="12" cy="15.2" r="1.4" />
               <path class="privacy-lock-keyhole" d="M11.3,16.2 L12.7,16.2 L12.2,18.4 L11.8,18.4 Z" />
             </svg>
-            <span id="privacyButtonLabel" class="graph-map-3d-button-label">Privacidad</span>
+            <span id="privacyButtonLabel" class="graph-map-3d-button-label">Privacy</span>
           </button>
-          <div id="privacyPanel" class="admin-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Privacidad"></div>
+          <div id="privacyPanel" class="admin-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Privacy"></div>
           <div id="authArea" class="auth-area" aria-label="Microsoft sign-in">
             <button id="userBadge" class="user-badge" type="button" hidden aria-haspopup="menu" aria-controls="profileMenu" aria-expanded="false">
               <span class="user-badge-avatar" aria-hidden="true">
@@ -98,31 +99,31 @@
               <div class="profile-menu-divider"></div>
               <button id="profileMenuProfileButton" class="profile-menu-item" type="button" aria-expanded="false" aria-controls="profilePanel">
                 <svg class="profile-menu-item-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="12" cy="8.5" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.8 19.4c1.2-3.3 4-5.1 7.2-5.1s6 1.8 7.2 5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                <span id="profileMenuProfileLabel">Perfil</span>
+                <span id="profileMenuProfileLabel">Profile</span>
               </button>
               <button id="adminButton" class="profile-menu-item" type="button" hidden aria-expanded="false" aria-controls="adminPanel">
                 <svg class="profile-menu-item-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5a7.6 7.6 0 0 0 .07-1l1.8-1.4-1.8-3.1-2.1.6a7.7 7.7 0 0 0-1.7-1l-.3-2.2H9.6l-.3 2.2a7.7 7.7 0 0 0-1.7 1l-2.1-.6-1.8 3.1 1.8 1.4a7.6 7.6 0 0 0 0 2l-1.8 1.4 1.8 3.1 2.1-.6a7.7 7.7 0 0 0 1.7 1l.3 2.2h4.8l.3-2.2a7.7 7.7 0 0 0 1.7-1l2.1.6 1.8-3.1-1.8-1.4a7.6 7.6 0 0 0 .07-1Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-                <span id="profileMenuAdminLabel">Configuración</span>
+                <span id="profileMenuAdminLabel">Settings</span>
               </button>
               <button id="helpButton" class="profile-menu-item" type="button" aria-expanded="false" aria-controls="helpPanel">
                 <svg class="profile-menu-item-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 9.3a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2.9-1.2 1.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor"/></svg>
-                <span id="profileMenuHelpLabel">Ayuda</span>
+                <span id="profileMenuHelpLabel">Help</span>
               </button>
               <div id="profileMenuSignOutDivider" class="profile-menu-divider"></div>
               <button id="profileMenuSignOutButton" class="profile-menu-item profile-menu-item-danger" type="button">
                 <svg class="profile-menu-item-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M15 17l5-5-5-5M20 12H9M12 19H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span id="profileMenuSignOutLabel">Cerrar sesión</span>
+                <span id="profileMenuSignOutLabel">Sign out</span>
               </button>
               <div class="profile-menu-divider"></div>
               <div class="profile-menu-quick-settings">
                 <div class="language-switch" aria-label="Language">
-                  <button id="langEsButton" class="icon-button active" type="button" title="Español">ES</button>
-                  <button id="langEnButton" class="icon-button" type="button" title="English">EN</button>
+                  <button id="langEsButton" class="icon-button" type="button" title="Español">ES</button>
+                  <button id="langEnButton" class="icon-button active" type="button" title="English">EN</button>
                 </div>
                 <div class="theme-switch" aria-label="Theme">
-                  <button id="themeAutoButton" class="icon-button" type="button" title="Automático (según el sistema)"><svg class="theme-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
-                  <button id="themeLightButton" class="icon-button" type="button" title="Claro"><svg class="theme-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="7" y2="7"/><line x1="17" y1="17" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="7" y2="17"/><line x1="17" y1="7" x2="19.1" y2="4.9"/></g></svg></button>
-                  <button id="themeDarkButton" class="icon-button" type="button" title="Oscuro"><svg class="theme-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                  <button id="themeAutoButton" class="icon-button" type="button" title="Automatic (follow system)"><svg class="theme-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
+                  <button id="themeLightButton" class="icon-button" type="button" title="Light"><svg class="theme-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="7" y2="7"/><line x1="17" y1="17" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="7" y2="17"/><line x1="17" y1="7" x2="19.1" y2="4.9"/></g></svg></button>
+                  <button id="themeDarkButton" class="icon-button" type="button" title="Dark"><svg class="theme-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 </div>
               </div>
             </div>
@@ -133,11 +134,11 @@
           <div id="profilePanel" class="profile-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Profile"></div>
           <div id="localScanPanel" class="local-scan-panel" aria-label="Fabric scan controls">
             <span id="localScanAccessHint" class="local-scan-access-hint" hidden></span>
-            <select id="localScanWorkspaceSelect" aria-label="Workspace a escanear"></select>
-            <button id="localScanButton" type="button">Escanear este workspace</button>
-            <button id="fullScanButton" type="button" hidden title="Reescanea los workspaces a los que tienes acceso (varias horas)">Escaneo completo</button>
-            <button id="scanHistoryButton" type="button" title="Historial de escaneos">🕘</button>
-            <button id="stopScanButton" type="button" class="stop-scan-button" hidden title="Detener escaneo">■</button>
+            <select id="localScanWorkspaceSelect" aria-label="Workspace to scan"></select>
+            <button id="localScanButton" type="button">Scan this workspace</button>
+            <button id="fullScanButton" type="button" hidden title="Rescans the workspaces you have access to (several hours)">Full scan</button>
+            <button id="scanHistoryButton" type="button" title="Scan history">🕘</button>
+            <button id="stopScanButton" type="button" class="stop-scan-button" hidden title="Stop scan">■</button>
             <span id="localScanHint" class="local-scan-hint"></span>
             <span id="localScanStatus" class="local-scan-status" aria-live="polite"></span>
             <div id="scanProgressWrap" class="scan-progress-wrap" hidden>
@@ -151,15 +152,15 @@
           </div>
           <div id="scanHistoryPanel" class="scan-history-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Scan history">
             <div class="scan-history-header">
-              <span id="scanHistoryTitle">Historial de escaneos</span>
-              <button id="scanHistoryCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+              <span id="scanHistoryTitle">Scan history</span>
+              <button id="scanHistoryCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
             </div>
             <div id="scanHistoryBody" class="scan-history-body"></div>
           </div>
           <div id="glossaryPanel" class="glossary-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Glossary">
             <div class="scan-history-header">
-              <span id="glossaryTitle">Qué significa esto</span>
-              <button id="glossaryCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+              <span id="glossaryTitle">What this means</span>
+              <button id="glossaryCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
             </div>
             <div id="glossaryBody" class="glossary-body"></div>
           </div>
@@ -172,72 +173,72 @@
         <div class="scan-history-header">
           <span id="impactBreakdownTitle"></span>
           <div class="impact-breakdown-actions">
-            <button id="impactBreakdownExcelButton" type="button" class="detail-export-button">Descargar Excel</button>
-            <button id="impactBreakdownCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+            <button id="impactBreakdownExcelButton" type="button" class="detail-export-button">Download Excel</button>
+            <button id="impactBreakdownCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
           </div>
         </div>
         <p id="impactBreakdownSubtitle" class="impact-breakdown-subtitle"></p>
         <div id="impactBreakdownBody" class="impact-breakdown-body"></div>
       </div>
 
-      <div id="planningEvidenceModal" class="impact-breakdown-panel planning-evidence-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Planificación detallada">
+      <div id="planningEvidenceModal" class="impact-breakdown-panel planning-evidence-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Planning details">
         <div class="scan-history-header">
           <span id="planningEvidenceModalTitle"></span>
           <div class="impact-breakdown-actions">
-            <button id="planningEvidenceModalCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+            <button id="planningEvidenceModalCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
           </div>
         </div>
         <div id="planningEvidenceModalBody" class="impact-breakdown-body"></div>
       </div>
 
-      <div id="sensitivityDetailModal" class="impact-breakdown-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Detalle de sensibilidad">
+      <div id="sensitivityDetailModal" class="impact-breakdown-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Sensitivity detail">
         <div class="scan-history-header">
           <span id="sensitivityDetailTitle"></span>
           <div class="impact-breakdown-actions">
-            <button id="sensitivityDetailCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+            <button id="sensitivityDetailCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
           </div>
         </div>
         <p id="sensitivityDetailSubtitle" class="impact-breakdown-subtitle"></p>
         <div id="sensitivityDetailBody" class="impact-breakdown-body"></div>
       </div>
 
-      <div id="workspaceAccessModal" class="impact-breakdown-panel workspace-access-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Personas con acceso">
+      <div id="workspaceAccessModal" class="impact-breakdown-panel workspace-access-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="People with access">
         <div class="scan-history-header">
           <span id="workspaceAccessTitle"></span>
           <div class="impact-breakdown-actions">
-            <button id="workspaceAccessCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+            <button id="workspaceAccessCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
           </div>
         </div>
         <p id="workspaceAccessSubtitle" class="impact-breakdown-subtitle"></p>
         <div id="workspaceAccessBody" class="impact-breakdown-body"></div>
       </div>
 
-      <div id="tenantAdminWorkspacesModal" class="impact-breakdown-panel workspace-access-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Workspaces de un administrador">
+      <div id="tenantAdminWorkspacesModal" class="impact-breakdown-panel workspace-access-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Workspaces of an administrator">
         <div class="scan-history-header">
           <span id="tenantAdminWorkspacesTitle"></span>
           <div class="impact-breakdown-actions">
-            <button id="tenantAdminWorkspacesCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+            <button id="tenantAdminWorkspacesCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
           </div>
         </div>
         <p id="tenantAdminWorkspacesSubtitle" class="impact-breakdown-subtitle"></p>
         <div id="tenantAdminWorkspacesBody" class="impact-breakdown-body"></div>
       </div>
 
-      <div id="installerWizardModal" class="impact-breakdown-panel installer-wizard-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Instalar en otro tenant">
+      <div id="installerWizardModal" class="impact-breakdown-panel installer-wizard-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Install into another tenant">
         <div class="scan-history-header">
-          <span>Instalar en otro tenant / workspace</span>
+          <span>Install into another tenant / workspace</span>
           <div class="impact-breakdown-actions">
-            <button id="installerWizardCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+            <button id="installerWizardCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
           </div>
         </div>
         <div id="installerWizardBody" class="impact-breakdown-body"></div>
       </div>
 
-      <div id="workspaceCreateModal" class="impact-breakdown-panel workspace-access-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Dar de alta un workspace">
+      <div id="workspaceCreateModal" class="impact-breakdown-panel workspace-access-panel modal-panel" hidden role="dialog" aria-modal="true" aria-label="Register a workspace">
         <div class="scan-history-header">
-          <span>Dar de alta workspace / Lakehouse</span>
+          <span>Register workspace / Lakehouse</span>
           <div class="impact-breakdown-actions">
-            <button id="workspaceCreateCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+            <button id="workspaceCreateCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
           </div>
         </div>
         <div id="workspaceCreateBody" class="impact-breakdown-body"></div>
@@ -245,12 +246,12 @@
 
       <section class="modebar" aria-label="Dependency tree mode">
         <div class="modebar-visible" id="modeBarVisible">
-          <button id="modeSemantic" class="mode-button active" type="button" data-mode="semantic">Modelos semánticos</button>
+          <button id="modeSemantic" class="mode-button active" type="button" data-mode="semantic">Semantic models</button>
           <button id="modeNotebooks" class="mode-button" type="button" data-mode="notebooks">Notebooks</button>
           <button id="modeCopyjobs" class="mode-button" type="button" data-mode="copyjobs">CopyJobs</button>
           <button id="modePipelines" class="mode-button" type="button" data-mode="pipelines">Pipelines</button>
           <button id="modeDataflows" class="mode-button" type="button" data-mode="dataflows">Dataflows</button>
-          <button id="modeAll" class="mode-button" type="button" data-mode="all">Todos</button>
+          <button id="modeAll" class="mode-button" type="button" data-mode="all">All</button>
         </div>
         <div class="modebar-overflow-wrap">
           <button id="modeOverflowToggle" class="mode-overflow-toggle" type="button" aria-haspopup="true" aria-expanded="false" hidden>
@@ -267,44 +268,44 @@
         </article>
         <article>
           <span id="metricPrimary">0</span>
-          <p id="metricPrimaryLabel">Elementos</p>
+          <p id="metricPrimaryLabel">Items</p>
         </article>
         <article>
           <span id="metricSources">0</span>
-          <p id="metricSourcesLabel">Orígenes</p>
+          <p id="metricSourcesLabel">Sources</p>
         </article>
         <article>
           <span id="metricObjects">0</span>
-          <p id="metricObjectsLabel">Tablas / vistas / SP</p>
+          <p id="metricObjectsLabel">Tables / views / SPs</p>
         </article>
       </section>
 
       <section id="workspaceShell" class="workspace">
         <aside class="panel workspace-panel">
           <div class="panel-header compact">
-            <button id="focusButton" class="panel-collapse-button" type="button" aria-expanded="true" title="Cerrar índice">‹</button>
+            <button id="focusButton" class="panel-collapse-button" type="button" aria-expanded="true" title="Close index">‹</button>
             <div>
               <h2 id="workspacePanelTitle">Workspaces</h2>
-              <p id="workspacePanelSubtitle">Solo workspaces con elementos del árbol elegido</p>
+              <p id="workspacePanelSubtitle">Only workspaces with items in the chosen tree</p>
             </div>
             <span id="workspaceCount" class="count-pill">0</span>
           </div>
           <div class="workspace-actions">
-            <button id="selectAllWorkspacesButton" type="button">Todos</button>
-            <button id="clearWorkspacesButton" type="button">Limpiar</button>
+            <button id="selectAllWorkspacesButton" type="button">All</button>
+            <button id="clearWorkspacesButton" type="button">Clear</button>
           </div>
-          <div id="workspaceEnvironmentFilters" class="workspace-env-filters" aria-label="Filtros de entorno de deployment pipeline">
+          <div id="workspaceEnvironmentFilters" class="workspace-env-filters" aria-label="Deployment pipeline environment filters">
             <button type="button" data-workspace-env-filter="DEV" aria-pressed="false">DEV</button>
             <button type="button" data-workspace-env-filter="QA" aria-pressed="false">QA</button>
             <button type="button" data-workspace-env-filter="PRO" aria-pressed="false">PRO</button>
           </div>
           <label id="workspaceDomainFilterRow" class="workspace-domain-filter-row" hidden>
-            <span id="workspaceDomainFilterLabel">Dominio</span>
+            <span id="workspaceDomainFilterLabel">Domain</span>
             <select id="workspaceDomainFilter"></select>
           </label>
           <div class="workspace-search-filter">
             <button id="workspaceSearchToggle" type="button" class="workspace-search-toggle" aria-expanded="false" aria-controls="workspaceSearchPanel">
-              <span id="workspaceSearchToggleLabel">Buscar y seleccionar workspace...</span>
+              <span id="workspaceSearchToggleLabel">Search and select workspace...</span>
               <i aria-hidden="true">▾</i>
             </button>
             <div id="workspaceSearchPanel" class="workspace-search-panel" hidden>
@@ -318,8 +319,8 @@
         <section id="graphSurface" class="graph-surface">
           <div class="graph-header">
             <div class="graph-copy">
-              <h2 id="graphTitle">Selecciona un workspace</h2>
-              <p id="graphSubtitle">El árbol se abre progresivamente para mantener la pantalla limpia.</p>
+              <h2 id="graphTitle">Select a workspace</h2>
+              <p id="graphSubtitle">The tree opens progressively to keep the screen clean.</p>
             </div>
 
             <div class="graph-tools">
@@ -330,25 +331,25 @@
                    see the [hidden] CSS guard in styles.css. (The old back
                    button was fully removed, including its JS.) -->
               <label class="search-box" hidden>
-                <span id="searchLabel">Buscar</span>
-                <input id="searchInput" type="search" placeholder="Workspace, modelo, notebook, origen..." autocomplete="off" />
+                <span id="searchLabel">Search</span>
+                <input id="searchInput" type="search" placeholder="Workspace, model, notebook, source..." autocomplete="off" />
               </label>
               <div class="viewport-controls" aria-label="Diagram controls">
                 <div class="viewport-controls-left">
-                  <button id="inspectionButton" type="button" aria-pressed="true">Inspeccion</button>
-                  <button id="impactButton" type="button">Impacto</button>
-                  <button id="scheduleButton" type="button">Planificación</button>
-                  <button id="filterButton" type="button" title="Filtros">Filtro</button>
+                  <button id="inspectionButton" type="button" aria-pressed="true">Inspection</button>
+                  <button id="impactButton" type="button">Impact</button>
+                  <button id="scheduleButton" type="button">Planning</button>
+                  <button id="filterButton" type="button" title="Filter">Filter</button>
                 </div>
                 <div class="viewport-controls-right">
                   <button id="resetButton" class="icon-command" type="button" title="Reset">↻</button>
                   <button id="zoomOutButton" type="button" title="Zoom out">−</button>
                   <button id="fitButton" type="button" title="Fit">⤢</button>
                   <button id="zoomInButton" type="button" title="Zoom in">+</button>
-                  <button id="planningMapButton" type="button" title="Abrir mapa de planificación" hidden>⧉</button>
-                  <button id="inspectionMapPngButton" type="button" title="Diagrama PNG" hidden>PNG</button>
-                  <button id="inspectionMapExcelButton" type="button" title="Descargar Excel" hidden>Excel</button>
-                  <button id="inspectionMapCloseButton" type="button" class="icon-button" title="Cerrar mapa" hidden>✕</button>
+                  <button id="planningMapButton" type="button" title="Open planning map" hidden>⧉</button>
+                  <button id="inspectionMapPngButton" type="button" title="PNG diagram" hidden>PNG</button>
+                  <button id="inspectionMapExcelButton" type="button" title="Download Excel" hidden>Excel</button>
+                  <button id="inspectionMapCloseButton" type="button" class="icon-button" title="Close map" hidden>✕</button>
                 </div>
               </div>
             </div>
@@ -358,26 +359,26 @@
             <canvas id="lineageScene" class="scene3d" aria-hidden="true"></canvas>
             <div id="filterMenu" class="filter-menu" hidden>
               <div class="filter-drag-handle">
-                <span class="filter-title">Filtro</span>
+                <span class="filter-title">Filter</span>
                 <span class="filter-grip" aria-hidden="true"></span>
               </div>
               <label>
-                <span id="sourceFilterLabel">Origen</span>
+                <span id="sourceFilterLabel">Source</span>
                 <select id="sourceTypeFilter"></select>
               </label>
               <label hidden>
-                <span id="confidenceFilterLabel">Almacén</span>
+                <span id="confidenceFilterLabel">Store</span>
                 <select id="confidenceFilter"></select>
               </label>
               <label>
-                <span id="itemTypeFilterLabel">Tipo de item</span>
+                <span id="itemTypeFilterLabel">Item type</span>
                 <select id="itemTypeFilter"></select>
               </label>
               <label id="objectFilterRow" hidden>
-                <span id="objectFilterLabel">Objeto</span>
+                <span id="objectFilterLabel">Object</span>
                 <span class="object-filter-combo">
                   <input id="impactObjectSearch" type="search" autocomplete="off" />
-                  <button id="impactObjectClear" type="button">Limpiar</button>
+                  <button id="impactObjectClear" type="button">Clear</button>
                   <datalist id="impactObjectOptions"></datalist>
                   <select id="objectFilter" class="filter-hidden-select" aria-hidden="true" tabindex="-1"></select>
                 </span>
@@ -386,7 +387,7 @@
               <div id="planningFilterSources" class="planning-filter-sources" hidden></div>
             </div>
             <div id="treeStage" class="tree-stage" aria-live="polite">
-              <div class="empty-state">Cargando linaje...</div>
+              <div class="empty-state">Loading lineage...</div>
             </div>
           </div>
           <!-- Sibling of graphViewport (not a descendant): graphViewport
@@ -413,24 +414,24 @@
           <div id="authGate" class="auth-gate" hidden>
             <div class="auth-gate-card">
               <div class="auth-gate-lang language-switch" aria-label="Language">
-                <button id="authGateLangEsButton" class="icon-button active" type="button" title="Español">ES</button>
-                <button id="authGateLangEnButton" class="icon-button" type="button" title="English">EN</button>
+                <button id="authGateLangEsButton" class="icon-button" type="button" title="Español">ES</button>
+                <button id="authGateLangEnButton" class="icon-button active" type="button" title="English">EN</button>
               </div>
-              <p class="auth-gate-eyebrow">Fabric Lineage Explorer</p>
-              <h1 id="authGateTitle" class="auth-gate-title">Inicia sesión para continuar</h1>
-              <p id="authGateLede" class="auth-gate-lede">Por seguridad, los datos de linaje no se cargan hasta que inicies sesión con tu cuenta Microsoft. Verás únicamente los workspaces a los que tu cuenta tiene acceso.</p>
-              <button id="authGateSignInButton" type="button" class="auth-gate-signin-button">Iniciar sesión con Microsoft</button>
+              <p class="auth-gate-eyebrow">LineageIQ</p>
+              <h1 id="authGateTitle" class="auth-gate-title">Sign in to continue</h1>
+              <p id="authGateLede" class="auth-gate-lede">For security, neither the interface nor the lineage data loads until you sign in with your Microsoft account. You will only see the workspaces your account has access to.</p>
+              <button id="authGateSignInButton" type="button" class="auth-gate-signin-button">Sign in with Microsoft</button>
               <p id="authGateError" class="auth-gate-error" hidden></p>
               <div id="authGateDeviceCode" class="auth-gate-device-code" hidden>
-                <p id="authGateHint1" class="auth-gate-device-hint">1. Abre esta página en cualquier pestaña:</p>
+                <p id="authGateHint1" class="auth-gate-device-hint">1. Open this page on any tab:</p>
                 <a id="authGateVerificationLink" href="#" target="_blank" rel="noopener" class="auth-gate-link">login.microsoftonline.com/device ↗</a>
-                <p id="authGateHint2" class="auth-gate-device-hint">2. Escribe este código:</p>
+                <p id="authGateHint2" class="auth-gate-device-hint">2. Enter this code:</p>
                 <div class="auth-gate-code-row">
                   <code id="authGateUserCode"></code>
-                  <button id="authGateCopyCodeButton" type="button" class="icon-button" title="Copiar código">⧉</button>
+                  <button id="authGateCopyCodeButton" type="button" class="icon-button" title="Copy code">⧉</button>
                 </div>
-                <p id="authGateStatusMessage" class="auth-gate-status">Esperando a que completes el inicio de sesión...</p>
-                <button id="authGateCancelButton" type="button" class="auth-gate-cancel-button">Cancelar</button>
+                <p id="authGateStatusMessage" class="auth-gate-status">Waiting for you to complete sign-in...</p>
+                <button id="authGateCancelButton" type="button" class="auth-gate-cancel-button">Cancel</button>
               </div>
             </div>
           </div>
@@ -438,34 +439,34 @@
 
         <aside class="panel detail-panel">
           <div class="panel-header compact">
-            <button id="detailsToggleButton" class="panel-collapse-button detail-collapse-button" type="button" aria-expanded="true" title="Cerrar detalles">›</button>
+            <button id="detailsToggleButton" class="panel-collapse-button detail-collapse-button" type="button" aria-expanded="true" title="Close details">›</button>
             <div>
-              <h2 id="detailTitle">Detalles</h2>
-              <p id="detailSubtitle">Selecciona un elemento del árbol.</p>
+              <h2 id="detailTitle">Details</h2>
+              <p id="detailSubtitle">Select an item in the tree.</p>
             </div>
           </div>
           <div id="detailContent" class="detail-content"></div>
         </aside>
       </section>
 
-      <section id="planningMapView" class="planning-map-view" hidden aria-label="Mapa de planificación">
+      <section id="planningMapView" class="planning-map-view" hidden aria-label="Planning map">
         <div class="planning-map-topbar">
-          <h2 id="planningMapTitle">Mapa de planificación</h2>
+          <h2 id="planningMapTitle">Planning map</h2>
           <div class="planning-map-controls">
             <div class="planning-map-filter">
-              <button id="planningMapTypeFilterButton" type="button" aria-expanded="false">Tipo de objeto ▾</button>
+              <button id="planningMapTypeFilterButton" type="button" aria-expanded="false">Object type ▾</button>
               <div id="planningMapTypeFilterPanel" class="planning-map-filter-panel" hidden></div>
             </div>
             <div class="planning-map-filter">
-              <button id="planningMapNameFilterButton" type="button" aria-expanded="false">Nombre de objeto ▾</button>
+              <button id="planningMapNameFilterButton" type="button" aria-expanded="false">Object name ▾</button>
               <div id="planningMapNameFilterPanel" class="planning-map-filter-panel" hidden></div>
             </div>
-            <button id="planningMapZoomOutButton" type="button" title="Alejar">−</button>
-            <button id="planningMapZoomInButton" type="button" title="Acercar">+</button>
-            <button id="planningMapFitButton" type="button" title="Encajar">⤢</button>
-            <button id="planningMapPngButton" type="button" title="Descargar PNG">PNG</button>
-            <button id="planningMapExcelButton" type="button" title="Descargar Excel">Excel</button>
-            <button id="planningMapCloseButton" type="button" title="Cerrar">✕</button>
+            <button id="planningMapZoomOutButton" type="button" title="Zoom out">−</button>
+            <button id="planningMapZoomInButton" type="button" title="Zoom in">+</button>
+            <button id="planningMapFitButton" type="button" title="Fit">⤢</button>
+            <button id="planningMapPngButton" type="button" title="Download PNG">PNG</button>
+            <button id="planningMapExcelButton" type="button" title="Download Excel">Excel</button>
+            <button id="planningMapCloseButton" type="button" title="Close">✕</button>
           </div>
         </div>
         <div id="planningMapViewport" class="planning-map-viewport" tabindex="0">
@@ -489,11 +490,11 @@
             <button id="graphMapExportJsonButton" type="button"></button>
             <button id="graphMapExportPngButton" type="button"></button>
           </div>
-          <button id="graphMapCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+          <button id="graphMapCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
         </div>
         <div id="graphMapBreadcrumbs" class="graph-map-breadcrumbs" hidden></div>
         <div class="graph-map-body">
-          <aside class="graph-map-sidebar" aria-label="Índice de nodos">
+          <aside class="graph-map-sidebar" aria-label="Node index">
             <div class="graph-map-search-box">
               <input id="graphMapSearchInput" type="search" autocomplete="off" />
             </div>
@@ -504,14 +505,14 @@
             <div id="graphMapLegend" class="graph-map-legend"></div>
             <div id="graphMapTooltip" class="graph-map-tooltip" hidden></div>
           </div>
-          <aside id="graphMapDetail" class="graph-map-detail" hidden aria-label="Detalle del nodo"></aside>
+          <aside id="graphMapDetail" class="graph-map-detail" hidden aria-label="Node detail"></aside>
         </div>
       </section>
 
       <div id="dagViewBackdrop" class="graph-map-backdrop" hidden></div>
-      <section id="dagView" class="graph-map-view" hidden aria-label="Diagrama de linaje (DAG)">
+      <section id="dagView" class="graph-map-view" hidden aria-label="Lineage diagram (DAG)">
         <div class="graph-map-topbar">
-          <h2 id="dagViewTitle">Diagrama de linaje</h2>
+          <h2 id="dagViewTitle">Lineage diagram</h2>
           <div class="graph-map-topbar-controls">
             <label class="dag-view-hops">
               <span id="dagViewHopsLabel"></span>
@@ -524,10 +525,10 @@
             <button id="dagViewBackButton" type="button" hidden></button>
             <button id="dagViewFitButton" type="button"></button>
           </div>
-          <button id="dagViewCloseButton" type="button" class="icon-button" aria-label="Cerrar">×</button>
+          <button id="dagViewCloseButton" type="button" class="icon-button" aria-label="Close">×</button>
         </div>
         <div class="graph-map-body">
-          <aside class="graph-map-sidebar" aria-label="Buscar item">
+          <aside class="graph-map-sidebar" aria-label="Find item">
             <div class="graph-map-search-box">
               <input id="dagViewSearchInput" type="search" autocomplete="off" />
             </div>

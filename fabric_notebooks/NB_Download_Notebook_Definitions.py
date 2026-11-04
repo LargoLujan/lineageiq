@@ -232,8 +232,8 @@ def replace_notebook_definitions_table(connection, rows):
     # notebook's source code easily exceeds the ~2000-char threshold)
     # using the legacy TEXT/NTEXT DAE wire format, which Fabric Warehouse's
     # default UTF-8 collation (Latin1_General_100_BIN2_UTF8) rejects with
-    # "Cannot convert to text/ntext or collate..." (confirmed live,
-    # 2026-08-12) -- forcing SQL_WVARCHAR on every parameter makes pyodbc
+    # "Cannot convert to text/ntext or collate..." (confirmed live)
+    # forcing SQL_WVARCHAR on every parameter makes pyodbc
     # use the modern varchar(max)-compatible binding instead.
     input_sizes = [(pyodbc.SQL_WVARCHAR, 0, 0)] * 9
     for row in rows:

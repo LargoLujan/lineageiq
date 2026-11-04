@@ -7,9 +7,8 @@ service principal for.
 Built on the `fab` CLI, not raw REST calls -- this is the SAME mechanism
 already used and trusted this project for pushing live notebook edits
 (`fab export`/`fab import`, verified
-byte-identical on re-export). There is no second
-tenant available this session to test raw REST workspace/item-creation
-calls against, so reusing the CLI (which already handles auth, retries,
+byte-identical on re-export). Raw REST workspace/item-creation
+calls have not been validated against a second tenant, so reusing the CLI (which already handles auth, retries,
 and the exact item-definition wire format) is the lower-risk choice.
 
 Every `fab` call here runs with an ISOLATED HOME/USERPROFILE (see
@@ -360,7 +359,7 @@ def create_workspace_and_item(config, on_step):
     env, home_dir = _isolated_fab_env(config)
     try:
         ok, detail = _fab_auth_check(env)
-        on_step("auth", detail if ok else f"No se pudo autenticar: {detail}", ok)
+        on_step("auth", detail if ok else f"Could not authenticate: {detail}", ok)
         if not ok:
             return
 
@@ -368,15 +367,15 @@ def create_workspace_and_item(config, on_step):
         exists_ok, _ = _fab(["exists", workspace_path], env)
         if not exists_ok:
             ok, detail = _fab(["mkdir", workspace_path], env)
-            on_step("workspace", detail if ok else f"No se pudo crear el workspace: {detail}", ok)
+            on_step("workspace", detail if ok else f"Could not create the workspace: {detail}", ok)
             if not ok:
                 return
         else:
-            on_step("workspace", f"El workspace '{config['workspace_name']}' ya existía -- reutilizado.", True)
+            on_step("workspace", f"Workspace '{config['workspace_name']}' already existed -- reused.", True)
 
         if config.get("capacity_name"):
             ok, detail = _fab(["assign", f'.capacities/{config["capacity_name"]}.Capacity', "-W", workspace_path, "-f"], env)
-            on_step("capacity", detail if ok else f"No se pudo asignar la capacidad: {detail}", ok)
+            on_step("capacity", detail if ok else f"Could not assign the capacity: {detail}", ok)
             if not ok:
                 return
 
@@ -386,15 +385,15 @@ def create_workspace_and_item(config, on_step):
             exists_ok, _ = _fab(["exists", item_path], env)
             if not exists_ok:
                 ok, detail = _fab(["mkdir", item_path], env)
-                on_step("item", detail if ok else f"No se pudo crear {item_type} '{config['item_name']}': {detail}", ok)
+                on_step("item", detail if ok else f"Could not create {item_type} '{config['item_name']}': {detail}", ok)
                 if not ok:
                     return
             else:
-                on_step("item", f"{item_type} '{config['item_name']}' ya existía -- reutilizado.", True)
+                on_step("item", f"{item_type} '{config['item_name']}' already existed -- reused.", True)
 
-        on_step("done", "Alta completada.", True)
+        on_step("done", "Registration completed.", True)
     except Exception as exc:  # noqa: BLE001 - same "always end the run cleanly" reasoning as run_install
-        on_step("error", f"Error inesperado: {exc}", False)
+        on_step("error", f"Unexpected error: {exc}", False)
     finally:
         shutil.rmtree(home_dir, ignore_errors=True)
 
@@ -418,7 +417,7 @@ def run_install(config, on_step):
     env, home_dir = _isolated_fab_env(config)
     try:
         ok, detail = _fab_auth_check(env)
-        on_step("auth", detail if ok else f"No se pudo autenticar: {detail}", ok)
+        on_step("auth", detail if ok else f"Could not authenticate: {detail}", ok)
         if not ok:
             return
 
@@ -426,14 +425,14 @@ def run_install(config, on_step):
         exists_ok, _ = _fab(["exists", workspace_path], env)
         if not exists_ok:
             ok, detail = _fab(["mkdir", workspace_path], env)
-            on_step("workspace", detail if ok else f"No se pudo crear el workspace: {detail}", ok)
+            on_step("workspace", detail if ok else f"Could not create the workspace: {detail}", ok)
             if not ok:
                 return
         else:
-            on_step("workspace", f"El workspace '{config['workspace_name']}' ya existía -- reutilizado.", True)
+            on_step("workspace", f"Workspace '{config['workspace_name']}' already existed -- reused.", True)
         if config.get("capacity_name"):
             ok, detail = _fab(["assign", f'.capacities/{config["capacity_name"]}.Capacity', "-W", workspace_path, "-f"], env)
-            on_step("capacity", detail if ok else f"No se pudo asignar la capacidad: {detail}", ok)
+            on_step("capacity", detail if ok else f"Could not assign the capacity: {detail}", ok)
             if not ok:
                 return
 
@@ -444,7 +443,7 @@ def run_install(config, on_step):
         exists_ok, _ = _fab(["exists", storage_path], env)
         if not exists_ok:
             ok, detail = _fab(["mkdir", storage_path], env)
-            on_step("storage", detail if ok else f"No se pudo crear {storage_item_type} '{storage_name}': {detail}", ok)
+            on_step("storage", detail if ok else f"Could not create {storage_item_type} '{storage_name}': {detail}", ok)
             if not ok:
                 return
             # The SQL analytics endpoint hostname only exists once Fabric
@@ -460,22 +459,22 @@ def run_install(config, on_step):
                 if endpoint_ok and endpoint_detail:
                     overrides.setdefault("WAREHOUSE_SQL_ENDPOINT", endpoint_detail.strip().strip('"'))
                     overrides.setdefault("WAREHOUSE_DATABASE_NAME", storage_name)
-                    on_step("storage_endpoint", f"SQL endpoint resuelto automáticamente: {overrides['WAREHOUSE_SQL_ENDPOINT']}", True)
+                    on_step("storage_endpoint", f"SQL endpoint resolved automatically: {overrides['WAREHOUSE_SQL_ENDPOINT']}", True)
                 else:
-                    on_step("storage_endpoint", "No se pudo resolver el SQL endpoint automáticamente -- revisa WAREHOUSE_SQL_ENDPOINT a mano.", False)
+                    on_step("storage_endpoint", "Could not resolve the SQL endpoint automatically -- set WAREHOUSE_SQL_ENDPOINT by hand.", False)
         else:
-            on_step("storage", f"{storage_item_type} '{storage_name}' ya existía -- reutilizado.", True)
+            on_step("storage", f"{storage_item_type} '{storage_name}' already existed -- reused.", True)
 
         if config.get("lakehouse_name") and storage_item_type != "Lakehouse":
             lakehouse_path = f'{workspace_path}/{config["lakehouse_name"]}.Lakehouse'
             exists_ok, _ = _fab(["exists", lakehouse_path], env)
             if not exists_ok:
                 ok, detail = _fab(["mkdir", lakehouse_path], env)
-                on_step("onelake_lakehouse", detail if ok else f"No se pudo crear el Lakehouse de OneLake '{config['lakehouse_name']}': {detail}", ok)
+                on_step("onelake_lakehouse", detail if ok else f"Could not create the OneLake Lakehouse '{config['lakehouse_name']}': {detail}", ok)
                 if not ok:
                     return
             else:
-                on_step("onelake_lakehouse", f"Lakehouse '{config['lakehouse_name']}' ya existía -- reutilizado.", True)
+                on_step("onelake_lakehouse", f"Lakehouse '{config['lakehouse_name']}' already existed -- reused.", True)
 
         notebooks = available_notebooks()
         requested = config.get("notebook_names") or list(notebooks.keys())
@@ -494,18 +493,18 @@ def run_install(config, on_step):
             with open(os.path.join(item_dir, "notebook-content.ipynb"), "w", encoding="utf-8") as handle:
                 handle.write(notebook_content_json(patched_source))
             ok, detail = _fab(["import", f"{workspace_path}/{name}.Notebook", "-i", item_dir, "-f"], env, timeout=180)
-            on_step("notebooks", f"{name}: {'desplegado' if ok else 'FALLO - ' + detail}", ok)
+            on_step("notebooks", f"{name}: {'deployed' if ok else 'FAILED - ' + detail}", ok)
             if ok:
                 deployed += 1
             else:
                 failed += 1
         on_step(
             "notebooks_summary",
-            f"{deployed} notebook(s) desplegados, {failed} fallido(s) de {len(requested)} solicitados.",
+            f"{deployed} notebook(s) deployed, {failed} failed, out of {len(requested)} requested.",
             failed == 0,
         )
-        on_step("done", "Instalación completada. Falta el paso manual del Data Pipeline (ver instrucciones).", True)
+        on_step("done", "Installation completed. The manual Data Pipeline step is still pending (see the instructions).", True)
     except Exception as exc:  # noqa: BLE001 - a background install thread must always end the run cleanly, never crash silently mid-progress
-        on_step("error", f"Error inesperado durante la instalación: {exc}", False)
+        on_step("error", f"Unexpected error during the installation: {exc}", False)
     finally:
         shutil.rmtree(home_dir, ignore_errors=True)

@@ -227,6 +227,9 @@ class LineageWebHandler(BaseHTTPRequestHandler):
     # subprocess failed to start), in which case /mcp returns 503 instead
     # of trying to proxy to nothing.
     mcp_http_port: int | None = None
+    # True when the server was started with --no-mcp-http, so the 503 can
+    # say the endpoint is switched off rather than suggest a reinstall.
+    mcp_http_disabled: bool = False
 
     def log_message(self, format_str, *args):
         sys.stderr.write(f"[{self.log_date_time_string()}] {self.address_string()} {format_str % args}\n")
@@ -624,6 +627,12 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         import urllib.request
 
         if not self.mcp_http_port:
+            if self.mcp_http_disabled:
+                self._send_json(503, {
+                    "error": "mcp_disabled",
+                    "message": "The remote MCP endpoint is disabled on this server (--no-mcp-http). Use the stdio MCP server instead: python backend/scripts/mcp_server.py (see README).",
+                })
+                return
             self._send_json(503, {
                 "error": "mcp_unavailable",
                 "message": "The MCP-over-HTTP subprocess isn't running on this server -- see the startup log, or `pip install -r requirements-mcp.txt` if this is a fresh install.",
@@ -1583,8 +1592,8 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         self._serve_static(parsed_path)
 
     def do_DELETE(self):
-        # Streamable HTTP's optional explicit session-termination call
-        #  -- the only DELETE this server handles at all, so
+        # Streamable HTTP's optional explicit session-termination call is
+        # the only DELETE this server handles at all, so
         # anything else 404s via the same _serve_static fallback GET/HEAD
         # already use (do_DELETE didn't exist before /mcp needed it).
         parsed = urlparse(self.path)
@@ -1896,11 +1905,11 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             required = ["tenant_id", "client_id", "client_secret", "workspace_name"]
             missing = [key for key in required if not config.get(key)]
             if missing:
-                self._send_json(400, {"error": "missing_fields", "message": f"Faltan campos obligatorios: {', '.join(missing)}."})
+                self._send_json(400, {"error": "missing_fields", "message": f"Missing required fields: {', '.join(missing)}."})
                 return
             with _installer_lock:
                 if _installer_state["status"] == "running":
-                    self._send_json(409, {"error": "already_running", "message": "Ya hay una instalación en curso."})
+                    self._send_json(409, {"error": "already_running", "message": "An installation is already running."})
                     return
                 _installer_state.update({
                     "status": "running", "current_step": None, "message": "",
@@ -1955,7 +1964,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
                 return
             columns = body.get("columns") or []
             if not columns:
-                self._send_json(400, {"error": "no_columns", "message": "Selecciona al menos una tabla."})
+                self._send_json(400, {"error": "no_columns", "message": "Select at least one table."})
                 return
             # Table granularity, not column -- see NB_Discover_Column_
             # Sensitivity.py's own "## Parámetros" comment for why (the
@@ -1987,11 +1996,11 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             required = ["tenant_id", "client_id", "client_secret", "workspace_name"]
             missing = [key for key in required if not config.get(key)]
             if missing:
-                self._send_json(400, {"error": "missing_fields", "message": f"Faltan campos obligatorios: {', '.join(missing)}."})
+                self._send_json(400, {"error": "missing_fields", "message": f"Missing required fields: {', '.join(missing)}."})
                 return
             with _installer_lock:
                 if _installer_state["status"] == "running":
-                    self._send_json(409, {"error": "already_running", "message": "Ya hay una operación de alta/instalación en curso."})
+                    self._send_json(409, {"error": "already_running", "message": "A registration or installation is already running."})
                     return
                 _installer_state.update({
                     "status": "running", "current_step": None, "message": "",

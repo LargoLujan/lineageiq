@@ -135,7 +135,7 @@ SENSITIVITY_CATEGORIES = {
     "image_media": {
         "es": "Imagen / fotografía", "en": "Image / photo",
         # "video"/"videoconferencia" excluded on purpose -- columns such as
-        # SESION_VIDEOCONFERENCIA are usually metadata about a session or meeting
+        # VIDEO_MEETING_SESSION are usually metadata about a session or meeting
         # (schedule, link), not a stored image of a person; including "video" would
         # have been pure noise, the same criterion as excluding "movilidad" from
         # "phone".

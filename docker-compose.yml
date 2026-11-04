@@ -20,7 +20,7 @@ services:
       LINEAGE_WEB_PUBLIC_TUNNEL: "false"
       LINEAGE_WEB_TUNNEL_WAIT_SECONDS: "120"
     ports:
-      - "8765:8765"
+      - "127.0.0.1:8765:8765"
     stdin_open: true
     tty: true
 

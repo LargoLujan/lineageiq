@@ -160,7 +160,7 @@ def read_onelake_json(onelake_relative_path):
         f"{ONELAKE_LAKEHOUSE_NAME}.Lakehouse/{onelake_relative_path}"
     )
     # notebookutils.fs.head() silently truncates well below whatever
-    # max_bytes you pass it (confirmed live, 2026-08-12) -- it's a preview
+    # max_bytes you pass it (confirmed live) -- it's a preview
     # API, not a full-read one. spark.read.text(..., wholetext=True) reads
     # the whole file as a single row with no such cap.
     content = spark.read.text(abfss_path, wholetext=True).collect()[0][0]

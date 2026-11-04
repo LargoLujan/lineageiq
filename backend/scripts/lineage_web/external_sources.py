@@ -101,7 +101,7 @@ def _summarize_pending_external_sources(settings):
     into one bucket:
       - "pending": no Fabric Connection assigned at all yet.
       - "broken": a connection IS assigned, but the last time someone
-        pressed "Probar conexión (vía Fabric)" it came back Offline (see
+        pressed "Test connection (via Fabric)" it came back Offline (see
         handler.py's /api/admin/fabric-connections/test, which persists
         fabric_connection_last_test_status/_at onto the source).
     Both are returned, but the caller (handler.py's notifications-summary
@@ -152,7 +152,7 @@ def _get_detected_external_origins():
     if rows is None:
         return {
             "found": False,
-            "reason": "Necesita que 'Almacén de escritura' -> modo de lectura esté en Warehouse y que ya se haya hecho un escaneo completo.",
+            "reason": "Needs the 'Write storage' read mode set to Warehouse and a completed full scan.",
         }
     origins = {}
     for row in rows:
@@ -184,7 +184,7 @@ def _get_detected_external_origins():
 def _persist_external_source_test_result(index, source, result):
     """Best-effort: writes last_test_ok/last_test_at/last_test_message onto
     the DISK copy of external_sources[index], not whatever the caller's own
-    in-memory list currently holds -- "Probar conexión" has no per-row save
+    in-memory list currently holds -- "Test connection" has no per-row save
     (only "Save all" exists), so touching the disk copy through the
     caller's possibly-mid-edit list would silently persist unrelated
     unsaved changes elsewhere in the list too (a mistake this project already avoided once, see app.js's
@@ -235,7 +235,7 @@ def _test_lakehouse_connection(lakehouse, session=None):
     if not pwsh_path:
         return {"ok": False, "message": "PowerShell ('pwsh') was not found on PATH."}
     if not lakehouse.get("sql_endpoint_connection_string") or not lakehouse.get("lakehouse_name"):
-        return {"ok": False, "message": "Rellena 'Workspace', 'Lakehouse' y 'SQL endpoint' antes de probar la conexión."}
+        return {"ok": False, "message": "Fill in 'Workspace', 'Lakehouse' and 'SQL endpoint' before testing the connection."}
 
     args = [
         pwsh_path, "-NoLogo", "-File", str(TEST_EXTERNAL_SOURCE_SCRIPT_PATH),

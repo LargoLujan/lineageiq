@@ -14,7 +14,7 @@
 #     datamart_dependencies.csv): NEED script 08 (base builder of
 #     semantic_model_datamart_dependencies, not ported) and/or the
 #     external SQL catalog (script 48, blocked by the lack of a network
-#     route -- see docs/105, verified 2026-08-17). Porting them as-is today
+#     route -- see docs/105, verified). Porting them as-is today
 #     would produce zero real backfills -- NOT ported, documented as an
 #     explicit gap instead of dead code.
 #   - 61 (backfill via the notebook flow catalog + SQL catalog): its main

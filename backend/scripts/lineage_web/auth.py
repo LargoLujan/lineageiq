@@ -427,7 +427,7 @@ def _end_session(session_id):
 
 
 def _generate_api_key():
-    # "flm_" prefix (Fabric Lineage Mapper) makes a leaked key recognizable
+    # "flm_" prefix (from the project's original name, Fabric Lineage Mapper; kept for compatibility with existing keys) makes a leaked key recognizable
     # in logs/scans, same idea as GitHub's "ghp_"/Stripe's "sk_" prefixes.
     return "flm_" + secrets.token_urlsafe(32)
 

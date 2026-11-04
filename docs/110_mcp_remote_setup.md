@@ -29,7 +29,7 @@ The only stable part is "URL + Bearer token", which is the MCP protocol itself. 
 ### Claude Code (CLI)
 
 ```bash
-claude mcp add --transport http fabric-lineage https://<your-domain>/mcp --header "Authorization: Bearer <your-api-key>"
+claude mcp add --transport http lineageiq https://<your-domain>/mcp --header "Authorization: Bearer <your-api-key>"
 ```
 
 If your version of `claude mcp add` does not recognise `--transport http` or `--header`, run `claude mcp add --help` to see the flags that version accepts.
@@ -49,7 +49,7 @@ Settings, then Connectors (or Apps, depending on the account), then Add a custom
 ```json
 {
   "mcpServers": {
-    "fabric-lineage": {
+    "lineageiq": {
       "url": "https://<your-domain>/mcp",
       "headers": { "Authorization": "Bearer <your-api-key>" }
     }

@@ -1014,7 +1014,7 @@ def _build_notification_email(scope_label, started_at_iso, ended_at_iso, status,
     display_scope = texts["full_scan_label"] if scope_label == FULL_SCAN_LABEL else scope_label
     duration = _duration_seconds_between(started_at_iso, ended_at_iso)
     who = triggered_by_email or texts["anonymous"]
-    subject = f"[Fabric Lineage Mapper] {texts['subject'].get(status, status)}: {display_scope}"
+    subject = f"[LineageIQ] {texts['subject'].get(status, status)}: {display_scope}"
     by_type = (diff or {}).get("by_type") or {}
 
     error_row_html = ""
@@ -1073,7 +1073,7 @@ def _send_email(settings, to_email, subject, html_body, text_body):
     if password_ref and reserved and password_ref == reserved:
         return False, f"'{password_ref}' is reserved for the Warehouse service-principal secret and can't be used as an SMTP password reference."
     password = os.environ.get(password_ref, "") if password_ref else ""
-    from_address = (notif.get("from_address") or user or "fabric-lineage-mapper@localhost").strip()
+    from_address = (notif.get("from_address") or user or "lineageiq@localhost").strip()
 
     message = MIMEMultipart("alternative")
     message["Subject"] = subject

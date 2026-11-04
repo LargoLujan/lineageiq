@@ -368,7 +368,7 @@ NOTIFICATION_TEXT = {
         "modified_col": "Modificados",
         "error_label": "Error",
         "failed_step_label": "Paso que falló",
-        "footer": "Este correo se envió automáticamente porque tienes activadas las notificaciones de escaneo en el panel de administración de Fabric Lineage Mapper.",
+        "footer": "Este correo se envió automáticamente porque tienes activadas las notificaciones de escaneo en el panel de administración de LineageIQ.",
     },
     "en": {
         "subject": {
@@ -394,7 +394,7 @@ NOTIFICATION_TEXT = {
         "modified_col": "Modified",
         "error_label": "Error",
         "failed_step_label": "Failed step",
-        "footer": "This email was sent automatically because scan notifications are enabled for your account in the Fabric Lineage Mapper admin panel.",
+        "footer": "This email was sent automatically because scan notifications are enabled for your account in the LineageIQ admin panel.",
     },
 }
 FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"

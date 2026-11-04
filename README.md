@@ -268,7 +268,7 @@ The viewer stays local by default (`LINEAGE_WEB_PUBLIC_TUNNEL=false`). For a tem
 `Dockerfile.render` is a separate, lean image for hosting only the viewer on a platform-as-a-service: no PowerShell or Azure CLI, no baked data snapshot, scans triggered through a Fabric Data Pipeline and reads served live from the Warehouse and OneLake. Create `docker/render_admin_settings.json` from `docker/render_admin_settings.example.json`, then build from the repository root:
 
 ```bash
-docker build -f Dockerfile.render -t fabric-lineage-viewer .
+docker build -f Dockerfile.render -t lineageiq-viewer .
 ```
 
 ## Usage
@@ -422,8 +422,8 @@ Register the local or remote server with Claude Code:
 
 ```bash
 pip install -r requirements-mcp.txt
-claude mcp add fabric-lineage -- python3 "<repo path>/backend/scripts/mcp_server.py"
-claude mcp add fabric-lineage-remote -- python3 "<repo path>/backend/scripts/mcp_server_remote.py" --base-url http://127.0.0.1:8765
+claude mcp add lineageiq -- python3 "<repo path>/backend/scripts/mcp_server.py"
+claude mcp add lineageiq-remote -- python3 "<repo path>/backend/scripts/mcp_server_remote.py" --base-url http://127.0.0.1:8765
 ```
 
 Then ask questions such as "what feeds the RPT_Sales_Dashboard report?" or "what depends on the sales_summary table?" against the demo data. For the HTTP server, `docs/110_mcp_remote_setup.md` gives registration steps for Claude Code, Claude Desktop, ChatGPT, Cursor, Windsurf and GitHub Copilot, plus a `curl` smoke test.
@@ -511,7 +511,7 @@ Sessions live in memory only and expire after 8 hours idle or 24 hours in total;
 python -m pytest tests/python/ -q
 ```
 
-The Python suite collects 421 tests (`pytest --collect-only`) and needs no live Fabric connection.
+The Python suite collects 423 tests (`pytest --collect-only`) and needs no live Fabric connection.
 
 CI (`.github/workflows/ci.yml`) runs on every push and pull request to `main` with three jobs:
 

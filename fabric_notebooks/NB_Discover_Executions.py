@@ -49,7 +49,7 @@ POWER_BI_API_BASE_URL = "https://api.powerbi.com/v1.0/myorg"
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 # No longer read from Key Vault (blocked) NOR from a pipeline parameter
-# (tested 2026-08-12: it leaked the value in plain text when the
+# (tested: it leaked the value in plain text when the
 # type conversion failed -- never again that way). Private file in the
 # Files area of the workspace Lakehouse, read with notebookutils.fs.head() --
 # governed by the SP's Fabric role on this workspace, not by Azure RBAC

@@ -7,7 +7,7 @@
 # activities). Each "# %%" block is a cell -- paste them in order.
 #
 # Faithful replica of scripts/04_analyze_items.ps1, the ONLY script that
-# writes index/dependencies.csv today (confirmed 2026-07-24 by reviewing the
+# writes index/dependencies.csv today (confirmed by reviewing the
 # ~30 scripts that match "dependencies.csv": all the others only
 # READ that file to build derived artifacts -- graph,
 # orchestration, explorer JSON, bronze tables). For each item it extracts:
@@ -65,7 +65,7 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 # No longer read from Key Vault (blocked) NOR from a pipeline parameter
-# (tested 2026-08-12: it leaked the value in plain text when the
+# (tested: it leaked the value in plain text when the
 # type conversion failed -- never again that way). Private file in the
 # Files area of the workspace Lakehouse, read with notebookutils.fs.head() --
 # governed by the SP's Fabric role on this workspace, not by Azure RBAC
@@ -138,8 +138,8 @@ def token_struct(token):
 
 def pick_odbc_driver():
     # Fabric's managed Spark runtime doesn't always ship the same ODBC
-    # driver major version as a local dev machine (confirmed live,
-    # 2026-08-11: "ODBC Driver 17 for SQL Server" -- file not found).
+    # driver major version as a local dev machine (confirmed live:
+    # "ODBC Driver 17 for SQL Server" -- file not found).
     # Picks whichever "ODBC Driver NN for SQL Server" is actually
     # installed, newest major version first, instead of a fixed guess.
     available = sorted(
@@ -289,7 +289,7 @@ def decode_definition_parts(definition_payload):
 
 
 # VariableLibrary definitions were already being fetched and decoded above
-# (2026-08-25) purely to regex-scan them for embedded item-id GUIDs like
+# purely to regex-scan them for embedded item-id GUIDs like
 # every other definition type -- the actual variables (name/type/value)
 # inside got thrown away afterwards. Schema confirmed live against 2 real
 # tenant items via getDefinition (variables.json: name/note/type/value,
@@ -341,7 +341,7 @@ def get_variable_library_rows(decoded_parts, workspace_name, item_name, qualifie
 
     # valueSets/<Name>.json parts -- per-value-set overrides on top of the
     # base variables above. variableOverrides was EMPTY in both real
-    # VariableLibrary items spot-checked live (2026-08-25), so the entry
+    # VariableLibrary items spot-checked live, so the entry
     # shape assumed here ({name, value}, mirroring a base variable) is
     # inferred from variables.json's own schema, NOT confirmed against a
     # populated example. Skips an entry silently rather than guessing
@@ -638,7 +638,7 @@ print(f"Dependencies computed: {len(dependency_rows)} ({confirmed_count} confirm
 # "Load workspaces + items" cell has been open since before steps
 # 1 and 2 (thousands of items, hundreds/thousands of Fabric API calls with
 # retries), potentially hours -- exactly the same problem that
-# already caused a real failure (2026-08-17, scheduled Saturday 21:00 UTC run:
+# already caused a real failure (a scheduled run:
 # NB_Discover_Dependencies died with "TCP Provider: Error code 0x20" when
 # reusing this same connection to write) and that NB_Discover_
 # Workspaces_Items.py already solves by reconnecting before its own
