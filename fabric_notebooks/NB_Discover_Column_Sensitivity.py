@@ -1,44 +1,41 @@
 # NB_Discover_Column_Sensitivity
 #
-# Fuente para un notebook Python de Fabric -- roadmap Fase 2
-# ("sensibilidad por contenido real"), 2026-08-17, rediseñado 2026-08-25
-# (panel admin, petición explícita: filtrar SIEMPRE por nombre de columna
-# antes de tocar contenido real, y guardar ejemplos reales -- no solo un
-# porcentaje -- para que un admin pueda juzgar a simple vista). Mismo
-# alcance nativo de Fabric que NB_Discover_Column_Profile.py (mismos
-# workspaces donde la SP ya tiene rol de datos, cero permisos nuevos)
-# -- ver docs/108_column_sensitivity_native_scope.md.
+# Source for a Fabric Python notebook -- column sensitivity based on real
+# content. Designed for the admin panel (explicit requirement: ALWAYS filter
+# by column name before touching real content, and store real examples --
+# not just a percentage -- so that an admin can judge at a glance). Same
+# Fabric-native scope as NB_Discover_Column_Profile.py (same
+# workspaces where the SP already has a data role, zero new permissions).
 #
-# Paso 0 (nuevo, obligatorio): antes de tocar el contenido de una columna,
-# su NOMBRE tiene que coincidir con el clasificador por nombre (mismos
-# patrones que backend/scripts/lineage_web/sensitivity_classifier.py,
-# copiados aquí porque este notebook es self-contained a propósito, igual
-# que el resto de notebooks "Discover"/"Extract" de este proyecto -- ver
-# CONTENT_PATTERN_CATEGORIES abajo). Esto evita muestrear TODAS las
-# columnas de texto del alcance (podía ser lento y no aportaba nada en las
-# columnas que ya sabíamos, por el nombre, que no eran candidatas) --
-# ahora solo se sampean las columnas que ya pasaron ese primer filtro.
+# Step 0 (mandatory): before touching a column's content,
+# its NAME has to match the name-based classifier (same
+# patterns as backend/scripts/lineage_web/sensitivity_classifier.py,
+# copied here because this notebook is self-contained on purpose, like
+# the rest of the "Discover"/"Extract" notebooks of this project -- see
+# CONTENT_PATTERN_CATEGORIES below). This avoids sampling ALL the text
+# columns in scope (it would be slow and would add nothing for the
+# columns that we already knew, from their name, were not candidates) --
+# only the columns that passed that first filter are sampled.
 #
-# POLÍTICA DE PRIVACIDAD DE LOS VALORES DE MUESTRA: algunos responsables
-# de datos prefieren guardar hasta SAMPLE_VALUES_TO_STORE valores de
-# ejemplo reales
-# (truncados) por columna, en su propia tabla separada
-# (dbo.bronze_column_sensitivity_samples), para que el panel admin (solo
-# accesible a administradores, ver handler.py's _require_admin) pudiera
-# mostrarlos y confirmar de un vistazo si de verdad era un dato sensible
-# -- especialmente útil para categorías sin patrón de contenido fiable
-# (nombre/dirección/fecha de nacimiento/género/salud). Es una decisión
-# de política legítima, pero es de quien opera CADA instalación, no algo que
-# este proyecto deba activar por defecto para cualquiera que lo clone --
-# ver STORE_REAL_SAMPLE_VALUES arriba (False por defecto en este repo).
-# Con el flag en False (el default), este notebook mantiene la garantía
-# original: ningún valor real de celda sale nunca de esta sesión de
-# Spark, solo un porcentaje/conteo. dbo.bronze_column_sensitivity_content
-# NUNCA lleva un valor real, con el flag en el estado que sea -- esa
-# tabla mantiene su propia garantía siempre intacta.
+# PRIVACY POLICY FOR SAMPLE VALUES: some data owners
+# prefer to store up to SAMPLE_VALUES_TO_STORE real example values
+# (truncated) per column, in their own separate table
+# (dbo.bronze_column_sensitivity_samples), so that the admin panel (only
+# accessible to administrators, see handler.py's _require_admin) can
+# show them and confirm at a glance whether it really is sensitive data
+# -- especially useful for categories without a reliable content pattern
+# (name/address/date of birth/gender/health). This is a legitimate policy
+# decision, but it belongs to whoever operates EACH installation, not something
+# this project should enable by default for anyone who clones it --
+# see STORE_REAL_SAMPLE_VALUES below (False by default in this repo).
+# With the flag set to False (the default), this notebook keeps the original
+# guarantee: no real cell value ever leaves this Spark session,
+# only a percentage/count. dbo.bronze_column_sensitivity_content
+# NEVER carries a real value, whatever the flag state -- that
+# table always keeps its own guarantee intact.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -64,14 +61,14 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
-# Mismo alcance Fase 1 que NB_Discover_Column_Profile.py -- ver ese
-# notebook y docs/108 para el porqué.
+# Same scope as NB_Discover_Column_Profile.py -- see that
+# notebook for the rationale.
 TARGET_WORKSPACE_NAMES = [
     "Contoso-Sales_Prod",
     "Fabrikam-Ops_Dev",
@@ -79,29 +76,28 @@ TARGET_WORKSPACE_NAMES = [
 ]
 
 MAX_TABLES_PER_LAKEHOUSE = 200
-SAMPLE_SIZE = 500  # filas no-nulas muestreadas por columna, no toda la tabla (2026-08-25: subido de 200 a 500, petición explícita)
+SAMPLE_SIZE = 500  # non-null rows sampled per column, not the whole table
 
-# APAGADO POR DEFECTO A PROPÓSITO (2026-08-27, saneado para publicación
-# open source -- ver H-01 en la auditoría de este repo): guardar valores
-# reales de celda, aunque truncados, en dbo.bronze_column_sensitivity_
-# samples es una decisión de política de privacidad que cada responsable
-# de datos debe tomar explícitamente para SU tenant (ver "POLÍTICA DE
-# PRIVACIDAD" arriba) -- no algo que un fork de este proyecto
-# deba heredar por defecto sin haber tomado esa misma decisión él mismo.
-# Con esto en False (el default), el notebook vuelve a la garantía
-# original: ningún valor de celda real sale nunca de esta sesión de
-# Spark, solo el porcentaje/conteo de coincidencia. Ponlo a True solo tras
-# una decisión explícita y documentada de quien opera ESTA instalación.
+# OFF BY DEFAULT ON PURPOSE (sanitized for open-source publication):
+# storing real cell values, even truncated, in dbo.bronze_column_sensitivity_
+# samples is a privacy policy decision that each data owner
+# must take explicitly for THEIR tenant (see "PRIVACY
+# POLICY" above) -- not something a fork of this project
+# should inherit by default without having made that same decision itself.
+# With this set to False (the default), the notebook keeps the
+# original guarantee: no real cell value ever leaves this Spark
+# session, only the match percentage/count. Set it to True only after
+# an explicit, documented decision by whoever operates THIS installation.
 STORE_REAL_SAMPLE_VALUES = False
-SAMPLE_VALUES_TO_STORE = 20  # de esas SAMPLE_SIZE filas, cuántas se guardan como ejemplo real en bronze_column_sensitivity_samples -- solo aplica si STORE_REAL_SAMPLE_VALUES es True
-MAX_SAMPLE_VALUE_LENGTH = 120  # trunca cada ejemplo guardado -- ver un valor de 120 caracteres ya basta para juzgar, no hace falta el campo entero
-MIN_MATCH_PERCENTAGE_TO_KEEP = 0.0  # DIAGNOSTICO 2026-08-17: temporalmente en 0 para ver si hay senal alguna antes de decidir el umbral final -- sigue sin decidirse; sube esto en tu propio fork en cuanto tengas señal real de qué porcentaje separa ruido de coincidencias genuinas
+SAMPLE_VALUES_TO_STORE = 20  # of those SAMPLE_SIZE rows, how many are stored as a real example in bronze_column_sensitivity_samples -- only applies if STORE_REAL_SAMPLE_VALUES is True
+MAX_SAMPLE_VALUE_LENGTH = 120  # truncates each stored example -- seeing 120 characters is enough to judge, the whole field is not needed
+MIN_MATCH_PERCENTAGE_TO_KEEP = 0.0  # DIAGNOSTIC: temporarily 0 to see whether there is any signal before deciding the final threshold -- still undecided; raise this in your own fork as soon as you have real signal on which percentage separates noise from genuine matches
 
-# Mismas claves/categoría/patrones que backend/scripts/lineage_web/
-# sensitivity_classifier.py's SENSITIVITY_CATEGORIES -- copiados aquí a
-# propósito (notebook self-contained, no puede importar ese módulo) para
-# el Paso 0 nuevo: filtrar por NOMBRE antes de sampear contenido. Mantener
-# en sync a mano si sensitivity_classifier.py cambia sus patrones.
+# Same keys/category/patterns as backend/scripts/lineage_web/
+# sensitivity_classifier.py's SENSITIVITY_CATEGORIES -- copied here on
+# purpose (self-contained notebook, it cannot import that module) for
+# Step 0: filter by NAME before sampling content. Keep
+# in sync by hand if sensitivity_classifier.py changes its patterns.
 NAME_PATTERNS = {
     "email": re.compile(r"e-?mail", re.IGNORECASE),
     "phone": re.compile(r"telefono|\bphone\b|movil(?!idad)", re.IGNORECASE),
@@ -119,59 +115,58 @@ def classify_column_name(column_name):
     return [key for key, pattern in NAME_PATTERNS.items() if pattern.search(column_name or "")]
 
 
-# Solo las categorías con un formato reconocible por regex se pueden
-# CONFIRMAR automáticamente por contenido -- person_name/address/
-# birth_date/gender/health no tienen un patrón de contenido fiable, así
-# que para esas match_percentage/match_count quedan en blanco (no "0%",
-# que sugeriría que se comprobó y no coincidió) y la confirmación depende
-# de que un admin revise los SAMPLE_VALUES_TO_STORE ejemplos guardados.
+# Only categories with a regex-recognizable format can be
+# CONFIRMED automatically by content -- person_name/address/
+# birth_date/gender/health have no reliable content pattern, so
+# for those match_percentage/match_count stay blank (not "0%",
+# which would suggest it was checked and did not match) and the confirmation depends
+# on an admin reviewing the stored SAMPLE_VALUES_TO_STORE examples.
 CONTENT_PATTERNS = {
     "email": re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"),
     "phone": re.compile(r"^\+?[0-9][0-9\s\-()]{6,14}[0-9]$"),
     # DNI espanol: 8 digitos + letra. NIE: X/Y/Z + 7 digitos + letra.
     "national_id": re.compile(r"^(?:[0-9]{8}[A-Za-z]|[XYZxyz][0-9]{7}[A-Za-z])$"),
-    # IBAN (2 letras + 2 digitos + hasta 30 alfanumericos) o tarjeta
-    # (13-19 digitos, con o sin separadores) -- checksum real (Luhn/IBAN
-    # mod-97) no implementado en esta primera version; heuristico, mismo
-    # espiritu "digno de revision humana" que sensitivity_classifier.py.
+    # IBAN (2 letters + 2 digits + up to 30 alphanumerics) or card
+    # (13-19 digits, with or without separators) -- real checksum (Luhn/IBAN
+    # mod-97) not implemented in this first version; heuristic, same
+    # "worth human review" spirit as sensitivity_classifier.py.
     "financial": re.compile(r"^(?:[A-Za-z]{2}[0-9]{2}[A-Za-z0-9]{10,30}|(?:[0-9][ \-]?){13,19})$"),
 }
 
-# Solo columnas capaces de contener un valor por fila -- ver el
-# comentario de salvaguarda de privacidad arriba (dbo.bronze_column_
-# sensitivity_content sigue sin llevar NUNCA un valor real). NUNCA anadir
-# aqui un campo tipo "sample_value"/"example"/"evidence_raw" -- esos
-# viven en SAMPLE_COLUMNS/bronze_column_sensitivity_samples, aparte.
+# Only columns able to hold one value per row -- see the
+# privacy safeguard comment above (dbo.bronze_column_
+# sensitivity_content still NEVER carries a real value). NEVER add
+# here a field like "sample_value"/"example"/"evidence_raw" -- those
+# live in SAMPLE_COLUMNS/bronze_column_sensitivity_samples, separately.
 SENSITIVITY_COLUMNS = [
     "workspace_name", "lakehouse_name", "table_name", "column_name", "data_type",
     "category", "sample_size", "match_count", "match_percentage", "checked_at",
 ]
 
-# 2026-08-25: tabla nueva, separada a propósito -- ver el comentario de
-# "CAMBIO DE POLÍTICA DE PRIVACIDAD" al principio del notebook. sample_
-# values_json es una lista JSON de hasta SAMPLE_VALUES_TO_STORE strings
-# truncados a MAX_SAMPLE_VALUE_LENGTH caracteres cada uno -- el único sitio
-# de todo este notebook donde un valor de fila real llega al Warehouse.
+# New table, separate on purpose -- see the "PRIVACY POLICY" comment
+# at the top of the notebook. sample_
+# values_json is a JSON list of up to SAMPLE_VALUES_TO_STORE strings
+# truncated to MAX_SAMPLE_VALUE_LENGTH characters each -- the only place
+# in this whole notebook where a real row value reaches the Warehouse.
 SAMPLE_COLUMNS = [
     "workspace_name", "lakehouse_name", "table_name", "column_name",
     "categories_matched", "sample_size", "sample_values_json", "checked_at",
 ]
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric. El panel admin
-# (Sensibilidad -> "Escanear contenido de los seleccionados", 2026-08-24
-# Fase 6) la rellena con las tablas que un admin marcó a mano en la lista
-# de sensibilidad-por-nombre, para no tener que escanear contenido real de
-# TODAS las tablas en TARGET_WORKSPACE_NAMES cada vez -- vacío (por
-# defecto) = comportamiento sin cambios, escanea todo lo que ya escaneaba.
-# Formato: "workspace::tabla" separadas por ";" (mismo separador que
-# WorkspaceNameFilter ya usa en otros notebooks). Granularidad de TABLA,
-# no de columna -- la lista de sensibilidad-por-nombre que alimenta esta
-# selección solo sabe qué OBJETOS tienen alguna columna sospechosa, no
-# cuál columna exactamente (ver purview_insights._get_sensitivity_overview);
-# una vez elegida una tabla, sus columnas de texto se muestrean todas,
-# igual que el comportamiento sin filtro.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric. The admin panel
+# (Sensitivity -> "Scan content of the selected") fills it in with the tables that an admin marked by hand in the list
+# of name-based sensitivity, so that real content does not have to be scanned for
+# ALL the tables in TARGET_WORKSPACE_NAMES every time -- empty (the
+# default) = unchanged behavior, scans everything it already scanned.
+# Format: "workspace::table" separated by ";" (same separator that
+# WorkspaceNameFilter already uses in other notebooks). TABLE granularity,
+# not column -- the name-based sensitivity list that feeds this
+# selection only knows which OBJECTS have some suspicious column, not
+# which column exactly (see purview_insights._get_sensitivity_overview);
+# once a table is chosen, all its text columns are sampled,
+# same as the unfiltered behavior.
 
 # %%
 TargetColumnsFilter = ""
@@ -191,7 +186,7 @@ if _target_tables:
     print(f"TargetColumnsFilter active: {len(_target_tables)} table(s) -- everything else in TARGET_WORKSPACE_NAMES is skipped this run.")
 
 # %% [markdown]
-# ## Autenticación (mismo patrón que los notebooks de descubrimiento)
+# ## Authentication (same pattern as the discovery notebooks)
 
 # %%
 def get_sp_client_secret():
@@ -252,8 +247,8 @@ def fabric_get(path):
         return json.loads(resp.read().decode("utf-8"))
 
 # %% [markdown]
-# ## Paso 1: resolver workspaces + lakehouses + su SQL endpoint (mismo
-# catálogo ya escrito por NB_Discover_Workspaces_Items.py)
+# ## Step 1: resolve workspaces + lakehouses + their SQL endpoint (same
+# catalog already written by NB_Discover_Workspaces_Items.py)
 
 # %%
 connection = connect_warehouse()
@@ -295,8 +290,8 @@ lakehouses_with_endpoint = [lh for lh in lakehouses if lh.get("sql_endpoint")]
 print(f"Lakehouses with a resolved SQL endpoint: {len(lakehouses_with_endpoint)}")
 
 # %% [markdown]
-# ## Paso 2: por cada tabla, filtrar columnas de texto por NOMBRE primero
-# (Paso 0) y solo entonces muestrear contenido de las que pasaron el filtro
+# ## Step 2: for each table, filter text columns by NAME first
+# (Step 0) and only then sample content from the ones that passed the filter
 
 # %%
 sensitivity_rows = []
@@ -348,20 +343,20 @@ for lh in lakehouses_with_endpoint:
         for col in text_columns:
             name = col["column_name"]
 
-            # Paso 0: filtro por NOMBRE primero -- si el nombre de la
-            # columna no sugiere ninguna categoría sensible, no se lanza
-            # ninguna consulta de contenido para ella. Esto es lo que
-            # evita samplear "todas las columnas de texto de golpe".
+            # Step 0: filter by NAME first -- if the column
+            # name does not suggest any sensitive category, no
+            # content query is launched for it. This is what
+            # avoids sampling "all the text columns at once".
             name_matched_categories = classify_column_name(name)
             if not name_matched_categories:
                 continue
 
             safe = name.replace("]", "]]")
             try:
-                # TABLESAMPLE no aplica bien a tablas pequenas/Delta via
-                # el endpoint SQL -- ORDER BY NEWID() con TOP es mas lento
-                # en tablas grandes pero funciona de forma consistente,
-                # aceptable dado SAMPLE_SIZE acotado.
+                # TABLESAMPLE does not work well on small/Delta tables via
+                # the SQL endpoint -- ORDER BY NEWID() with TOP is slower
+                # on large tables but works consistently,
+                # acceptable given the bounded SAMPLE_SIZE.
                 lh_cursor.execute(
                     f"SELECT TOP {SAMPLE_SIZE} [{safe}] FROM [{schema}].[{table}] "
                     f"WHERE [{safe}] IS NOT NULL ORDER BY NEWID()"
@@ -388,11 +383,11 @@ for lh in lakehouses_with_endpoint:
                         continue
                     match_count_out, match_percentage_out = match_count, match_percentage
                 else:
-                    # Sin patron de contenido fiable para esta categoria
+                    # No reliable content pattern for this category
                     # (person_name/address/birth_date/gender/health) --
-                    # queda en blanco (no "0%") para no sugerir que se
-                    # comprobo y no coincidio; la confirmacion depende de
-                    # que un admin revise los ejemplos guardados abajo.
+                    # left blank (not "0%") so as not to suggest that it
+                    # was checked and did not match; the confirmation depends on
+                    # an admin reviewing the examples stored below.
                     match_count_out, match_percentage_out = "", ""
                 sensitivity_rows.append({
                     "workspace_name": lh["workspace_name"], "lakehouse_name": lh["lakehouse_name"],
@@ -401,12 +396,12 @@ for lh in lakehouses_with_endpoint:
                     "match_percentage": match_percentage_out, "checked_at": now_iso,
                 })
 
-            # Ejemplos reales (2026-08-25, ver "CAMBIO DE POLITICA DE
-            # PRIVACIDAD" al principio del notebook) -- una fila por
-            # columna, no por categoria, con hasta SAMPLE_VALUES_TO_STORE
-            # valores truncados. Unico punto de todo el notebook donde un
-            # valor de fila real llega al Warehouse -- por eso queda detrás
-            # de STORE_REAL_SAMPLE_VALUES (False por defecto, ver arriba).
+            # Real examples (see the "PRIVACY POLICY" comment
+            # at the top of the notebook) -- one row per
+            # column, not per category, with up to SAMPLE_VALUES_TO_STORE
+            # truncated values. Only point in the whole notebook where a
+            # real row value reaches the Warehouse -- that is why it sits behind
+            # STORE_REAL_SAMPLE_VALUES (False by default, see above).
             if STORE_REAL_SAMPLE_VALUES:
                 example_values = [v[:MAX_SAMPLE_VALUE_LENGTH] for v in sampled_values[:SAMPLE_VALUES_TO_STORE]]
                 sample_rows.append({
@@ -416,17 +411,17 @@ for lh in lakehouses_with_endpoint:
                     "sample_size": sample_size, "sample_values_json": json.dumps(example_values, ensure_ascii=False),
                     "checked_at": now_iso,
                 })
-            # sampled_values sale de scope aqui -- la siguiente columna
-            # empieza una muestra nueva, nada se acumula entre columnas.
+            # sampled_values goes out of scope here -- the next column
+            # starts a new sample, nothing accumulates across columns.
 
     lh_conn.close()
 
 print(f"Sensitivity signals kept (>= {MIN_MATCH_PERCENTAGE_TO_KEEP}% match, or name-matched with no content pattern): {len(sensitivity_rows)}. Columns with stored examples: {len(sample_rows)}. Gaps: {len(gap_rows)}.")
 
 # %% [markdown]
-# ## Escribir en el Warehouse (reemplazo completo de ambas tablas).
-# Verificacion final de que bronze_column_sensitivity_content -- la tabla
-# de porcentajes -- sigue sin llevar nunca un valor de contenido real.
+# ## Write to the Warehouse (full replacement of both tables).
+# Final check that bronze_column_sensitivity_content -- the percentages
+# table -- still never carries a real content value.
 
 # %%
 for row in sensitivity_rows:
@@ -470,9 +465,9 @@ connection.close()
 if gap_rows:
     print(json.dumps(gap_rows[:10], indent=2, default=str))
 
-# DIAGNOSTICO 2026-08-17 (temporal, se retira una vez confirmado el
-# umbral final): visibilidad de conteos intermedios via OneLake, porque
-# el job status de Fabric no expone stdout.
+# DIAGNOSTIC (temporary, to be removed once the final threshold is
+# confirmed): visibility of intermediate counts via OneLake, because
+# the Fabric job status does not expose stdout.
 debug_path = (
     f"abfss://{ONELAKE_WORKSPACE_NAME}@onelake.dfs.fabric.microsoft.com/"
     f"{ONELAKE_LAKEHOUSE_NAME}.Lakehouse/Files/_debug_sensitivity_diagnostics.json"

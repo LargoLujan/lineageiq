@@ -1,6 +1,5 @@
 -- Warehouse-native translation of backend/scripts/26_build_d1_missing_
--- object_lineage_package.ps1 (Phase 2 migration continuation, 2026-07-
--- 21). Reads dbo.silver_likely_conflict_cleanup_queue (25), dbo.bronze_
+-- object_lineage_package.ps1 (SQL migration). Reads dbo.silver_likely_conflict_cleanup_queue (25), dbo.bronze_
 -- object_level_lineage_coverage, dbo.silver_manual_lineage_review_queue
 -- (14), dbo.bronze_item_object_lineage_gaps/pipeline_object_lineage_
 -- gaps/semantic_model_definition_gaps/semantic_model_view_candidates,

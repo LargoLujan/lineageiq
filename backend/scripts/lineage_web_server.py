@@ -17,7 +17,7 @@ opening the tunnel URL):
 - Catalog/data reads: GET /api/workspaces, /api/items, /api/item-lineage,
   /api/objects, /api/notebook-code, and any static file under /data/ (the
   frontend's large JSON payloads). Require a signed-in session or a
-  valid API key (2026-07-22) -- but no further check beyond that: this
+  valid API key -- but no further check beyond that: this
   data is read-only, so an authenticated tenant account sees it even
   without Fabric Warehouse/workspace permissions of their own.
 - The manual scan trigger: GET /api/status, GET /api/history, POST
@@ -61,7 +61,7 @@ tokens) and are lost on a server restart -- signing in again is the only
 consequence. Stdlib only, no new runtime dependency beyond `msal` (already
 installed on this machine as a transitive dependency of azure-cli-core).
 
-Split (D.3, 2026-07-08) into the backend/scripts/lineage_web/ package below;
+Split into the backend/scripts/lineage_web/ package below;
 this file is now a slim entrypoint that also re-exports every internal name
 the existing test suite (tests/python/test_lineage_web_server.py) and any
 other direct caller accessed on the old, single-file module -- pure code
@@ -423,7 +423,7 @@ def main():
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8765)))
     parser.add_argument("--bind", default="0.0.0.0")
     parser.add_argument("--directory", default=".")
-    # 2026-08-24: the remote MCP surface (see mcp_http_server.py's own
+    # The remote MCP surface (see mcp_http_server.py's own
     # docstring for why local/stdio-only was never enough for a hosted AI
     # product's Connectors feature to reach). --mcp-port defaults to one
     # above --port so two local instances (e.g. this server plus a test
@@ -448,6 +448,7 @@ def main():
     mcp_process = None
     if args.no_mcp_http:
         LineageWebHandler.mcp_http_port = None
+        LineageWebHandler.mcp_http_disabled = True
     else:
         mcp_port = args.mcp_port or (args.port + 1)
         mcp_process = _spawn_mcp_http_server(f"http://127.0.0.1:{args.port}", mcp_port)

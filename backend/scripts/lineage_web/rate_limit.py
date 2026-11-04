@@ -1,5 +1,5 @@
-"""Fixed-window rate limiting per client IP, for /api/* only (Tanda 5,
-E.3). In-memory and per-process, same tradeoff as every other piece of
+"""Fixed-window rate limiting per client IP, for /api/* only.
+In-memory and per-process, same tradeoff as every other piece of
 shared state in this package: a server restart resets every window, which
 is fine for a limiter whose job is smoothing bursts, not enforcing a hard
 long-term quota.
@@ -17,7 +17,7 @@ def _check_rate_limit(client_ip):
     with _rate_limit_lock:
         # Opportunistic cleanup of expired windows -- otherwise this dict
         # only ever grows, one entry per distinct client_ip ever seen,
-        # never shrinking (2026-08-17 security audit). Combined with the
+        # never shrinking. Combined with the
         # _client_ip() fix above (untrusted callers can no longer mint
         # unlimited fake IPs via a spoofed header), this keeps the dict
         # bounded by real distinct recent visitors instead of unbounded.

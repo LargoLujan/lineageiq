@@ -1,4 +1,4 @@
-"""Unit tests for the OneLake web-data auto-publish mechanism (2026-07-24):
+"""Unit tests for the OneLake web-data auto-publish mechanism:
 _maybe_trigger_onelake_publish/_start_onelake_publish/_wait_for_onelake_
 publish_process in backend/scripts/lineage_web/scan_manager.py -- the
 publish-side counterpart to the existing Warehouse auto-upload trigger.
@@ -208,7 +208,7 @@ def test_queue_entry_workspace_label_for_onelake_publish():
 
 
 # ---------------------------------------------------------------------------
-# _wait_for_process (single-workspace scan) -- as of 2026-07-24 this scan
+# _wait_for_process (single-workspace scan) -- this scan
 # kind's own local rebuild steps (11/17/21/build_graph_map_index.ps1, see
 # scan_single_workspace.ps1) refresh all 5 big JSON files too, same as a
 # full scan, so it must trigger OneLake publish on success exactly like

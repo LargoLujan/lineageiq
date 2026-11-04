@@ -1,6 +1,6 @@
 const { expect, test } = require('@playwright/test');
 
-// Covers the sign-in wall added in Fase 1 (see
+// Covers the sign-in wall (see
 // docs/102_admin_panel_and_user_auth.md): nothing in .app-shell -- toolbar,
 // diagram, the multi-MB lineage payload -- should load or become visible
 // until a session exists. Runs against the real backend/scripts/lineage_web_server.py

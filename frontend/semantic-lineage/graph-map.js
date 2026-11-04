@@ -1,5 +1,5 @@
-// Graph Map Mode -- rendering, interactions, and view state (Fase G, then
-// Tanda 8: rewritten onto a WebGL 3D engine after live profiling proved
+// Graph Map Mode -- rendering, interactions, and view state.
+// Rewritten onto a WebGL 3D engine after live profiling proved
 // the original Cytoscape.js canvas 2D renderer averaged under 1 FPS (every
 // single frame over 1 second) panning/zooming a graph of a few thousand
 // nodes,
@@ -160,7 +160,7 @@
 
   var SEARCH_RESULT_LIMIT = 40;
 
-  // H.7 (2026-07-08) / Tanda 8 (2026-07-08, 3D rewrite): one entry per real
+  // One entry per real
   // node_type. `shape` is kept in the data (not just color) for a future
   // pass that vendors Three.js directly to render distinct 3D geometries
   // per type -- ForceGraph3D's UMD build doesn't expose `window.THREE`
@@ -189,7 +189,7 @@
     GraphQLApi: { shape: 'triangle', color: '#22d3ee', es: 'API GraphQL', en: 'GraphQL API' },
     UserDataFunction: { shape: 'round-triangle', color: '#2dd4bf', es: 'Función de usuario', en: 'User data function' },
     DataAgent: { shape: 'heptagon', color: '#e879f9', es: 'Agente de datos', en: 'Data agent' },
-    // G/portal-1 (2026-07-09): a real, non-Fabric connection (external SQL
+    // A real, non-Fabric connection (external SQL
     // Server, SharePoint/file, external API) that one or more items read
     // from directly -- see build_external_origin_graph. Rendered as a
     // "portal" ring (nodeThreeObjectFor special-case, slowly spinning) on
@@ -197,7 +197,7 @@
     // never inside a workspace atmosphere -- it never carries a `parent`.
     ExternalOrigin: { shape: 'portal', color: '#c026d3', es: 'Origen externo', en: 'External origin' },
   };
-  // Object-level nodes (id starts "object::", G.8) carry no node_type from
+  // Object-level nodes (id starts "object::") carry no node_type from
   // a Fabric type catalog -- keyed by source_type instead (see
   // build_graph_map_index.py's build_object_graph).
   var SOURCE_TYPE_META = {
@@ -283,8 +283,8 @@
 
   // Per-tier floor so the ordinal hierarchy (workspace > storage > item)
   // build_graph_map_index.py already establishes via `size` still holds
-  // even after Tanda 8 folds real connectivity ("influence") into the
-  // final value -- direct user feedback was that H.4's count-only sizing
+  // even after real connectivity ("influence") is folded into the
+  // final value -- the earlier count-only sizing
   // didn't *read* as influence. sqrt(1 + degree) keeps one very highly
   // connected item from visually swallowing the graph the way a linear
   // multiplier would.
@@ -296,7 +296,7 @@
     return base * Math.sqrt(1 + degree);
   }
 
-  // Tanda 8 deferred item: distinct 3D geometry per type, not just color.
+  // Distinct 3D geometry per type, not just color.
   // `3d-force-graph`'s UMD build never exposes its own internal Three.js
   // copy as a global, so index.html loads a second, separate Three.js as a
   // native ES module and bridges it to `window.THREE` for this classic
@@ -396,7 +396,7 @@
     return mesh;
   }
 
-  // Purview-inspired health/freshness signal (Tanda A, 2026-07-09): a soft
+  // Purview-inspired health/freshness signal: a soft
   // colored glow (MeshLambertMaterial's own `emissive`, not a separate
   // object -- one property, no extra geometry/draw call) on items whose
   // last real run failed or that haven't run in 30+ days (see
@@ -411,7 +411,7 @@
     return null;
   }
 
-  // Tanda B (2026-07-09): same glow mechanism as healthMetaFor, for objects
+  // Same glow mechanism as healthMetaFor, for objects
   // sensitivity_classifier.py flagged by column-name pattern (email/DNI/
   // card/etc.) -- a pink/magenta glow distinct from health's red/amber so
   // the two signals never look alike, even though items and objects rarely
@@ -422,7 +422,7 @@
     return { color: 0xf472b6, es: 'Posibles datos sensibles', en: 'Potentially sensitive data' };
   }
 
-  // Tanda C (Purview-inspired, 2026-07-09): a certified/official-source
+  // A certified/official-source
   // badge (config/admin_settings.json's certified_items, admin-curated) is
   // a *positive* signal, unlike health/sensitivity's warning glow -- reusing
   // the same emissive channel for it would either fight or silently lose to
@@ -553,7 +553,7 @@
   var filterButton = null;
   var filterPanelEl = null;
   var legendEl = null;
-  var graph = null; // ForceGraph3D instance (Tanda 8; was `cy`, the Cytoscape instance)
+  var graph = null; // ForceGraph3D instance (replaced `cy`, the earlier Cytoscape instance)
   var isOpen = false;
   var loadState = 'idle'; // idle | loading | loaded | error
   var adjacency = null; // built once per load (GraphMapData.buildAdjacency) -- selection never rescans edges
@@ -692,7 +692,7 @@
   }
 
   // Arrowheads are real 3D cone geometry (see linkDirectionalArrowLength in
-  // createGraph) -- Tanda 8 measured rendering one on every link at once as
+  // createGraph) -- measurements showed rendering one on every link at once as
   // the single biggest cost in this whole view (~40 FPS on their own), so
   // this stays keyed to "actively highlighted" specifically, not to
   // linkWidthFor's own >1 check -- cross-workspace links are now *also*
@@ -765,7 +765,7 @@
       .linkWidth(linkWidthFor)
       .linkVisibility(linkVisibilityFor)
       // Arrowheads are real 3D cone geometry per link, not a cheap 2D
-      // stroke -- measured live (2026-07-08) that rendering one on every
+      // stroke -- measured live that rendering one on every
       // link (~5,100 once the synthetic clustering links below are added)
       // alone dropped a locked 60 FPS to ~23 FPS, dominating every other
       // cost in this file combined. Only rendering them on the handful of
@@ -918,7 +918,7 @@
   // Tap-vs-double-tap: ForceGraph3D has no built-in double-click event, so
   // this tracks consecutive clicks on the same node within DOUBLE_CLICK_MS
   // -- mirrors Cytoscape's 'tap'/'dbltap' split (single = select, double =
-  // drill into object-level detail, G.8).
+  // drill into object-level detail).
   function handleNodeClick(node) {
     if (!node) return;
     var now = Date.now();
@@ -944,7 +944,7 @@
     selectNode(node.id);
   }
 
-  // H.2-era hover tooltip, ported as-is (positions next to the node's
+  // Hover tooltip, ported as-is from the earlier Cytoscape view (positions next to the node's
   // current *screen* projection, not a continuous mousemove listener).
   function showTooltip(node) {
     if (!tooltipEl || !graph) return;
@@ -970,8 +970,8 @@
     if (tooltipEl) tooltipEl.hidden = true;
   }
 
-  // Tanda 8 deferred item: direct user feedback was "no veo ninguna tabla
-  // ya sea de fabric u otro origen, vista o sp" -- G.8's original design
+  // Direct user feedback was "I can't see any table, whether from Fabric or
+  // another origin, view or stored procedure" -- the original design
   // only ever surfaced object-level nodes in a separate "focused" canvas
   // that hid the rest of the graph, which technically answered "can I see
   // this item's tables" but not "I want to see tables in the main map."
@@ -984,8 +984,8 @@
   // either. The fix: objects are revealed progressively, ADDED directly
   // into the same always-visible main graph (never hiding anything, no
   // separate "focused mode" to enter/exit) one item at a time, on click --
-  // exactly the same GraphMapData.getObjectEdgesForItem() O(1) lookup G.8
-  // already built, just merged in place instead of swapped in.
+  // exactly the same GraphMapData.getObjectEdgesForItem() O(1) lookup the
+  // focused graph already used, just merged in place instead of swapped in.
   function resetView() {
     clearMergedObjects();
     clearSelection();
@@ -1232,7 +1232,7 @@
     pushBreadcrumb(nodeId);
   }
 
-  // Replaces G.9's manual dash-offset "illuminated streets" animation --
+  // Replaces the earlier manual dash-offset "illuminated streets" animation --
   // linkDirectionalParticles is 3d-force-graph's own built-in equivalent
   // (small spheres flowing source->target along a link), no interval/timer
   // to manage or self-stop ourselves.
@@ -1645,8 +1645,8 @@
   // separately from computeVisibleTypeCounts() (which only tracks the
   // top-level node_type/source_type keys) so the legend can render every
   // distinct origin type its own row, inside a collapsible group instead
-  // of one flat row -- requested explicitly: "un subíndice... con un + para
-  // abrir y verlo porque si no la lista será muy larga."
+  // of one flat row -- requested explicitly: "a sub-index... with a + to
+  // expand it, because otherwise the list will be too long."
   function computeVisibleExternalOriginSourceTypeCounts() {
     var counts = {};
     if (!nodesById) return counts;
@@ -1852,7 +1852,7 @@
     return flat;
   }
 
-  // H.5's "gravitational clustering" relied on Cytoscape compound parent/
+  // The earlier "gravitational clustering" relied on Cytoscape compound parent/
   // child nodes, a concept ForceGraph3D has no equivalent for. Reimplemented
   // here as real (if visually subtle) synthetic links from each item to its
   // workspace -- d3-force-3d's own link force then does the actual pulling,
@@ -1971,7 +1971,7 @@
 
   function open(event) {
     if (isOpen) return;
-    // Roadmap Fase 4 (2026-08-31): DagView is a sibling full-screen overlay
+    // DagView is a sibling full-screen overlay
     // living right next to this one's own toolbar button -- never both at
     // once (see dag-view.js's own symmetric guard on ITS open()).
     if (window.DagView) window.DagView.close();
@@ -1989,7 +1989,7 @@
     // drops the class + any inline clip-path once the animation ends (or
     // immediately, if it never validly started) -- belt-and-suspenders so
     // a stuck/partial clip-path can never leave the 3D view unclickable,
-    // which is exactly what happened live (2026-08-18) before this guard:
+    // which is exactly what happened live before this guard:
     // an animation-end listener is far more reliable than trusting every
     // browser to always revert clip-path to none on its own once a
     // fill-mode:none animation completes.

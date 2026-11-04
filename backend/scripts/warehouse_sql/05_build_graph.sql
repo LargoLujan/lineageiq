@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/05_build_graph.ps1
--- (Phase 2 migration, 2026-07-21). Reads dbo.bronze_workspaces,
+-- (SQL migration). Reads dbo.bronze_workspaces,
 -- dbo.bronze_items, dbo.bronze_dependencies, dbo.bronze_item_analysis, and
 -- dbo.bronze_graph_nodes (05's own prior output, mirrored to bronze, for
 -- ExternalConnection retention across runs). No recursion needed -- this
@@ -59,7 +59,7 @@ node_ranked AS (
     -- PARTITION BY LOWER(...), not the raw column: PowerShell's $NodeMap is
     -- a plain hashtable, whose default string-key comparer is ordinal
     -- CASE-INSENSITIVE -- unlike Fabric Warehouse's own default database
-    -- collation (Latin1_General_100_BIN2_UTF8, confirmed live 2026-07-21:
+    -- collation (Latin1_General_100_BIN2_UTF8, confirmed live:
     -- 'abc' = 'ABC' is false), which is case-SENSITIVE binary. Without this,
     -- two qualified_names differing only by case (a real one exists in this
     -- tenant's data, e.g. mixed-case vs all-lowercase variants of the same

@@ -1,4 +1,4 @@
-"""Unit tests for lineage_web/onelake_data.py (2026-07-24): the optional
+"""Unit tests for lineage_web/onelake_data.py: the optional
 live-from-OneLake serving path for the big generated JSON payloads.
 
 Every network/SDK call is monkeypatched -- these tests must never touch a
@@ -160,7 +160,7 @@ def test_credential_falls_back_to_azure_cli_when_no_sp_or_service_session(monkey
     # The exact scenario hit live: workspace/lakehouse filled in, no SP,
     # and (explicitly forced here, not just ambient) no persisted service
     # session either -- see test_credential_uses_service_session_when_no_sp
-    # for the case added 2026-07-24 that this must NOT hit instead.
+    # for the case that this must NOT hit instead.
     config = {"workspace_name": "WS1", "lakehouse_name": "LH1"}
     monkeypatch.setattr("lineage_web.service_session.has_service_session", lambda: False)
     sentinel = object()
@@ -182,7 +182,7 @@ def test_credential_uses_client_secret_when_sp_configured(monkeypatch):
 
 
 def test_credential_uses_service_session_when_no_sp_but_one_is_designated(monkeypatch):
-    # Added 2026-07-24: the persisted delegated service session (see
+    # The persisted delegated service session (see
     # service_session.py) is tried BEFORE the az-cli fallback, since it
     # also works on a host with no `az` at all (e.g. Render).
     config = {"workspace_name": "WS1", "lakehouse_name": "LH1"}
@@ -219,7 +219,7 @@ def test_service_session_credential_get_token_raises_when_no_token(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# test_connection (2026-08-18, admin-panel completeness pass): the OneLake
+# test_connection: the OneLake
 # tab's own "Probar conexión" -- resolves the Files directory without
 # publishing anything. DataLakeServiceClient is imported inline inside
 # test_connection (same lazy-import pattern as _download), so it's

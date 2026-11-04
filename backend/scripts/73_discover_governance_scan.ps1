@@ -36,7 +36,7 @@
 #     re-run this script once someone with Admin Portal access has checked/
 #     adjusted the above; nothing else needs to change.
 #
-# AUTH MODE (2026-08-26 update): supports a service principal instead of a
+# AUTH MODE: supports a service principal instead of a
 # named person's delegated session, which is the actually-recommended path
 # for unattended/non-nominal scanning -- confirmed against Microsoft Learn's
 # "Enable service principal authentication for admin APIs": PostWorkspaceInfo/
@@ -49,7 +49,7 @@
 # same sp_tenant_id/sp_client_id/sp_client_secret_ref fields admin_settings.py
 # already writes there) so "use the SP we already have" needs zero extra
 # flags -- falls back to the signed-in delegated Azure CLI session (the
-# original 2026-08-26 behavior, still fully supported) when no SP is
+# original behavior, still fully supported) when no SP is
 # configured or its token acquisition fails. Setup a tenant admin still has
 # to do once, by hand (this script cannot grant its own access):
 #   1. Confirm the app has NO admin-consent-required Power BI permissions
@@ -71,7 +71,7 @@ param(
     [string]$OutputRlsRolesPath = (Join-Path $PSScriptRoot "../../analysis/governance_rls_roles.csv"),
     [string]$OutputStatusPath = (Join-Path $PSScriptRoot "../../analysis/governance_scan_status.csv"),
     [string]$OutputSummaryPath = (Join-Path $PSScriptRoot "../../analysis/governance_scan_summary.csv"),
-    [string]$OutputDocPath = (Join-Path $PSScriptRoot "../../docs/110_governance_scan.md"),
+    [string]$OutputDocPath = (Join-Path $PSScriptRoot "../../docs/73_governance_scan.md"),
     [string]$AzCommand = "az",
     [string]$PowerBiApiBaseUrl = "https://api.powerbi.com/v1.0/myorg",
     [string]$PowerBiTokenResource = "https://analysis.windows.net/powerbi/api",
@@ -245,7 +245,7 @@ function Get-ScannerApiFix {
             if ($UsingServicePrincipal) {
                 return "HTTP 401 with service-principal auth. Ask a Fabric/Power BI admin to check: (1) the app has no admin-consent-required Power BI permissions set on it (Entra ID -> Enterprise applications -> the app -> Permissions must be empty of Application-type Power BI grants -- this API rejects the call otherwise); (2) the app is a member of the Security Group allow-listed under Fabric admin portal -> Tenant settings -> Admin API settings -> 'Service principals can access read-only admin APIs' -> Enabled -> that group; (3) the client secret hasn't expired."
             }
-            return "HTTP 401 on this specific Power BI Admin API (different from an ordinary 403 'not an admin'). Confirmed live 2026-08-26 that a Fabric Administrator account still gets this with delegated auth. Ask someone with Fabric/Power BI Admin Portal access to check: (1) the calling account also holds the Microsoft Entra 'Power BI Administrator' role, not just 'Fabric Administrator' -- these are two distinct roles for this legacy API family; (2) Admin Portal -> Tenant settings -> Admin API settings isn't restricted to a security group the account isn't in. Alternative: switch to service-principal auth (-SpTenantId/-SpClientId/-SpClientSecretEnvVar, or configure config/lakehouse_target.json) -- it needs no directory role at all, just a security-group allow-list."
+            return "HTTP 401 on this specific Power BI Admin API (different from an ordinary 403 'not an admin'). A Fabric Administrator account can still get this with delegated auth. Ask someone with Fabric/Power BI Admin Portal access to check: (1) the calling account also holds the Microsoft Entra 'Power BI Administrator' role, not just 'Fabric Administrator' -- these are two distinct roles for this legacy API family; (2) Admin Portal -> Tenant settings -> Admin API settings isn't restricted to a security group the account isn't in. Alternative: switch to service-principal auth (-SpTenantId/-SpClientId/-SpClientSecretEnvVar, or configure config/lakehouse_target.json) -- it needs no directory role at all, just a security-group allow-list."
         }
         403 {
             if ($UsingServicePrincipal) {

@@ -94,7 +94,7 @@ $dependencyColumns = @(
     "notes"
 )
 
-# 2026-08-25: a VariableLibrary's definition was already being fetched and
+# A VariableLibrary's definition was already being fetched and
 # decoded (it's in $DefinitionItemTypes below) purely to regex-scan it for
 # embedded item-id GUIDs like every other definition type -- the actual
 # variables (name/type/value) inside got thrown away afterwards. Real
@@ -536,7 +536,7 @@ function Get-VariableLibraryRows {
 
     # valueSets/<Name>.json parts -- per-value-set overrides on top of the
     # base variables above. variableOverrides was EMPTY in both real
-    # VariableLibrary items spot-checked live (2026-08-25), so the entry
+    # VariableLibrary items spot-checked live, so the entry
     # shape assumed here ({name, value}, mirroring a base variable) is
     # inferred from variables.json's own schema, NOT confirmed against a
     # populated example. Skips an entry silently rather than guessing

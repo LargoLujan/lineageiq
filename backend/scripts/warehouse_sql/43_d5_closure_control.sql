@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/43_build_d5_closure_control.ps1
--- (Phase 1 migration, 2026-07-21). Reads dbo.bronze_d5_object_conflict_queue,
+-- (SQL migration). Reads dbo.bronze_d5_object_conflict_queue,
 -- dbo.bronze_d5_object_guard_edge_queue, dbo.bronze_d5_object_conflict_participants,
 -- dbo.bronze_d4_exact_object_type_impact_queue, AND
 -- dbo.silver_d3_source_object_review_targets -- the first cross-D-phase

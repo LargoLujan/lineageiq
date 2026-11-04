@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/22_build_evidence_
--- hardening_queue.ps1 (Phase 2 migration continuation, 2026-07-21).
+-- hardening_queue.ps1 (SQL migration).
 -- Reads dbo.bronze_dependencies/object_impact_index/object_impact_summary/
 -- source_object_type_metadata_gaps/object_level_lineage_coverage, plus
 -- three of THIS migration's own already-validated silver_* outputs

@@ -1,4 +1,4 @@
-"""Comments and favorites on catalog nodes (roadmap Nivel 1, 2026-08-17) --
+"""Comments and favorites on catalog nodes --
 the lightest-weight collaborative layer identified in the competitive
 research (the Castor Docs pattern): treat each workspace/item/object as
 something people can comment on and bookmark, not just a read-only

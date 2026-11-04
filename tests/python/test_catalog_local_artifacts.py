@@ -1,5 +1,5 @@
 """Unit tests for catalog.py's 6 local-artifact catalog reads ported from
-mcp_server.py's local-only MCP tools (roadmap Fase 2, 2026-08-18):
+mcp_server.py's local-only MCP tools:
 _get_related_elements, _get_objects_for_item, _get_workspace_roles,
 _get_execution_stats, _get_failure_hotspots, _get_schedules. Query
 semantics mirror mcp_server.py's originals exactly -- these tests assert

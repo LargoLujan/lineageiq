@@ -1,6 +1,6 @@
-"""Unit tests for mcp_server_remote.py (Tanda 6, F.2; extended 2026-08-18
-with get_business_glossary/get_column_profile/get_column_sensitivity, then
-again the same day with get_related_elements/get_objects_for_item/
+"""Unit tests for mcp_server_remote.py (including
+get_business_glossary/get_column_profile/get_column_sensitivity and
+get_related_elements/get_objects_for_item/
 get_workspace_roles/get_execution_stats/get_failure_hotspots/
 get_schedules): the HTTP-backed MCP server that calls the deployed REST
 API instead of reading local files. Every test here mocks

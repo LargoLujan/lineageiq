@@ -1,6 +1,5 @@
 -- Warehouse-native translation of backend/scripts/46_build_d8_parallel_
--- candidate_retest_package.ps1 (Phase 2 migration continuation,
--- 2026-07-21). Reads dbo.silver_orchestration_v2_parallel_candidates
+-- candidate_retest_package.ps1 (SQL migration). Reads dbo.silver_orchestration_v2_parallel_candidates
 -- (24), dbo.silver_likely_conflict_cleanup_queue (25, phase D8),
 -- dbo.silver_object_read_write_classification (23), dbo.silver_d1_
 -- closure_control_queue, dbo.silver_d3_item_closure_control_queue,
@@ -14,7 +13,7 @@
 -- original's Join-Unique (case-insensitive sort+dedupe, alphabetical),
 -- so no file-row-order concern applies to those -- replicated here via
 -- DISTINCT + STRING_AGG ordered by LOWER().
--- IMPORTANT VALIDATION NOTE (2026-07-21): dbo.silver_orchestration_v2_
+-- IMPORTANT VALIDATION NOTE: dbo.silver_orchestration_v2_
 -- parallel_candidates is currently EMPTY in this project (0 rows, both
 -- in the live Warehouse table and in a freshly regenerated local
 -- analysis/orchestration_v2_parallel_candidates.csv), so this procedure

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """MCP server exposing this project's lineage catalog to AI agents over the
-secured REST API (Tanda 6, F.2) -- a second server alongside mcp_server.py,
+secured REST API -- a second server alongside mcp_server.py,
 not a replacement for it (see mcp_server.py's own docstring: it stays as
 "the simple, always-available local option"). Use this one instead when the
 MCP client and the running lineage_web_server.py aren't the same machine
@@ -11,7 +11,7 @@ fresh scan already on disk.
 Every tool has the exact same name and signature as mcp_server.py's, plus an
 optional trailing api_key param on the read tools that call the REST API's
 catalog routes -- those now require a signed-in session or a valid API
-key (2026-07-22, see docs/102_admin_panel_and_user_auth.md), which has no
+key (see docs/102_admin_panel_and_user_auth.md), which has no
 equivalent in mcp_server.py's direct-file-access tools since there's no HTTP
 request to authenticate there. An agent already configured against the local
 server doesn't need reconfiguring to switch to this one, or vice versa, as
@@ -26,19 +26,19 @@ viewer's scan-trigger dropdown), so narrowing its response to match here
 would be the wrong fix; this is documented, not silently inconsistent.
 
 api_key is a per-CALL argument, not a server-startup/env-var identity
-(2026-08-18, roadmap "MCP para toda la empresa"): this server can be run
+(so the whole company can use it): this server can be run
 once, pointed at the deployed instance, and reused by any number of
 colleagues/agents, each supplying their own admin-issued key on every
 call -- rather than baking one fixed identity into how the process was
-launched. This matters for "cualquier agente con autenticación pueda
-conectarse": the server itself grants nothing; the REST API is what
+launched. This matters so that any authenticated agent can
+connect: the server itself grants nothing; the REST API is what
 checks the key on every single request, the exact same way it already
 checks a Fabric pipeline's X-Api-Key header.
 
-Added 2026-08-18 alongside the three read tools above: get_business_
+Also included alongside the three read tools above: get_business_
 glossary, get_column_profile, get_column_sensitivity -- covering the
 catalog surfaces this server didn't expose yet (the admin-curated
-glossary, and the two new Fase-2 Fabric-native column enrichment tables).
+glossary, and the two Fabric-native column enrichment tables).
 
 Added later the same day: get_related_elements, get_objects_for_item,
 get_workspace_roles, get_execution_stats, get_failure_hotspots,
@@ -56,12 +56,11 @@ lineage_web_server.py instance's /api/* surface, whose base URL comes from
 --base-url or the FABRIC_LINEAGE_API_BASE_URL env var (defaults to
 http://127.0.0.1:8765, i.e. talking to a locally-running server over HTTP
 instead of reading its files directly -- useful on its own for verifying
-this server's behavior matches mcp_server.py's, see the F.2 verification
-notes in docs/conversations/2026-07-08.md).
+this server's behavior matches mcp_server.py's).
 
 Run directly for a smoke test: `python3 backend/scripts/mcp_server_remote.py
 --base-url http://127.0.0.1:8765` (stdio mode, waits for an MCP client).
-Register with Claude Code via `claude mcp add fabric-lineage-remote --
+Register with Claude Code via `claude mcp add lineageiq-remote --
 python3 <path-to-this-file> --base-url <url>` (see README).
 """
 
@@ -79,7 +78,7 @@ from mcp.server.fastmcp import FastMCP
 
 BASE_URL = (os.environ.get("FABRIC_LINEAGE_API_BASE_URL") or "http://127.0.0.1:8765").rstrip("/")
 
-mcp = FastMCP("fabric-lineage-remote")
+mcp = FastMCP("lineageiq-remote")
 
 
 def _request(method: str, path: str, params: dict[str, Any] | None = None, body: dict[str, Any] | None = None, api_key: str = "") -> dict[str, Any]:
@@ -119,7 +118,7 @@ def list_workspaces(name_contains: str = "", api_key: str = "") -> list[dict[str
         name_contains: Optional case-insensitive substring filter on
             workspace_name. Empty returns every workspace.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     result = _request("GET", "/api/workspaces", params={"name_contains": name_contains}, api_key=api_key)
     return result.get("workspaces", [])
@@ -136,7 +135,7 @@ def search_items(query: str, item_type: str = "", limit: int = 20, api_key: str 
             Notebook, DataPipeline, Lakehouse, etc.).
         limit: Max rows to return.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     result = _request("GET", "/api/items", params={"query": query, "item_type": item_type, "limit": limit}, api_key=api_key)
     return result.get("items", [])
@@ -153,7 +152,7 @@ def get_item_lineage(qualified_name: str, api_key: str = "") -> dict[str, Any]:
             caller can retry with the right qualified_name (use
             search_items to find it first if unsure).
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     return _request("GET", "/api/item-lineage", params={"qualified_name": qualified_name}, api_key=api_key)
 
@@ -167,7 +166,7 @@ def get_object_impact(query: str, limit: int = 5, api_key: str = "") -> dict[str
             display name (e.g. "orders", "DATAMART_SALES").
         limit: Max matching objects to return full detail for.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     return _request("GET", "/api/objects", params={"query": query, "limit": limit}, api_key=api_key)
 
@@ -185,7 +184,7 @@ def get_notebook_code(qualified_name: str, max_chars: int = 60000, api_key: str 
             response and narrow the request rather than raising this
             indefinitely.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     return _request("GET", "/api/notebook-code", params={"qualified_name": qualified_name, "max_chars": max_chars}, api_key=api_key)
 
@@ -207,8 +206,8 @@ def get_business_glossary(api_key: str = "") -> dict[str, Any]:
 def get_column_profile(workspace_name: str, lakehouse_name: str, table_name: str, api_key: str = "") -> dict[str, Any]:
     """Get column-level statistics (null %, distinct count, safe min/max --
     never a raw identifying value) for a Fabric-native Lakehouse table, if
-    it's been profiled (via the REST API). Coverage is partial by design
-    (roadmap Fase 2): only Lakehouses in workspaces the service's own
+    it's been profiled (via the REST API). Coverage is partial by design --
+    only Lakehouses in workspaces the service's own
     identity already had a data role in when profiled -- a "found: false"
     response means "not profiled yet", not "doesn't exist".
 
@@ -258,7 +257,7 @@ def get_related_elements(qualified_name: str, direction: str = "both", max_hops:
             matching get_item_lineage; 2+ reaches indirect dependencies).
         limit: Max related items to return per direction.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     return _request("GET", "/api/related-elements", params={
         "qualified_name": qualified_name, "direction": direction, "max_hops": max_hops, "limit": limit,
@@ -274,7 +273,7 @@ def get_objects_for_item(qualified_name: str, api_key: str = "") -> dict[str, An
     Args:
         qualified_name: Exact or partial item name (see search_items).
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     return _request("GET", "/api/objects-for-item", params={"qualified_name": qualified_name}, api_key=api_key)
 
@@ -288,7 +287,7 @@ def get_workspace_roles(workspace_name: str, api_key: str = "") -> dict[str, Any
     Args:
         workspace_name: Exact or case-insensitive-substring workspace name.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     return _request("GET", "/api/workspace-roles", params={"workspace_name": workspace_name}, api_key=api_key)
 
@@ -357,7 +356,7 @@ def get_content_sensitivity_overview(sample_limit: int = 15, api_key: str = "") 
 @mcp.tool()
 def get_data_quality_overview(api_key: str = "") -> dict[str, Any]:
     """Tenant-wide evaluation of every admin-defined data-quality rule
-    (Roadmap Fase 1) against dbo.bronze_column_profile (via the REST API)
+     against dbo.bronze_column_profile (via the REST API)
     -- pass/fail/not_profiled counts and a pass_rate that excludes
     not_profiled rules from the denominator. {found: False, reason} if no
     rule has been defined yet.
@@ -390,7 +389,7 @@ def get_data_quality_for_table(workspace_name: str, lakehouse_name: str, table_n
 @mcp.tool()
 def get_data_products(api_key: str = "") -> dict[str, Any]:
     """The admin-curated list of Purview-Unified-Catalog-style data products
-    (Roadmap Fase 3, via the REST API): name, owner_email, description,
+    (via the REST API): name, owner_email, description,
     and linked qualified_names. Distinct from Fabric's own native
     per-workspace "Domain" field, a different, already-scanned concept.
 
@@ -403,7 +402,7 @@ def get_data_products(api_key: str = "") -> dict[str, Any]:
 
 @mcp.tool()
 def get_privacy_coverage_map(api_key: str = "") -> dict[str, Any]:
-    """Data-subject-rights/privacy locator (Roadmap Fase 5, via the REST
+    """Data-subject-rights/privacy locator (via the REST
     API): which Fabric tables contain columns matching a sensitivity
     category (email, biometric, academic record, disciplinary record,
     financial, guardian/family data, etc.), one row per table with EVERY
@@ -426,8 +425,8 @@ def get_privacy_coverage_map(api_key: str = "") -> dict[str, Any]:
 def get_privacy_framework_map(api_key: str = "") -> dict[str, Any]:
     """Same privacy locator data as get_privacy_coverage_map, grouped by
     legal FRAMEWORK first (GDPR, GDPR special category, GDPR criminal/
-    disciplinary, FERPA, CCPA/CPRA), then by category (Roadmap Fase 6,
-    via the REST API) -- for "what data do we have under GDPR" questions.
+    disciplinary, FERPA, CCPA/CPRA), then by category (via the
+    REST API) -- for "what data do we have under GDPR" questions.
     A table appears under EVERY framework/category it matches
     (deliberately not deduplicated, unlike the per-object coverage map).
     Also folds in admin-maintained "known systems" per category, so a
@@ -451,7 +450,7 @@ def get_execution_stats(query: str, limit: int = 10, api_key: str = "") -> dict[
         query: Case-insensitive substring matched against item_name.
         limit: Max matching item+job_type rows to return.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     return _request("GET", "/api/execution-stats", params={"query": query, "limit": limit}, api_key=api_key)
 
@@ -465,7 +464,7 @@ def get_failure_hotspots(limit: int = 20, api_key: str = "") -> list[dict[str, s
     Args:
         limit: Max items to return, worst-failure-rate first.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     result = _request("GET", "/api/failure-hotspots", params={"limit": limit}, api_key=api_key)
     return result.get("hotspots", [])
@@ -481,7 +480,7 @@ def get_schedules(query: str = "", workspace_name: str = "", api_key: str = "") 
         workspace_name: Optional case-insensitive substring matched against
             workspace_name.
         api_key: An API key created in the admin panel's "API Keys" tab
-            (reads now require a signed-in session or a valid key, 2026-07-22).
+            (reads require a signed-in session or a valid key).
     """
     return _request("GET", "/api/schedules", params={"query": query, "workspace_name": workspace_name}, api_key=api_key)
 

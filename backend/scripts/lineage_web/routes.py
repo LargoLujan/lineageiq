@@ -1,10 +1,10 @@
 """Declarative registry of every route this server exposes.
 
-Tanda 5, E.0: the actual request dispatch in handler.py stays as explicit
+The actual request dispatch in handler.py stays as explicit
 if/elif chains (already tested end-to-end, no reason to risk rewriting
 working security-critical routing for its own sake) -- this table is the
 single source of truth ABOUT those routes: method, path shape, who's
-allowed to call it, a one-line description, and (Tanda 5, E.4) enough
+allowed to call it, a one-line description, and enough
 parameter/body shape for a real OpenAPI spec. Path params use the
 `{name}` convention (same as OpenAPI), matching the one real prefix route
 today (`/api/workspaces/{workspace_id}/lakehouses`).
@@ -12,7 +12,7 @@ today (`/api/workspaces/{workspace_id}/lakehouses`).
 Keep this in sync with handler.py by hand -- there is no code generation
 in either direction yet.
 
-Every route below is also subject to Tanda 5, E.3's per-client-IP rate
+Every route below is also subject to the per-client-IP rate
 limit (see rate_limit.py) -- a single project-wide window, not configured
 per route, so it isn't repeated in each entry's description.
 
@@ -26,8 +26,8 @@ renders it as a generic `application/json` object body.
 
 # auth: "public" (no credential required), "session" (signed-in browser
 # session cookie), "admin" (session + admin_emails allowlist), or
-# "session_or_api_key" (a signed-in session OR a valid X-Api-Key header --
-# Tanda 5, E.1). "admin_or_api_key" (2026-08-31) is "admin" for a browser
+# "session_or_api_key" (a signed-in session OR a valid X-Api-Key header).
+# "admin_or_api_key" is "admin" for a browser
 # session (non-admin signed-in users still get 403, same as "admin" alone)
 # but ALSO accepts any valid API key as an alternative -- used only by the
 # 5 governance/sensitivity routes below so mcp_server_remote.py/
@@ -67,7 +67,7 @@ ROUTES = (
          {"name": "max_chars", "in": "query", "required": False, "type": "integer", "description": "Truncates very large notebooks. Default 60000."},
      ]},
     {"method": "GET", "path": "/api/related-elements", "auth": "session_or_api_key",
-     "description": "Items related to one item within a bounded number of hops, via a prebuilt relationship index (roadmap Fase 2, 2026-08-18 -- ported from mcp_server.py's local-only get_related_elements).",
+     "description": "Items related to one item within a bounded number of hops, via a prebuilt relationship index.",
      "params": [
          {"name": "qualified_name", "in": "query", "required": True, "type": "string", "description": "Exact or uniquely-matching partial item name."},
          {"name": "direction", "in": "query", "required": False, "type": "string", "description": "\"upstream\", \"downstream\", or \"both\" (default)."},
@@ -75,28 +75,28 @@ ROUTES = (
          {"name": "limit", "in": "query", "required": False, "type": "integer", "description": "Max related items to return per direction. Default 100, max 500."},
      ]},
     {"method": "GET", "path": "/api/objects-for-item", "auth": "session_or_api_key",
-     "description": "The full source-object footprint (tables/views/stored procedures/files) one item reads or writes (roadmap Fase 2, 2026-08-18 -- ported from mcp_server.py's local-only get_objects_for_item).",
+     "description": "The full source-object footprint (tables/views/stored procedures/files) one item reads or writes.",
      "params": [{"name": "qualified_name", "in": "query", "required": True, "type": "string", "description": "Exact or uniquely-matching partial item name."}]},
     {"method": "GET", "path": "/api/workspace-roles", "auth": "session_or_api_key",
-     "description": "Who has access to a workspace and with what role, from the tenant's real Fabric role assignments (roadmap Fase 2, 2026-08-18 -- ported from mcp_server.py's local-only get_workspace_roles).",
+     "description": "Who has access to a workspace and with what role, from the tenant's real Fabric role assignments.",
      "params": [{"name": "workspace_name", "in": "query", "required": True, "type": "string", "description": "Exact or case-insensitive-substring workspace name."}]},
     {"method": "GET", "path": "/api/execution-stats", "auth": "session_or_api_key",
-     "description": "Run history stats for item(s) matching a name -- run count, success/failure/cancelled counts, min/avg/median/max duration (roadmap Fase 2, 2026-08-18 -- ported from mcp_server.py's local-only get_execution_stats).",
+     "description": "Run history stats for item(s) matching a name -- run count, success/failure/cancelled counts, min/avg/median/max duration.",
      "params": [
          {"name": "query", "in": "query", "required": True, "type": "string", "description": "Case-insensitive substring matched against item_name."},
          {"name": "limit", "in": "query", "required": False, "type": "integer", "description": "Max matching item+job_type rows to return. Default 10, max 100."},
      ]},
     {"method": "GET", "path": "/api/failure-hotspots", "auth": "session_or_api_key",
-     "description": "The items with the worst run-failure rates tenant-wide, already ranked (roadmap Fase 2, 2026-08-18 -- ported from mcp_server.py's local-only get_failure_hotspots).",
+     "description": "The items with the worst run-failure rates tenant-wide, already ranked.",
      "params": [{"name": "limit", "in": "query", "required": False, "type": "integer", "description": "Max items to return, worst-failure-rate first. Default 20, max 200."}]},
     {"method": "GET", "path": "/api/schedules", "auth": "session_or_api_key",
-     "description": "Configured run schedules for items, optionally filtered by item name and/or workspace (roadmap Fase 2, 2026-08-18 -- ported from mcp_server.py's local-only get_schedules).",
+     "description": "Configured run schedules for items, optionally filtered by item name and/or workspace.",
      "params": [
          {"name": "query", "in": "query", "required": False, "type": "string", "description": "Case-insensitive substring matched against item_name."},
          {"name": "workspace_name", "in": "query", "required": False, "type": "string", "description": "Case-insensitive substring matched against workspace_name."},
      ]},
     {"method": "GET", "path": "/api/status", "auth": "public",
-     "description": "Current/last scan status (including scan_id, the same value returned by the trigger call, for an Until-activity poll loop to correlate against) plus queue: requests waiting for it to finish (Tanda 10), in start order; log tail, started_by_email and each queue entry's requested_by_email are only included for a session or a valid API key."},
+     "description": "Current/last scan status (including scan_id, the same value returned by the trigger call, for an Until-activity poll loop to correlate against) plus queue: requests waiting for it to finish, in start order; log tail, started_by_email and each queue entry's requested_by_email are only included for a session or a valid API key."},
     {"method": "GET", "path": "/api/history", "auth": "public",
      "description": "Scan run history, optionally filtered by ?workspace=; triggered_by_email/error/failed_step are blanked out unless the caller has a session or a valid API key.",
      "params": [{"name": "workspace", "in": "query", "required": False, "type": "string", "description": "Exact workspace_name filter."}]},
@@ -118,72 +118,72 @@ ROUTES = (
     {"method": "GET", "path": "/api/admin/sessions", "auth": "admin",
      "description": "List currently signed-in sessions."},
     {"method": "GET", "path": "/api/admin/session-history", "auth": "admin",
-     "description": "Ended sessions (signed out, revoked, or expired), newest first, capped to 200 entries (2026-08-18). Process-lifetime only, same as /api/admin/sessions itself -- a server restart clears both."},
+     "description": "Ended sessions (signed out, revoked, or expired), newest first, capped to 200 entries. Process-lifetime only, same as /api/admin/sessions itself -- a server restart clears both."},
     {"method": "GET", "path": "/api/admin/api-keys", "auth": "admin",
-     "description": "List API keys by name/created_at/preview/description/created_by/expires_at/scope/last_used_at (2026-08-18 -- never the raw key or key_hash), plus a bounded revoked_api_keys audit trail. last_used_at is in-memory only (resets when this server process restarts)."},
+     "description": "List API keys by name/created_at/preview/description/created_by/expires_at/scope/last_used_at (never the raw key or key_hash), plus a bounded revoked_api_keys audit trail. last_used_at is in-memory only (resets when this server process restarts)."},
     {"method": "GET", "path": "/api/admin/metrics", "auth": "admin",
-     "description": "In-memory request counts by method/path/status_code since this process started (Tanda 5, E.3)."},
+     "description": "In-memory request counts by method/path/status_code since this process started."},
     {"method": "GET", "path": "/api/admin/usage-analytics", "auth": "admin",
-     "description": "Tenant-wide lineage-explorer usage rollup from the permanent bronze_usage_events Warehouse table (Fase 6, 2026-08-24): total/unique-user counts, a daily event series, and the most-viewed items. {found: False, reason} when the table has no rows yet.",
+     "description": "Tenant-wide lineage-explorer usage rollup from the permanent bronze_usage_events Warehouse table: total/unique-user counts, a daily event series, and the most-viewed items. {found: False, reason} when the table has no rows yet.",
      "params": [{"name": "days", "in": "query", "required": False, "type": "integer", "description": "How many trailing days the daily series covers. Default 30, max 365."}]},
     {"method": "GET", "path": "/api/admin/mcp-usage-analytics", "auth": "admin",
-     "description": "Same bronze_usage_events table, filtered to mcp_tool_call rows (2026-08-25): total/unique-caller counts, calls by tool name, calls by API-key name, and a daily series -- who is actually calling the remote MCP server (backend/scripts/mcp_http_server.py) and with what. {found: False, reason} when no MCP calls are recorded yet.",
+     "description": "Same bronze_usage_events table, filtered to mcp_tool_call rows: total/unique-caller counts, calls by tool name, calls by API-key name, and a daily series -- who is actually calling the remote MCP server (backend/scripts/mcp_http_server.py) and with what. {found: False, reason} when no MCP calls are recorded yet.",
      "params": [{"name": "days", "in": "query", "required": False, "type": "integer", "description": "How many trailing days the daily series covers. Default 30, max 365."}]},
     {"method": "GET", "path": "/api/admin/access-audit", "auth": "admin_or_api_key",
      "description": "Workspace role assignments by workspace, plus a tenant-wide view of who has Admin in the most workspaces."},
     {"method": "GET", "path": "/api/admin/governance-scan", "auth": "admin_or_api_key",
      "description": "Scanner API results (scripts/73_discover_governance_scan.ps1): sensitivity labels, endorsement, tags, semantic model RLS roles, and the scan's own diagnostic status list (what's working, what's blocked, and the exact fix). {found: False, reason} if the scan has never been run."},
     {"method": "GET", "path": "/api/admin/capacity-insight", "auth": "admin",
-     "description": "Item and execution counts grouped by Fabric capacity. Capacity labels are upgraded from raw ids to real display names via a live Fabric API call when possible (2026-08-18), and capacities with zero scanned workspaces are included too, not just ones already represented in scanned data."},
+     "description": "Item and execution counts grouped by Fabric capacity. Capacity labels are upgraded from raw ids to real display names via a live Fabric API call when possible, and capacities with zero scanned workspaces are included too, not just ones already represented in scanned data."},
     {"method": "GET", "path": "/api/admin/capacity-metrics-overview", "auth": "admin",
-     "description": "Live capacity name/SKU/owners/total CU and the top items by CU consumed, read straight from the Microsoft Fabric Capacity Metrics app's own semantic model (2026-08-24) -- {found: False, reason} when capacity_metrics isn't configured yet or the live read failed."},
+     "description": "Live capacity name/SKU/owners/total CU and the top items by CU consumed, read straight from the Microsoft Fabric Capacity Metrics app's own semantic model -- {found: False, reason} when capacity_metrics isn't configured yet or the live read failed."},
     {"method": "GET", "path": "/api/admin/capacity-metrics/discover", "auth": "admin",
-     "description": "Best-effort auto-discovery of an already-installed Capacity Metrics app among the signed-in admin's own accessible workspaces (2026-08-24), for the Capacidad tab's \"Detectar automáticamente\" button. {found: False, reason} if none matched."},
+     "description": "Best-effort auto-discovery of an already-installed Capacity Metrics app among the signed-in admin's own accessible workspaces, for the Capacity tab's \"Auto-detect\" button. {found: False, reason} if none matched."},
     {"method": "GET", "path": "/api/admin/tenant-users", "auth": "admin",
      "description": "Typeahead search over the tenant's Entra directory (?q=), for picking a real person when adding to an allowlist instead of typing an email blind. Returns [] (not an error) if this tenant hasn't consented the Graph permission it needs."},
     {"method": "GET", "path": "/api/admin/notifications-summary", "auth": "admin",
-     "description": "Feeds the toolbar notifications badge/panel (2026-08-18, refined 2026-08-26 to drop false alarms): external-source connections that were assigned and tested but came back unreachable (external_sources.broken), plus a lightweight content-sensitivity flagged-column count (sensitivity.flagged_column_count). external_sources.pending (no connection assigned yet) is included in the payload but intentionally NOT treated as an alert -- it's optional config with no effect on scan discovery."},
+     "description": "Feeds the toolbar notifications badge/panel: external-source connections that were assigned and tested but came back unreachable (external_sources.broken), plus a lightweight content-sensitivity flagged-column count (sensitivity.flagged_column_count). external_sources.pending (no connection assigned yet) is included in the payload but intentionally NOT treated as an alert -- it's optional config with no effect on scan discovery."},
     {"method": "GET", "path": "/api/admin/fabric-connections", "auth": "admin",
      "description": "Live list of Fabric Connections (gateway-backed or cloud) the signed-in user can see, for assigning one to an external source in the Sources tab. Needs Connection.Read.All -- returns {connections: [], error: ...} (not an error status) if that isn't consented in this tenant."},
     {"method": "POST", "path": "/api/admin/fabric-connections/test", "auth": "admin",
-     "description": "Tests a Fabric Connection THROUGH its gateway via Fabric's own testConnection long-running operation (2026-08-18) -- unlike every other 'Probar conexión' button, which connects directly from wherever this server runs and can never succeed for an on-premises source. Body: {connection_id, source_index (optional)}. When source_index is given, persists fabric_connection_last_test_status/_at onto that external source, which is what /api/admin/notifications-summary's 'broken' list reads. Can take up to ~60s (a real LRO poll)."},
+     "description": "Tests a Fabric Connection THROUGH its gateway via Fabric's own testConnection long-running operation -- unlike every other 'Test connection' button, which connects directly from wherever this server runs and can never succeed for an on-premises source. Body: {connection_id, source_index (optional)}. When source_index is given, persists fabric_connection_last_test_status/_at onto that external source, which is what /api/admin/notifications-summary's 'broken' list reads. Can take up to ~60s (a real LRO poll)."},
     {"method": "GET", "path": "/api/admin/changes-digest", "auth": "admin",
-     "description": "Items added/removed/modified during one scan run through this server -- the most recent one by default, or a specific past one via ?scan= (2026-08-18, must be one of the response's own available_scans values).",
+     "description": "Items added/removed/modified during one scan run through this server -- the most recent one by default, or a specific past one via ?scan= (must be one of the response's own available_scans values).",
      "params": [{"name": "scan", "in": "query", "required": False, "type": "string", "description": "A scan_started_at value from a previous response's available_scans list. Defaults to the latest scan."}]},
     {"method": "GET", "path": "/api/admin/sensitivity-overview", "auth": "admin_or_api_key",
      "description": "Tenant-wide count of catalogued source objects whose columns match a sensitivity pattern BY NAME (email, national ID, etc.), by category -- unconfirmed, see /api/admin/content-sensitivity-overview for the content-verified counterpart."},
     {"method": "GET", "path": "/api/admin/content-sensitivity-overview", "auth": "admin_or_api_key",
-     "description": "Tenant-wide count of columns with a CONTENT-verified sensitivity match (regex against a bounded sample of real cell values, never the raw values themselves), by category (2026-08-18) -- scoped to the Fabric-native Lakehouse tables NB_Discover_Column_Sensitivity.py has profiled, a subset of the whole tenant."},
+     "description": "Tenant-wide count of columns with a CONTENT-verified sensitivity match (regex against a bounded sample of real cell values, never the raw values themselves), by category -- scoped to the Fabric-native Lakehouse tables NB_Discover_Column_Sensitivity.py has profiled, a subset of the whole tenant."},
     {"method": "GET", "path": "/api/admin/data-quality-overview", "auth": "admin_or_api_key",
-     "description": "Tenant-wide evaluation of every admin-defined data-quality rule (Roadmap Fase 1, 2026-08-31) against dbo.bronze_column_profile -- pass/fail/not_profiled counts and a pass_rate excluding not_profiled rules from the denominator. {found: False, reason} if no rule has been defined yet."},
+     "description": "Tenant-wide evaluation of every admin-defined data-quality rule against dbo.bronze_column_profile -- pass/fail/not_profiled counts and a pass_rate excluding not_profiled rules from the denominator. {found: False, reason} if no rule has been defined yet."},
     {"method": "GET", "path": "/api/admin/privacy-coverage-map", "auth": "admin_or_api_key",
-     "description": "Data-subject-rights/privacy locator (Roadmap Fase 5, 2026-08-31): same sensitivity classification as sensitivity-overview, pivoted per OBJECT instead of per category -- each flagged table appears exactly once with every matched category and a max_risk, so a table with several sensitive columns isn't repeated once per category. A locator, not a personal-data puller -- shows WHERE data of a given kind might live in Fabric, never a specific person's row."},
+     "description": "Data-subject-rights/privacy locator: same sensitivity classification as sensitivity-overview, pivoted per OBJECT instead of per category -- each flagged table appears exactly once with every matched category and a max_risk, so a table with several sensitive columns isn't repeated once per category. A locator, not a personal-data puller -- shows WHERE data of a given kind might live in Fabric, never a specific person's row."},
     {"method": "GET", "path": "/api/admin/privacy-framework-map", "auth": "admin_or_api_key",
-     "description": "Same privacy locator data as privacy-coverage-map, grouped by legal framework (GDPR/FERPA/CCPA) first, then category (Roadmap Fase 6, 2026-08-31) -- a table appears under EVERY framework/category it matches (unlike the per-object coverage map, this is not deduplicated, since the same table genuinely being a GDPR AND a CCPA concern is real). Also folds in admin-maintained privacy_external_systems per category, so a category with zero Fabric matches (e.g. biometric) can still show a known external system."},
+     "description": "Same privacy locator data as privacy-coverage-map, grouped by legal framework (GDPR/FERPA/CCPA) first, then category -- a table appears under EVERY framework/category it matches (unlike the per-object coverage map, this is not deduplicated, since the same table genuinely being a GDPR AND a CCPA concern is real). Also folds in admin-maintained privacy_external_systems per category, so a category with zero Fabric matches (e.g. biometric) can still show a known external system."},
     {"method": "GET", "path": "/api/business-glossary", "auth": "session_or_api_key",
      "description": "The admin-curated business glossary (terms linked to real qualified_names), for any signed-in user (or authenticated agent) to browse."},
     {"method": "GET", "path": "/api/certifications", "auth": "session_or_api_key",
-     "description": "The admin-curated list of certified/official qualified_names (2026-08-18: now also rendered in the primary detail panel, not just Graph Map Mode)."},
+     "description": "The admin-curated list of certified/official qualified_names (also rendered in the primary detail panel, not just Graph Map Mode)."},
     {"method": "GET", "path": "/api/tags", "auth": "session_or_api_key",
-     "description": "The admin-curated free-form tags on qualified_names (2026-08-18) -- distinct from an item's own native Fabric tags, which are a different field already in the item payload."},
+     "description": "The admin-curated free-form tags on qualified_names -- distinct from an item's own native Fabric tags, which are a different field already in the item payload."},
     {"method": "GET", "path": "/api/data-products", "auth": "session_or_api_key",
-     "description": "The admin-curated data-product list (Roadmap Fase 3, 2026-08-31, Purview-Unified-Catalog-style): name, owner_email, description, and linked qualified_names -- distinct from Fabric's own native per-workspace 'Domain' field (data.domain_name), a different, already-scanned concept."},
+     "description": "The admin-curated data-product list (in the style of the Purview Unified Catalog): name, owner_email, description, and linked qualified_names -- distinct from Fabric's own native per-workspace 'Domain' field (data.domain_name), a different, already-scanned concept."},
     {"method": "GET", "path": "/api/column-profile", "auth": "session_or_api_key",
-     "description": "Column-level statistics (null %, distinct count, safe min/max) for a Fabric-native Lakehouse table, if it's been profiled -- roadmap Fase 2, scoped to workspaces the service principal already has a data role in (see docs/105).",
+     "description": "Column-level statistics (null %, distinct count, safe min/max) for a Fabric-native Lakehouse table, if it's been profiled -- scoped to workspaces the service principal already has a data role in (see docs/105).",
      "params": [
          {"name": "workspace_name", "in": "query", "required": True, "type": "string", "description": "Exact workspace name."},
          {"name": "lakehouse_name", "in": "query", "required": True, "type": "string", "description": "Exact Lakehouse item name."},
          {"name": "table_name", "in": "query", "required": True, "type": "string", "description": "Exact table name, e.g. \"dbo.MyTable\"."},
      ]},
     {"method": "GET", "path": "/api/column-sensitivity", "auth": "session_or_api_key",
-     "description": "Content-based sensitivity signals (email/phone/national_id/financial match percentages, never raw values) for a Fabric-native Lakehouse table -- roadmap Fase 2, same scope as /api/column-profile.",
+     "description": "Content-based sensitivity signals (email/phone/national_id/financial match percentages, never raw values) for a Fabric-native Lakehouse table -- same scope as /api/column-profile.",
      "params": [
          {"name": "workspace_name", "in": "query", "required": True, "type": "string", "description": "Exact workspace name."},
          {"name": "lakehouse_name", "in": "query", "required": True, "type": "string", "description": "Exact Lakehouse item name."},
          {"name": "table_name", "in": "query", "required": True, "type": "string", "description": "Exact table name, e.g. \"dbo.MyTable\"."},
      ]},
     {"method": "GET", "path": "/api/data-quality", "auth": "session_or_api_key",
-     "description": "Evaluates whatever admin-defined data-quality rules (Roadmap Fase 1, 2026-08-31) target this table against dbo.bronze_column_profile -- {found: False} means no rule targets this table yet, same scope as /api/column-profile.",
+     "description": "Evaluates whatever admin-defined data-quality rules target this table against dbo.bronze_column_profile -- {found: False} means no rule targets this table yet, same scope as /api/column-profile.",
      "params": [
          {"name": "workspace_name", "in": "query", "required": True, "type": "string", "description": "Exact workspace name."},
          {"name": "lakehouse_name", "in": "query", "required": True, "type": "string", "description": "Exact Lakehouse item name."},
@@ -191,7 +191,7 @@ ROUTES = (
      ]},
     {"method": "GET", "path": "/api/workspaces/mine", "auth": "session",
      "description": "Workspaces the signed-in user can actually see in Fabric, via their own delegated token.",
-     "params": [{"name": "min_role", "in": "query", "required": False, "type": "string", "description": "\"contributor\" narrows the list down to workspaces where the caller is Admin/Member/Contributor (via one roleAssignments call per workspace), excluding Viewer-only access -- used by the individual-workspace-scan picker (2026-08-24). Omit for every workspace the caller can see at all."}]},
+     "params": [{"name": "min_role", "in": "query", "required": False, "type": "string", "description": "\"contributor\" narrows the list down to workspaces where the caller is Admin/Member/Contributor (via one roleAssignments call per workspace), excluding Viewer-only access -- used by the individual-workspace-scan picker. Omit for every workspace the caller can see at all."}]},
     {"method": "GET", "path": "/api/workspaces/{workspace_id}/lakehouses", "auth": "session",
      "description": "Lakehouses in one workspace, via the signed-in user's own delegated token.",
      "params": [{"name": "workspace_id", "in": "path", "required": True, "type": "string", "description": "A Fabric workspace GUID."}]},
@@ -199,10 +199,10 @@ ROUTES = (
      "description": "Warehouses in one workspace, via the signed-in user's own delegated token -- the admin panel's write-target picker uses this (a Warehouse's SQL endpoint is read-write; a Lakehouse's is query-only).",
      "params": [{"name": "workspace_id", "in": "path", "required": True, "type": "string", "description": "A Fabric workspace GUID."}]},
     {"method": "GET", "path": "/api/workspaces/{workspace_id}/pipelines", "auth": "session",
-     "description": "Data Pipelines in one workspace, via the signed-in user's own delegated token (2026-08-18) -- the admin panel's Fabric-pipeline tab picker uses this instead of pasting workspace_id/pipeline_item_id by hand.",
+     "description": "Data Pipelines in one workspace, via the signed-in user's own delegated token -- the admin panel's Fabric-pipeline tab picker uses this instead of pasting workspace_id/pipeline_item_id by hand.",
      "params": [{"name": "workspace_id", "in": "path", "required": True, "type": "string", "description": "A Fabric workspace GUID."}]},
     {"method": "GET", "path": "/api/openapi.json", "auth": "public",
-     "description": "This OpenAPI 3.0 spec, generated live from this same route registry (Tanda 5, E.4)."},
+     "description": "This OpenAPI 3.0 spec, generated live from this same route registry."},
     {"method": "POST", "path": "/api/auth/device-start", "auth": "public",
      "description": "Begin an Entra ID device-code sign-in; returns a user_code + verification_uri."},
     {"method": "POST", "path": "/api/auth/logout", "auth": "public",
@@ -223,7 +223,7 @@ ROUTES = (
      "description": "Sign out every session belonging to one email.",
      "request_body": "{\"email\": \"...\"}"},
     {"method": "POST", "path": "/api/admin/api-keys", "auth": "admin",
-     "description": "Create a new named API key; the raw key is returned once, in this response only. scope defaults to \"read_only\" if omitted (2026-08-18) -- pass \"full\" for a key that also needs to trigger/stop scans. created_by is captured from the caller's own session, not the request body.",
+     "description": "Create a new named API key; the raw key is returned once, in this response only. scope defaults to \"read_only\" if omitted -- pass \"full\" for a key that also needs to trigger/stop scans. created_by is captured from the caller's own session, not the request body.",
      "request_body": "{\"name\": \"...\", \"description\": \"optional\", \"scope\": \"read_only|full\", \"expires_at\": \"optional ISO timestamp\"}"},
     {"method": "POST", "path": "/api/admin/api-keys/revoke", "auth": "admin",
      "description": "Delete a named API key; it stops authenticating immediately.",
@@ -238,19 +238,19 @@ ROUTES = (
      "description": "Verify a Fabric discovery-pipeline config (workspace/pipeline id + service principal) without starting a real run -- reads the pipeline item's own metadata as the connectivity check.",
      "request_body": "A discovery_pipeline config object (workspace_id, pipeline_item_id, sp_tenant_id, sp_client_id, sp_client_secret_ref)."},
     {"method": "POST", "path": "/api/admin/capacity-metrics/test", "auth": "admin",
-     "description": "Verify a Capacity Metrics connection config (workspace/dataset id + auth) without persisting anything (2026-08-24) -- runs a small real DAX query against the target dataset as the connectivity check.",
+     "description": "Verify a Capacity Metrics connection config (workspace/dataset id + auth) without persisting anything -- runs a small real DAX query against the target dataset as the connectivity check.",
      "request_body": "A capacity_metrics config object (workspace_id, dataset_id, auth_mode, sp_tenant_id, sp_client_id, sp_client_secret_ref)."},
     {"method": "POST", "path": "/api/admin/onelake/test", "auth": "admin",
-     "description": "Verify an OneLake data-publish config (workspace/Lakehouse name + optional service principal) without publishing anything (2026-08-18) -- confirms the Lakehouse's Files area is reachable with the configured credential.",
+     "description": "Verify an OneLake data-publish config (workspace/Lakehouse name + optional service principal) without publishing anything -- confirms the Lakehouse's Files area is reachable with the configured credential.",
      "request_body": "An onelake_data config object (workspace_name, lakehouse_name, sp_tenant_id, sp_client_id, sp_client_secret_ref)."},
     {"method": "POST", "path": "/api/admin/notifications/test", "auth": "admin",
-     "description": "Send a sample scan-notification email to the current admin. Any smtp_host/smtp_port/smtp_use_tls/smtp_user/smtp_password_ref/from_address in the body overrides the saved config for this test only (2026-08-18) -- omit a field to use what's already saved.",
+     "description": "Send a sample scan-notification email to the current admin. Any smtp_host/smtp_port/smtp_use_tls/smtp_user/smtp_password_ref/from_address in the body overrides the saved config for this test only -- omit a field to use what's already saved.",
      "request_body": "{\"language\": \"es\"|\"en\"} (optional), plus any SMTP field to test an unsaved value."},
     {"method": "POST", "path": "/api/admin/notifications/test-teams", "auth": "admin",
-     "description": "Post a sample scan-notification Adaptive Card to the configured Teams webhook. teams_webhook_url in the body overrides the saved one for this test only (2026-08-18).",
+     "description": "Post a sample scan-notification Adaptive Card to the configured Teams webhook. teams_webhook_url in the body overrides the saved one for this test only.",
      "request_body": "{\"language\": \"es\"|\"en\"} (optional), plus teams_webhook_url to test an unsaved value."},
     {"method": "POST", "path": "/api/scan-full", "auth": "session_or_api_key",
-     "description": "Trigger a full tenant scan (or, for a signed-in user, a scan scoped to their accessible workspaces). Fire-and-forget: returns {status: \"started\", scan_id, ...} immediately, well before the scan itself finishes -- or, if another scan is already running, {status: \"queued\", queue_id, position, ...} instead of failing (Tanda 10); see /api/status's queue field to track it."},
+     "description": "Trigger a full tenant scan (or, for a signed-in user, a scan scoped to their accessible workspaces). Fire-and-forget: returns {status: \"started\", scan_id, ...} immediately, well before the scan itself finishes -- or, if another scan is already running, {status: \"queued\", queue_id, position, ...} instead of failing; see /api/status's queue field to track it."},
     {"method": "POST", "path": "/api/scan-executions", "auth": "session_or_api_key",
      "description": "Trigger a production-only execution/schedule refresh (duration, run history, schedules -- Phase 6 alone, not a full re-discovery). Scope is always every workspace without a [DEV]/[QA]/[UAT]/[PRE] suffix, resolved server-side, not per-caller. Safe to call repeatedly/daily: past job runs are merged with what's already on disk, never re-fetched-and-lost or duplicated. Fire-and-forget, same {status, scan_id}/{status: \"queued\", ...} shape as /api/scan-full."},
     {"method": "POST", "path": "/api/admin/warehouse-upload", "auth": "session_or_api_key",
@@ -260,6 +260,6 @@ ROUTES = (
     {"method": "POST", "path": "/api/scan-stop", "auth": "session_or_api_key",
      "description": "Stop the currently running scan. A valid API key can stop any scan, matching admin-level operational control. Does not affect queued (not yet started) requests."},
     {"method": "POST", "path": "/api/scan", "auth": "session_or_api_key",
-     "description": "Trigger a scan of one workspace. Fire-and-forget: returns {status: \"started\", scan_id, ...} immediately, well before the scan itself finishes -- or, if another scan is already running, {status: \"queued\", queue_id, position, ...} instead of failing (Tanda 10); see /api/status's queue field to track it.",
+     "description": "Trigger a scan of one workspace. Fire-and-forget: returns {status: \"started\", scan_id, ...} immediately, well before the scan itself finishes -- or, if another scan is already running, {status: \"queued\", queue_id, position, ...} instead of failing; see /api/status's queue field to track it.",
      "request_body": "{\"workspace\": \"...\"}"},
 )

@@ -12,7 +12,7 @@ param(
 # Discovers who has access to each workspace and at what role (Admin/
 # Member/Contributor/Viewer) via GET /v1/workspaces/{id}/roleAssignments --
 # a governance view of access, not just a lineage one (docs/102_admin_
-# panel_and_user_auth.md Fase 8). Also lets the frontend show "your own
+# panel_and_user_auth.md). Also lets the frontend show "your own
 # role here" by matching a principal id against the signed-in session's
 # own object_id (see /api/auth/me's object_id field). Read-only.
 

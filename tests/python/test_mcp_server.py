@@ -1,5 +1,5 @@
-"""Unit tests for mcp_server.py's new write-tool support logic (Tanda 6,
-F.1). Only _resolve_api_key_name is covered here: it's pure validation
+"""Unit tests for mcp_server.py's new write-tool support logic.
+Only _resolve_api_key_name is covered here: it's pure validation
 logic with no subprocess/live Azure dependency. trigger_scan/
 trigger_full_scan/stop_scan themselves are not unit tested for the same
 reason backend/scripts/lineage_web/scan_manager.py's own _start_scan/
@@ -21,7 +21,7 @@ import mcp_server  # noqa: E402
 from lineage_web import catalog  # noqa: E402
 
 
-# --- catalog.py delegation (2026-08-17, roadmap Fase 2/Tanda 6 F.2) ---
+# --- catalog.py delegation ---
 # list_workspaces/search_items/get_item_lineage/get_object_impact/
 # get_notebook_code now call straight into catalog.py's own functions (the
 # same live-Warehouse-when-enabled path the REST API uses) instead of
@@ -74,7 +74,7 @@ def test_resolve_api_key_name_rejects_an_unknown_key():
     assert error["error"] == "invalid_api_key"
 
 
-# --- scope enforcement (2026-08-18 code review finding): this local stdio
+# --- scope enforcement: this local stdio
 # server's write tools (trigger_scan/trigger_full_scan/stop_scan) call
 # _start_scan/_start_full_scan/_stop_scan directly, bypassing handler.py's
 # REST-only _resolve_scan_caller entirely -- a "read_only" key (the admin
@@ -115,7 +115,7 @@ def test_resolve_api_key_name_accepts_a_legacy_key_with_no_scope_field(monkeypat
     assert error is None
 
 
-# --- _traverse_relationship_index (2026-07-09, get_related_elements) ---
+# --- _traverse_relationship_index (get_related_elements) ---
 # Pure BFS logic over a hand-built synthetic index -- unlike
 # get_related_elements itself (reads real index/items.csv +
 # index/dependencies.csv), this doesn't touch disk, so it's tested here the

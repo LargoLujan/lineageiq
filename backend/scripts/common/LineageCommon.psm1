@@ -1,13 +1,13 @@
 # Shared helpers used across scripts/*.ps1. Only functions verified to be
 # byte-identical (modulo whitespace) across every script that previously
-# defined its own copy live here. A prior audit found several OTHER
+# defined its own copy live here. Several OTHER
 # similarly-named helpers (Get-FieldValue, Normalize-Key, Export-Rows,
-# Limit-Text, Convert-ToInt, Import-OptionalCsv) that were deliberately NOT
+# Limit-Text, Convert-ToInt, Import-OptionalCsv) were deliberately NOT
 # centralized: diffing every occurrence turned up real, intentional
 # differences between scripts (not just copy-paste drift), so merging them
 # here would risk silently changing behavior in scripts that have no
-# automated test coverage today. A 2026-07 follow-up audit found a second,
-# distinct family that IS safe to centralize (byte-identical logic, only
+# automated test coverage today. A second,
+# distinct family IS safe to centralize (byte-identical logic, only
 # formatting differs) -- see Get-AzureCliToken, Invoke-FabricWebRequest,
 # Get-HeaderValue, Convert-JsonContent, and Get-PagedFabricValues below.
 # Import this module with `Import-Module (Join-Path $PSScriptRoot
@@ -27,7 +27,7 @@ function Ensure-ParentDirectory {
 # Available for any script to adopt going forward -- NOT retrofitted onto
 # the ~50 scripts that already call Write-Host directly today, since that
 # would be a much larger, purely-cosmetic change with no test coverage to
-# catch a mistake across that many files in one pass (see Fase 2's note
+# catch a mistake across that many files in one pass (see the note
 # above about why the riskier helpers weren't centralized either). New
 # scripts, and any existing one touched for another reason, should prefer
 # this over a bare Write-Host so log lines are at least consistently

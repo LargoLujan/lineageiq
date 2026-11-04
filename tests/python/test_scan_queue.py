@@ -1,4 +1,4 @@
-"""Unit tests for the scan queue (Tanda 10) added to
+"""Unit tests for the scan queue added to
 backend/scripts/lineage_web/scan_manager.py. _start_scan/_start_full_scan
 themselves still aren't unit tested (see test_mcp_server.py's docstring --
 they spawn real subprocesses and need a live `az` session, verified live

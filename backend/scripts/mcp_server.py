@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""MCP server exposing this project's lineage catalog to AI agents (Fase F.0,
-expanded Tanda 6 F.1; core catalog tools re-pointed at lineage_web/catalog.py
-in Tanda 6 F.2, roadmap Fase 2, 2026-08-17).
+"""MCP server exposing this project's lineage catalog to AI agents.
 
 list_workspaces/search_items/get_item_lineage/get_object_impact/
 get_notebook_code now delegate to lineage_web/catalog.py's own query
 functions -- the same ones backend/scripts/lineage_web_server.py's HTTP
 handler calls -- instead of reading index/*.csv directly. This matters
 because catalog.py reads live from the Warehouse (dbo.bronze_workspaces/
-bronze_items/bronze_dependencies/...) whenever an admin has turned on
-lakehouse.web_read_mode == "warehouse", falling back to the local CSV/JSON
-snapshot only when that's off or a live read fails -- while a plain local
+bronze_items/bronze_dependencies/...) whenever
+lakehouse.web_read_mode == "warehouse" (the default), falling back to the
+local CSV/JSON snapshot only when that's not configured or a live read fails -- while a plain local
 read (what every tool here did before this change, and what the remaining
 tools below still do) silently answers from whatever that snapshot last
 captured, which on a dev machine can be weeks stale (e.g.
@@ -24,29 +22,28 @@ launched as a local subprocess by an MCP client (Claude Code/Desktop) over
 stdio, so it needs no authentication of its own for READS: the client
 already controls who can start it.
 
-The write tools (trigger_scan/trigger_full_scan/stop_scan, Tanda 6 F.1) call
+The write tools (trigger_scan/trigger_full_scan/stop_scan) call
 straight into backend/scripts/lineage_web/scan_manager.py's own functions
 (the same ones backend/scripts/lineage_web_server.py's HTTP handler calls) --
 still local-only, no HTTP round trip, but a scan is a real action with real
 side effects, so it is NOT implicitly trusted just because this process was
 started locally the way reads are. Each write tool takes an optional
 api_key parameter, validated against config/admin_settings.json's api_keys
-list the exact same way a Fabric pipeline's X-Api-Key header is (Tanda 5,
-E.0/E.1) -- so triggering/stopping a scan from an AI agent requires the same
+list the exact same way a Fabric pipeline's X-Api-Key header is
+-- so triggering/stopping a scan from an AI agent requires the same
 deliberate, admin-issued credential a remote automation caller would need,
 not a new, quieter bypass. Omitting api_key falls through to the same
 sign-in-required/allow_anonymous_scans rule the REST API already enforces.
 
-A future phase (F.2) will add a second server that instead calls the
-secured REST API over HTTP (once a stable URL exists, Tanda 4), so the same
-tool surface also works for a remote/shared setup -- this file stays as the
-simple, always-available local option, and F.2 is expected to keep these
-same tool signatures, only swapping the implementation from a direct
-function call to an HTTP request.
+mcp_server_remote.py is a second server that instead calls the
+secured REST API over HTTP, so the same tool surface also works for a
+remote/shared setup -- this file stays as the simple, always-available
+local option, and both keep the same tool signatures (the implementation
+is a direct function call here and an HTTP request there).
 
 Run directly for a smoke test: `python3 backend/scripts/mcp_server.py` (stdio mode,
 waits for an MCP client). Register with Claude Code via `claude mcp add
-fabric-lineage -- python3 <path-to-this-file>` (see README).
+lineageiq -- python3 <path-to-this-file>` (see README).
 """
 
 from __future__ import annotations
@@ -68,7 +65,7 @@ INDEX_DIR = REPO_ROOT / "index"
 DATA_DIR = REPO_ROOT / "frontend" / "semantic-lineage" / "data"
 SCAN_STATE_DIR = REPO_ROOT / "analysis" / "single_workspace_scan"
 
-mcp = FastMCP("fabric-lineage")
+mcp = FastMCP("lineageiq")
 
 _SCAN_ERROR_STATUS = {
     "sign_in_required": "This action requires a valid api_key (ask an admin to create one via the admin panel's API Keys tab), or an admin must enable allow_anonymous_scans.",
@@ -90,8 +87,8 @@ def _resolve_api_key_name(api_key: str) -> tuple[str | None, dict[str, Any] | No
     when a non-empty api_key was supplied but didn't match any configured
     key -- fails loudly rather than silently falling through to the
     anonymous/session-less path, so a typo'd key doesn't look like "no key
-    was given" from the caller's side. Also checked for scope (2026-08-18
-    code review finding): the three write tools below are exactly the
+    was given" from the caller's side. Also checked for scope:
+    the three write tools below are exactly the
     "trigger/stop a scan" action a "read_only" key must NOT be able to do
     -- handler.py's REST route already enforced this, but this local stdio
     server called _start_scan/_start_full_scan/_stop_scan directly, so a
@@ -247,7 +244,7 @@ def get_object_impact(query: str, limit: int = 5) -> dict[str, Any]:
     return catalog._get_object_impact(query, limit)
 
 
-# --- Relationship index (2026-07-09): a real graph index, not a per-call
+# --- Relationship index: a real graph index, not a per-call
 # scan -- built once per process from index/dependencies.csv (an item's
 # direct upstream/downstream -- small enough to hold
 # in memory) so an agent asking "what's related to X, a few hops out" gets
@@ -534,7 +531,7 @@ def get_content_sensitivity_overview(sample_limit: int = 15) -> dict[str, Any]:
 @mcp.tool()
 def get_data_quality_overview() -> dict[str, Any]:
     """Tenant-wide evaluation of every admin-defined data-quality rule
-    (Roadmap Fase 1) against dbo.bronze_column_profile -- pass/fail/
+     against dbo.bronze_column_profile -- pass/fail/
     not_profiled counts and a pass_rate that excludes not_profiled rules
     from the denominator (an unprofiled table is a coverage gap, not a
     quality failure). {found: False, reason} if no rule has been defined
@@ -558,8 +555,8 @@ def get_data_quality_for_table(workspace_name: str, lakehouse_name: str, table_n
 
 @mcp.tool()
 def get_data_products() -> dict[str, Any]:
-    """The admin-curated list of Purview-Unified-Catalog-style data products
-    (Roadmap Fase 3): name, owner_email, description, and the
+    """The admin-curated list of Purview-Unified-Catalog-style data products:
+    name, owner_email, description, and the
     qualified_names linked to each one -- for "what data product does this
     item belong to, and who owns it" questions. Distinct from Fabric's own
     native per-workspace "Domain" field (a different, already-scanned
@@ -571,7 +568,7 @@ def get_data_products() -> dict[str, Any]:
 
 @mcp.tool()
 def get_privacy_coverage_map() -> dict[str, Any]:
-    """Data-subject-rights/privacy locator (Roadmap Fase 5): which Fabric
+    """Data-subject-rights/privacy locator: which Fabric
     tables contain columns matching a sensitivity category (email,
     biometric, academic record, disciplinary record, financial, guardian/
     family data, etc.), one row per table with EVERY matched category
@@ -593,7 +590,7 @@ def get_privacy_coverage_map() -> dict[str, Any]:
 def get_privacy_framework_map() -> dict[str, Any]:
     """Same privacy locator data as get_privacy_coverage_map, grouped by
     legal FRAMEWORK first (GDPR, GDPR special category, GDPR criminal/
-    disciplinary, FERPA, CCPA/CPRA), then by category -- Roadmap Fase 6,
+    disciplinary, FERPA, CCPA/CPRA), then by category,
     for "what data do we have under GDPR" / "which categories fall under
     FERPA" questions. A table appears under EVERY framework/category it
     matches (unlike the per-object coverage map, this is deliberately NOT
@@ -741,7 +738,7 @@ def get_scan_status() -> dict[str, Any]:
             "current_step_name": progress.get("current_step_name", ""),
             "phase": progress.get("phase", ""),
         },
-        # Requests waiting behind the scan above, if any (Tanda 10) -- see
+        # Requests waiting behind the scan above, if any -- see
         # get_scan_queue() for the same list on its own.
         "queue": _queue_snapshot(),
     }
@@ -749,7 +746,7 @@ def get_scan_status() -> dict[str, Any]:
 
 @mcp.tool()
 def get_scan_queue() -> list[dict[str, Any]]:
-    """List requests waiting for the current scan to finish (Tanda 10),
+    """List requests waiting for the current scan to finish,
     in the order they'll start. Empty when nothing is queued -- most of the
     time, since a request only queues instead of starting immediately when
     another scan is already running. Each entry's position is 1-based, so

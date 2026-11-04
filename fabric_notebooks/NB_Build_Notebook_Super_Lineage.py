@@ -1,51 +1,51 @@
 # NB_Build_Notebook_Super_Lineage
 #
-# Fuente para un notebook Python de Fabric -- duodécimo y último paso del
-# pipeline de descubrimiento nativo (ver docs/105_fabric_native_discovery_
-# setup.md). Cada bloque "# %%" es una celda -- pégalas en orden.
+# Source for a Fabric Python notebook -- twelfth and last step of the
+# native discovery pipeline (see docs/105_fabric_native_discovery_
+# setup.md). Each "# %%" block is a cell -- paste them in order.
 #
-# Puerto fiel de backend/scripts/52_build_notebook_super_lineage.py -- el
-# parser (parse_notebook_code y sus ~40 extractores AST/regex, líneas
-# 181-5142 del original) se copia AQUÍ TAL CUAL, sin cambiar una sola
-# línea de su lógica: es puro CPU-bound sobre texto de código ya
-# descargado, sin E/S propia. Los únicos cambios de E/S:
+# Faithful port of backend/scripts/52_build_notebook_super_lineage.py -- the
+# parser (parse_notebook_code and its ~40 AST/regex extractors, lines
+# 181-5142 of the original) is copied HERE AS IS, without changing a single
+# line of its logic: it is purely CPU-bound over already-downloaded code
+# text, with no I/O of its own. The only I/O changes:
 #   - index/items.csv, index/workspaces.csv, analysis/notebook_definition_
-#     download_manifest.csv ya no son ficheros locales -- se leen de
+#     download_manifest.csv are no longer local files -- they are read from
 #     dbo.bronze_items / dbo.bronze_workspaces / dbo.bronze_notebook_
-#     definitions (esta última la escribe NB_Download_Notebook_Definitions,
-#     el paso anterior del pipeline).
-#   - analysis/e1_notebook_code_review_queue.csv (cola de revisión manual)
-#     no tiene tabla bronze -- degrada a lista vacía, igual que el
-#     original cuando el fichero no existe.
-#   - El parser original navega una jerarquía real de carpetas en disco
-#     (data/notebook_definitions/<workspace>/<item>.Notebook/<part>) para
-#     tres cosas: leer el código de cada notebook, resolver directivas
-#     "%run <notebook>" buscando notebooks hermanos, y pre-escanear
-#     control.EntityConfig. En vez de recrear esa jerarquía en el
-#     filesystem efímero del driver Spark, se sustituye la clase `Path`
-#     por VPath (celda "Sistema de ficheros virtual" más abajo): un shim
-#     mínimo que implementa exactamente los métodos que el parser usa
-#     (.exists(), .read_text(), .name, .suffix, .parent, el operador /),
-#     respaldado por un diccionario en memoria construido desde
-#     bronze_notebook_definitions con la MISMA estructura de rutas
-#     virtuales ("<workspace>/<item>.Notebook/<part_path>") que 51/52
-#     usaban en disco -- el parser no distingue un VPath de un Path real,
-#     así que su código (incluida load_same_workspace_run_includes, la
-#     función que resuelve %run) no necesita ni un cambio.
-#   - Los 4 CSV intermedios (notebook_super_lineage_objects/flows/gaps/
-#     path_aliases.csv) y el doc .md no se escriben -- nada en la web en
-#     vivo los sirve (solo notebook-super-lineage.json, confirmado en
-#     backend/scripts/lineage_web/onelake_data.py y paths.py). El JSON
-#     final se escribe a OneLake vía el mismo patrón atómico ya usado en
-#     los notebooks anteriores.
-#   - Sin argparse: WorkspaceNameFilter es una celda de parámetros, como
-#     en el resto del pipeline. Cuando viene relleno, el comportamiento de
-#     "fusionar con lo ya existente" del original se preserva leyendo el
-#     notebook-super-lineage.json YA PUBLICADO en OneLake (en vez de los 4
-#     CSV) y conservando sus objects/flows/gaps de otros workspaces.
+#     definitions (the latter is written by NB_Download_Notebook_Definitions,
+#     the previous pipeline step).
+#   - analysis/e1_notebook_code_review_queue.csv (manual review queue)
+#     has no bronze table -- it degrades to an empty list, same as the
+#     original when the file does not exist.
+#   - The original parser walks a real folder hierarchy on disk
+#     (data/notebook_definitions/<workspace>/<item>.Notebook/<part>) for
+#     three things: reading each notebook's code, resolving "%run <notebook>"
+#     directives by looking up sibling notebooks, and pre-scanning
+#     control.EntityConfig. Instead of recreating that hierarchy on the
+#     Spark driver's ephemeral filesystem, the `Path` class is replaced
+#     by VPath (cell "Virtual file system" further down): a minimal shim
+#     that implements exactly the methods the parser uses
+#     (.exists(), .read_text(), .name, .suffix, .parent, the / operator),
+#     backed by an in-memory dictionary built from
+#     bronze_notebook_definitions with the SAME virtual path structure
+#     ("<workspace>/<item>.Notebook/<part_path>") that 51/52
+#     used on disk -- the parser cannot tell a VPath from a real Path,
+#     so its code (including load_same_workspace_run_includes, the
+#     function that resolves %run) needs no change at all.
+#   - The 4 intermediate CSVs (notebook_super_lineage_objects/flows/gaps/
+#     path_aliases.csv) and the .md doc are not written -- nothing in the
+#     live web app serves them (only notebook-super-lineage.json, confirmed in
+#     backend/scripts/lineage_web/onelake_data.py and paths.py). The final
+#     JSON is written to OneLake via the same atomic pattern already used in
+#     the previous notebooks.
+#   - No argparse: WorkspaceNameFilter is a parameters cell, as
+#     in the rest of the pipeline. When it is filled in, the original's
+#     "merge with what already exists" behavior is preserved by reading the
+#     notebook-super-lineage.json ALREADY PUBLISHED in OneLake (instead of the 4
+#     CSVs) and keeping its objects/flows/gaps from other workspaces.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -65,24 +65,24 @@ from datetime import datetime, timezone
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
 OUTPUT_ONELAKE_PATH = "Files/generated/notebook-super-lineage.json"
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación, Warehouse y OneLake (mismo patrón que los notebooks anteriores)
+# ## Authentication, Warehouse and OneLake (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -157,7 +157,7 @@ def read_onelake_json(onelake_relative_path):
         f"{ONELAKE_LAKEHOUSE_NAME}.Lakehouse/{onelake_relative_path}"
     )
     # notebookutils.fs.head() silently truncates well below whatever
-    # max_bytes you pass it (confirmed live, 2026-08-12) -- it's a preview
+    # max_bytes you pass it (confirmed live) -- it's a preview
     # API, not a full-read one. spark.read.text(..., wholetext=True) reads
     # the whole file as a single row with no such cap.
     try:
@@ -176,7 +176,7 @@ def write_json_onelake(onelake_relative_path, payload):
 
 
 # %% [markdown]
-# ## Parser (puerto fiel, sin cambios de lógica, de backend/scripts/52_build_notebook_super_lineage.py)
+# ## Parser (faithful port, no logic changes, of backend/scripts/52_build_notebook_super_lineage.py)
 
 # %%
 #!/usr/bin/env python3
@@ -200,17 +200,17 @@ from pathlib import Path
 from typing import Iterable
 
 
-# Ejemplo ilustrativo: mapa de grupo logico -> tabla de configuracion que
-# devuelve un helper get_assignment_config() en los notebooks escaneados.
-# Rellena con los nombres de tabla de tu propio entorno.
+# Illustrative example: map of logical group -> configuration table that
+# a get_assignment_config() helper returns in the scanned notebooks.
+# Fill in with the table names of your own environment.
 ASSIGNMENT_CONFIG_TABLES = {
     "regional": "RegionAssignment",
     "definitive": "DefinitiveSectorAssignment",
 }
 FABRIC_PATH_ALIAS_ROWS: dict[str, dict[str, str]] = {}
-# Ejemplo ilustrativo: adapta esta lista a los sistemas de negocio que
-# aparecen en los nombres de workspace/item de tu propio tenant, para
-# normalizarlos a su forma "bonita".
+# Illustrative example: adapt this list to the business systems that
+# appear in the workspace/item names of your own tenant, to
+# normalize them to their "pretty" form.
 FABRIC_NAME_WORDS = {
     "ADVENTUREWORKS": "AdventureWorks",
     "BRONZE": "Bronze",
@@ -4360,10 +4360,10 @@ def parse_notebook_code(
                 if unresolved and not row.unresolved_variables:
                     row.unresolved_variables = unresolved
                 dict_sources[(dict_name, dict_key)].append(row)
-                # Ejemplo ilustrativo: prefijos que marcan una clave como
-                # alias de otro sistema origen (p.ej.
-                # "crm_leads_table_name" es un alias de "leads_table_name").
-                # Adapta la lista a los prefijos de tu propio entorno.
+                # Illustrative example: prefixes that mark a key as an
+                # alias of another source system (e.g.
+                # "crm_leads_table_name" is an alias of "leads_table_name").
+                # Adapt the list to the prefixes of your own environment.
                 alias_keys = []
                 for prefix in ["crm_", "vendor_", "legacy_", "dept_"]:
                     if dict_key.startswith(prefix):
@@ -5131,7 +5131,7 @@ def parse_notebook_code(
 
 def build_definition_map(manifest_rows: list[dict[str, str]], e1_rows: list[dict[str, str]]) -> dict[str, list[str]]:
     """Resolve each notebook item's local definition file path(s), preferring
-    Phase 51's download manifest and falling back to the E1 manual-review
+    script 51's download manifest and falling back to the E1 manual-review
     queue's own recorded paths for anything the manifest missed. This is
     what lets main() turn "which notebooks exist" (index/items.csv) into
     "which local file do I actually parse for each one"."""
@@ -5217,18 +5217,18 @@ def collect_static_control_config_runtime_vars(code: str) -> list[tuple[int, int
 
 
 # %% [markdown]
-# ## Sistema de ficheros virtual (VPath) -- ver nota al principio del fichero
+# ## Virtual file system (VPath) -- see the note at the top of the file
 
 # %%
 class VPath:
-    """Shim mínimo de pathlib.Path respaldado por un diccionario en
-    memoria {ruta_virtual: texto} en vez del disco real -- implementa
-    exactamente los métodos que el parser copiado arriba usa sobre un
-    Path (.exists(), .read_text(), .name, .suffix, .parent, el operador
-    /, igualdad/hash para poder vivir en un set()). Rebinding `Path =
-    VPath` más abajo hace que TODO el código ya definido arriba (que
-    referencia el nombre global `Path`, resuelto en tiempo de llamada,
-    no de definición) empiece a usarlo sin que haga falta tocarlo."""
+    """Minimal pathlib.Path shim backed by an in-memory dictionary
+    {virtual_path: text} instead of the real disk -- it implements
+    exactly the methods that the parser copied above uses on a
+    Path (.exists(), .read_text(), .name, .suffix, .parent, the /
+    operator, equality/hash so it can live in a set()). Rebinding `Path =
+    VPath` further down makes ALL the code already defined above (which
+    references the global name `Path`, resolved at call time,
+    not at definition time) start using it without having to touch it."""
 
     def __init__(self, path_str):
         self._path = str(path_str)
@@ -5287,12 +5287,12 @@ NOTEBOOK_DEFINITION_COLUMNS = [
 
 
 def build_definition_map_from_bronze(definition_rows):
-    """Reemplaza build_definition_map(manifest_rows, e1_rows) del
-    original: misma forma de salida (qualified_name -> lista de rutas),
-    pero las rutas son virtuales ("<workspace>/<item>.Notebook/<part>")
-    respaldadas por VIRTUAL_FS en vez de rutas reales en disco resueltas
-    desde un CSV manifiesto. No hay tabla bronze equivalente a la cola E1
-    -- degrada a no usarla, igual que el original cuando el fichero falta."""
+    """Replaces build_definition_map(manifest_rows, e1_rows) of the
+    original: same output shape (qualified_name -> list of paths),
+    but the paths are virtual ("<workspace>/<item>.Notebook/<part>")
+    backed by VIRTUAL_FS instead of real on-disk paths resolved
+    from a CSV manifest. There is no bronze table equivalent to the E1 queue
+    -- it degrades to not using it, same as the original when the file is missing."""
     paths_by_item = defaultdict(list)
     virtual_fs = {}
     for row in definition_rows:
@@ -5469,9 +5469,9 @@ normalized_gap_rows.extend(gap_aggregate.values())
 gap_rows = sorted(normalized_gap_rows, key=lambda row: (row.get("workspace_name", ""), row.get("item_name", ""), row.get("gap_type", "")))
 
 if filter_set:
-    # Esta corrida solo re-parseó los workspaces de WorkspaceNameFilter --
-    # funde con lo ya publicado en OneLake para el resto, igual que el
-    # original fundía con sus 4 CSV (ver cabecera del fichero).
+    # This run only re-parsed the WorkspaceNameFilter workspaces --
+    # merge with what is already published in OneLake for the rest, just as the
+    # original merged with its 4 CSVs (see the file header).
     previous_payload = read_onelake_json(OUTPUT_ONELAKE_PATH) or {}
     existing_objects = previous_payload.get("objects", [])
     existing_flows = previous_payload.get("flows", [])

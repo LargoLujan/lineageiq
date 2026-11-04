@@ -120,12 +120,11 @@ archive/**/data/**
 !archive/**/data/.gitkeep
 archive/**/standalone.html
 
-# Project memory and operational evidence docs. Design docs themselves
-# (docs/10_*.md through docs/99_*.md) are NOT excluded -- they're real
-# architecture history for the ~90+ script pipeline and are meant to be
-# version-controlled (see docs/102_admin_panel_and_user_auth.md, Fase 4);
-# only the day-by-day work log and generated one-off probe reports below
-# are genuinely ephemeral/reproducible-from-data.
+# Generated reports and operational evidence. The numbered scripts write
+# their Markdown reports to docs/10_*.md .. docs/99_*.md from tenant data,
+# so those stay local; the hand-written guides (docs/04_*, docs/06_*,
+# docs/08_* and the three-digit docs/1NN_*) are version-controlled.
+docs/[1-9][0-9]_*.md
 docs/conversations/**
 !docs/conversations/.gitkeep
 docs/probe_*.md
@@ -140,3 +139,7 @@ docs/probe_*.md
 # One-off investigation scripts tied to real environment/business data
 docs/investigations/**
 !docs/investigations/.gitkeep
+
+# Local AI-assistant working files (never published)
+AGENTS.md
+.claude/

@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/24_build_orchestration_v2.ps1
--- (Phase 2 migration, 2026-07-21). Reads dbo.silver_ideal_execution_plan
+-- (SQL migration). Reads dbo.silver_ideal_execution_plan
 -- and dbo.silver_ideal_execution_edges (13's own already-validated SQL
 -- output), dbo.bronze_object_read_write_classification (Phase 23), and
 -- dbo.silver_parallelism_candidates (07's output) -- chaining off prior

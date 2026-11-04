@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/44_build_d6_closure_control.ps1
--- (Phase 1 migration, 2026-07-21). Reads dbo.bronze_d6_failure_duration_queue,
+-- (SQL migration). Reads dbo.bronze_d6_failure_duration_queue,
 -- dbo.bronze_d6_failure_hotspot_queue, dbo.bronze_d6_duration_stabilization_queue,
 -- dbo.bronze_d6_execution_evidence.
 --

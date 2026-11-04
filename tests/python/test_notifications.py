@@ -1,6 +1,6 @@
 """Unit tests for the scan-completion notification system in
 backend/scripts/lineage_web/scan_manager.py (email via smtplib, Teams via
-a webhook POST) -- written 2026-08-24 (Fase 6) after finding this code was
+a webhook POST) -- written after finding this code was
 already fully built (real SMTP send, real Adaptive Card Teams webhook,
 wired into every scan-completion path) but had NO test coverage at all.
 Real end-to-end sending (a real SMTP server actually accepting the

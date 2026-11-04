@@ -1,42 +1,42 @@
 # NB_Bronze_Silver_Gold_Build
 #
-# Fuente para un notebook PySpark de Fabric. Fabric no se puede crear/editar
-# de forma remota desde este repositorio, así que este archivo se pega a
-# mano en un notebook nuevo dentro del Lakehouse creado en la Fase 0 (ver
-# docs/101_medallion_lakehouse_provisioning.md). Cada bloque delimitado por
-# "# %%" es una celda independiente -- pégalas en el mismo orden.
+# Source for a Fabric PySpark notebook. Fabric cannot be created/edited
+# remotely from this repository, so this file is pasted by hand into a new
+# notebook inside the Lakehouse created beforehand (see
+# docs/101_medallion_lakehouse_provisioning.md). Each block delimited by
+# "# %%" is an independent cell -- paste them in the same order.
 #
-# Qué hace, en tres pasadas sobre el mismo Lakehouse:
-#   1. Bronze: lee Files/bronze/<entidad>/snapshot_date=<fecha>/<entidad>.csv
-#      (subido por scripts/64_upload_bronze_to_onelake.py) y lo escribe como
-#      tabla Delta gestionada bronze_<entidad>, particionada por snapshot_date.
-#   2. Silver: deduplica, tipa, y asigna una clave surrogate UUID determinista
-#      a cada dimensión.
-#   3. Gold: construye el esquema en estrella Kimball (dim_*/fact_*) que
-#      Power BI consumirá en DirectLake.
+# What it does, in three passes over the same Lakehouse:
+#   1. Bronze: reads Files/bronze/<entity>/snapshot_date=<date>/<entity>.csv
+#      (uploaded by scripts/64_upload_bronze_to_onelake.py) and writes it as
+#      a managed Delta table bronze_<entity>, partitioned by snapshot_date.
+#   2. Silver: deduplicates, types, and assigns a deterministic UUID
+#      surrogate key to each dimension.
+#   3. Gold: builds the Kimball star schema (dim_*/fact_*) that Power BI
+#      will consume in DirectLake.
 #
-# Nota importante sobre "portar la lógica de clasificación": el CSV
-# analysis/object_read_write_classification.csv que llega a Bronze YA es la
-# salida final de scripts/23_build_object_read_write_classification.ps1 --
-# ya trae usage_type_normalized, object_type_status, object_type_source y
-# object_type_confidence resueltos. Por eso este notebook NO reimplementa
-# esa clasificación en Spark (evita tener dos implementaciones
-# independientes de la misma regla de negocio, que es justo el riesgo de
-# deriva que el plan original quería evitar) -- Silver aquí solo conforma
-# claves y tipos sobre columnas que ya vienen correctas desde el origen.
+# Important note on "porting the classification logic": the CSV
+# analysis/object_read_write_classification.csv that lands in Bronze is
+# ALREADY the final output of scripts/23_build_object_read_write_classification.ps1
+# -- it already carries usage_type_normalized, object_type_status,
+# object_type_source and object_type_confidence resolved. That is why this
+# notebook does NOT reimplement that classification in Spark (it avoids
+# having two independent implementations of the same business rule, which
+# is exactly the drift risk to avoid) -- Silver here only conforms keys and
+# types on columns that already arrive correct from the source.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 from datetime import date
 import uuid
 
-RUN_DATE = date.today().isoformat()  # cambia esto si estás reprocesando un snapshot_date concreto
-UUID_NAMESPACE = uuid.UUID("6f1a1f2e-9c3d-4e7a-8b2a-1d4c9e6f0a11")  # namespace fijo del proyecto -- no cambiar nunca
+RUN_DATE = date.today().isoformat()  # change this if you are reprocessing a specific snapshot_date
+UUID_NAMESPACE = uuid.UUID("6f1a1f2e-9c3d-4e7a-8b2a-1d4c9e6f0a11")  # fixed project namespace -- never change
 
-# entidad -> ruta relativa dentro de Files/bronze/ (debe coincidir exactamente
-# con ENTITY_SOURCE_PATHS en scripts/64_upload_bronze_to_onelake.py)
+# entity -> relative path inside Files/bronze/ (must match exactly
+# ENTITY_SOURCE_PATHS in scripts/64_upload_bronze_to_onelake.py)
 BRONZE_ENTITIES = [
     "workspaces", "items", "item_analysis", "dependencies", "executions",
     "object_column_catalog", "object_impact_index", "object_read_write_classification",
@@ -48,8 +48,8 @@ BRONZE_ENTITIES = [
     "source_object_type_metadata_evidence", "sql_endpoint_object_catalog",
 ]
 
-# Columnas que SIEMPRE deben quedarse como string, nunca dejarse inferir como
-# numéricas -- son GUID o identificadores, no cantidades.
+# Columns that must ALWAYS stay as strings, never be left to numeric
+# inference -- they are GUIDs or identifiers, not quantities.
 ID_LIKE_COLUMN_SUFFIXES = ("_id", "_key")
 ID_LIKE_COLUMN_NAMES = {
     "technical_id", "qualified_name", "object_key", "schedule_id", "job_instance_id",
@@ -57,7 +57,7 @@ ID_LIKE_COLUMN_NAMES = {
 }
 
 # %% [markdown]
-# ## Funciones auxiliares
+# ## Helper functions
 
 # %%
 from pyspark.sql import functions as F
@@ -66,9 +66,9 @@ from pyspark.sql.window import Window
 
 
 def deterministic_uuid(business_key: str) -> str:
-    """UUID5 estable: la misma clave de negocio siempre produce el mismo
-    UUID, en cualquier carga -- no hace falta una tabla de keymap con
-    contador para mantener claves surrogate consistentes entre snapshots."""
+    """Stable UUID5: the same business key always produces the same
+    UUID, on any load -- no need for a keymap table with a counter to keep
+    surrogate keys consistent across snapshots."""
     if business_key is None:
         return None
     return str(uuid.uuid5(UUID_NAMESPACE, str(business_key).strip().lower()))
@@ -78,9 +78,9 @@ deterministic_uuid_udf = F.udf(deterministic_uuid, StringType())
 
 
 def cast_id_like_columns_to_string(df):
-    """Después de leer con inferSchema, fuerza a string cualquier columna
-    que por nombre sea claramente un identificador (GUID, clave, etc.) --
-    evita que Spark infiera un ID como numérico solo porque parece serlo."""
+    """After reading with inferSchema, force to string any column whose
+    name clearly marks it as an identifier (GUID, key, etc.) -- prevents
+    Spark from inferring an ID as numeric just because it looks like one."""
     for column_name in df.columns:
         lower_name = column_name.lower()
         if lower_name in ID_LIKE_COLUMN_NAMES or lower_name.endswith(ID_LIKE_COLUMN_SUFFIXES):
@@ -89,21 +89,21 @@ def cast_id_like_columns_to_string(df):
 
 
 def normalize_key(column):
-    """Replica Normalize-Key de PowerShell: minúsculas, trim, colapsar
-    espacios -- se usa igual en cualquier columna que sirva de clave de
-    negocio, en cualquier tabla."""
+    """Replicates PowerShell's Normalize-Key: lowercase, trim, collapse
+    whitespace -- applied the same way to any column that serves as a
+    business key, in any table."""
     return F.regexp_replace(F.trim(F.lower(column)), r"\s+", " ")
 
 
 # %% [markdown]
-# ## Fase Bronze: aterrizaje
+# ## Bronze layer: landing
 
 # %%
 for entity in BRONZE_ENTITIES:
     source_path = f"Files/bronze/{entity}/snapshot_date={RUN_DATE}/{entity}.csv"
     try:
         raw_df = spark.read.csv(source_path, header=True, inferSchema=True)
-    except Exception as exc:  # noqa: BLE001 - una entidad que falte no debe frenar las demás
+    except Exception as exc:  # noqa: BLE001 - a missing entity must not stop the others
         print(f"[bronze][skip] {entity}: no se pudo leer {source_path} ({exc})")
         continue
 
@@ -116,8 +116,8 @@ for entity in BRONZE_ENTITIES:
     )
 
     table_name = f"bronze_{entity}"
-    # Idempotente: si ya existe una carga para este snapshot_date, se
-    # reemplaza solo esa partición en vez de duplicar filas.
+    # Idempotent: if a load already exists for this snapshot_date, only
+    # that partition is replaced instead of duplicating rows.
     if spark.catalog.tableExists(table_name):
         bronze_df.write.format("delta").mode("overwrite") \
             .option("replaceWhere", f"snapshot_date = '{RUN_DATE}'") \
@@ -129,20 +129,20 @@ for entity in BRONZE_ENTITIES:
     print(f"[bronze][ok] {table_name}: {bronze_df.count()} filas para snapshot_date={RUN_DATE}")
 
 # %% [markdown]
-# ## Fase Silver: conformado
+# ## Silver layer: conforming
 #
-# Cada bloque de aquí en adelante depende de que la celda Bronze anterior
-# ya haya corrido (lee las tablas bronze_* recién escritas).
+# Every block from here on depends on the previous Bronze cell having
+# already run (it reads the freshly written bronze_* tables).
 
 # %%
-# --- Dimensión: workspace ---
+# --- Dimension: workspace ---
 silver_workspace = (
     spark.table("bronze_workspaces")
     .withColumn("workspace_bk", F.col("technical_id"))
     .withColumn("workspace_sk", deterministic_uuid_udf(F.col("technical_id")))
 )
 
-# --- Dimensión: capacidad (propia, no solo un atributo del workspace) ---
+# --- Dimension: capacity (its own dimension, not just a workspace attribute) ---
 silver_capacity = (
     silver_workspace
     .select("capacity_id", "capacity_name", "capacity_region")
@@ -151,19 +151,19 @@ silver_capacity = (
     .withColumn("capacity_sk", deterministic_uuid_udf(F.col("capacity_id")))
 )
 
-# --- Dimensión: item (notebooks, copyjobs, pipelines, modelos semánticos,
-#     informes -- todos conviven aquí, item_type como atributo, es la
-#     práctica Kimball correcta) ---
+# --- Dimension: item (notebooks, copyjobs, pipelines, semantic models,
+#     reports -- all live together here, with item_type as an attribute,
+#     which is the correct Kimball practice) ---
 silver_item = (
     spark.table("bronze_items")
     .withColumn("item_bk", F.coalesce(F.col("technical_id"), F.col("qualified_name")))
     .withColumn("item_sk", deterministic_uuid_udf(F.col("item_bk")))
 )
 
-# --- Dimensión: objeto fuente (tabla/vista/SP/columna) ---
-# object_read_write_classification.csv ya trae object_type/object_type_source/
-# object_type_confidence resueltos -- no se re-deriva nada aquí, solo se
-# conforma una fila por object_key.
+# --- Dimension: source object (table/view/SP/column) ---
+# object_read_write_classification.csv already carries object_type/object_type_source/
+# object_type_confidence resolved -- nothing is re-derived here, it only
+# conforms one row per object_key.
 silver_source_object = (
     spark.table("bronze_object_read_write_classification")
     .select(
@@ -176,14 +176,14 @@ silver_source_object = (
     .withColumn("object_sk", deterministic_uuid_udf(F.col("object_key")))
 )
 
-# --- Dimensión: principal/propietario ---
+# --- Dimension: principal/owner ---
 silver_principal = (
     spark.table("bronze_workspace_governance_principals")
     .withColumn("principal_bk", F.coalesce(F.col("principal_email"), F.col("principal_name")))
     .withColumn("principal_sk", deterministic_uuid_udf(F.col("principal_bk")))
 )
 
-# --- Dimensión: pipeline de despliegue + etapa ---
+# --- Dimension: deployment pipeline + stage ---
 silver_deployment_pipeline = (
     spark.table("bronze_deployment_pipelines")
     .withColumn("deployment_pipeline_sk", deterministic_uuid_udf(F.col("deployment_pipeline_id")))
@@ -201,7 +201,7 @@ silver_pipeline_stage = (
 print("Silver: dimensiones conformadas.")
 
 # %%
-# --- Deduplicación de ejecuciones (grano mixto: schedule vs job_instance) ---
+# --- Run deduplication (mixed grain: schedule vs job_instance) ---
 executions_bronze = spark.table("bronze_executions")
 
 silver_schedule = executions_bronze.filter(F.col("record_type") == "schedule")
@@ -222,13 +222,13 @@ silver_job_run = (
 print(f"Silver: {silver_schedule.count()} schedules, {silver_job_run.count()} job runs (deduplicados por job_instance_id).")
 
 # %% [markdown]
-# ## Fase Gold: dimensiones (SCD2 en workspace/item/source_object, Tipo 1 en el resto)
+# ## Gold layer: dimensions (SCD2 on workspace/item/source_object, Type 1 for the rest)
 
 # %%
 def upsert_scd2(silver_df, gold_table_name, business_key_col, surrogate_key_col, tracked_columns):
-    """SCD Tipo 2 sencillo: si la fila más reciente en Silver difiere de la
-    versión vigente en Gold en alguna columna vigilada, cierra la versión
-    anterior (effective_to/is_current=false) y abre una nueva."""
+    """Simple SCD Type 2: if the most recent row in Silver differs from the
+    current version in Gold in any tracked column, close the previous
+    version (effective_to/is_current=false) and open a new one."""
     from delta.tables import DeltaTable
 
     incoming = silver_df.withColumn("effective_from", F.current_timestamp()) \
@@ -276,13 +276,13 @@ upsert_scd2(
 )
 
 # %%
-# --- Dimensiones Tipo 1 (sobrescribir, sin histórico de versión) ---
+# --- Type 1 dimensions (overwrite, no version history) ---
 silver_capacity.write.format("delta").mode("overwrite").saveAsTable("gold_dim_capacity")
 silver_principal.write.format("delta").mode("overwrite").saveAsTable("gold_dim_principal")
 silver_deployment_pipeline.write.format("delta").mode("overwrite").saveAsTable("gold_dim_deployment_pipeline")
 silver_pipeline_stage.write.format("delta").mode("overwrite").saveAsTable("gold_dim_pipeline_stage")
 
-# --- Dimensión calendario (generada, no viene de ninguna CSV) ---
+# --- Calendar dimension (generated, does not come from any CSV) ---
 gold_dim_date = (
     spark.sql("SELECT explode(sequence(to_date('2024-01-01'), to_date('2030-12-31'), interval 1 day)) AS date")
     .withColumn("date_sk", F.date_format("date", "yyyyMMdd").cast("int"))
@@ -300,7 +300,7 @@ gold_dim_date.write.format("delta").mode("overwrite").saveAsTable("gold_dim_date
 print("Gold: dimensiones Tipo 1 + calendario listas.")
 
 # %% [markdown]
-# ## Fase Gold: hechos (todos con snapshot_date, salvo el evento inmutable job_run)
+# ## Gold layer: facts (all with snapshot_date, except the immutable job_run event)
 
 # %%
 workspace_lookup = spark.table("gold_dim_workspace").filter(F.col("is_current")).select("workspace_bk", "workspace_sk")
@@ -311,7 +311,7 @@ object_lookup = spark.table("gold_dim_source_object").filter(F.col("is_current")
 date_lookup = spark.table("gold_dim_date").select("date", "date_sk")
 
 # %%
-# --- gold_fact_schedule: snapshot periódico, un schedule_id por fecha ---
+# --- gold_fact_schedule: periodic snapshot, one schedule_id per date ---
 gold_fact_schedule = (
     silver_schedule
     .join(item_lookup, silver_schedule.qualified_name == item_lookup.item_qualified_name_lookup, "left")
@@ -327,7 +327,7 @@ gold_fact_schedule.write.format("delta").mode("overwrite") \
     .option("replaceWhere", f"snapshot_date = '{RUN_DATE}'").partitionBy("snapshot_date").saveAsTable("gold_fact_schedule")
 
 # %%
-# --- gold_fact_job_run: transacción, evento inmutable ya deduplicado ---
+# --- gold_fact_job_run: transaction, immutable event already deduplicated ---
 gold_fact_job_run = (
     silver_job_run
     .join(item_lookup, silver_job_run.qualified_name == item_lookup.item_qualified_name_lookup, "left")
@@ -341,8 +341,8 @@ gold_fact_job_run = (
     )
 )
 if spark.catalog.tableExists("gold_fact_job_run"):
-    # Solo se añaden job_instance_id que todavía no existan -- un job_run ya
-    # registrado es un evento pasado, no debe cambiar entre snapshots.
+    # Only job_instance_id values that do not exist yet are added -- a job_run
+    # already recorded is a past event and must not change between snapshots.
     existing_ids = spark.table("gold_fact_job_run").select("job_instance_id")
     gold_fact_job_run = gold_fact_job_run.join(existing_ids, "job_instance_id", "left_anti")
     gold_fact_job_run.write.format("delta").mode("append").saveAsTable("gold_fact_job_run")
@@ -350,7 +350,7 @@ else:
     gold_fact_job_run.write.format("delta").mode("overwrite").saveAsTable("gold_fact_job_run")
 
 # %%
-# --- gold_fact_dependency_edge: snapshot periódico ---
+# --- gold_fact_dependency_edge: periodic snapshot ---
 dependencies_bronze = spark.table("bronze_dependencies").filter(F.col("snapshot_date") == RUN_DATE)
 gold_fact_dependency_edge = (
     dependencies_bronze
@@ -365,8 +365,8 @@ gold_fact_dependency_edge.write.format("delta").mode("overwrite") \
     .option("replaceWhere", f"snapshot_date = '{RUN_DATE}'").partitionBy("snapshot_date").saveAsTable("gold_fact_dependency_edge")
 
 # %%
-# --- gold_fact_object_usage: snapshot periódico -- ya viene clasificado
-#     desde origen (ver nota al principio del notebook), solo se conforma ---
+# --- gold_fact_object_usage: periodic snapshot -- already classified at
+#     the source (see the note at the top of the notebook), only conformed ---
 usage_bronze = spark.table("bronze_object_read_write_classification").filter(F.col("snapshot_date") == RUN_DATE)
 gold_fact_object_usage = (
     usage_bronze
@@ -386,7 +386,7 @@ gold_fact_object_usage.write.format("delta").mode("overwrite") \
 print("Gold: hechos principales (schedule/job_run/dependency_edge/object_usage) listos para snapshot_date=" + RUN_DATE)
 
 # %%
-# --- gold_fact_semantic_model_source: snapshot periódico ---
+# --- gold_fact_semantic_model_source: periodic snapshot ---
 sm_source_bronze = spark.table("bronze_semantic_model_datamart_dependencies").filter(F.col("snapshot_date") == RUN_DATE)
 model_item_lookup = item_lookup.withColumnRenamed("item_sk", "semantic_model_item_sk")
 gold_fact_semantic_model_source = (
@@ -403,7 +403,7 @@ gold_fact_semantic_model_source.write.format("delta").mode("overwrite") \
     .option("replaceWhere", f"snapshot_date = '{RUN_DATE}'").partitionBy("snapshot_date").saveAsTable("gold_fact_semantic_model_source")
 
 # %%
-# --- gold_fact_semantic_model_report: snapshot periódico ---
+# --- gold_fact_semantic_model_report: periodic snapshot ---
 sm_report_bronze = spark.table("bronze_semantic_model_report_dependencies").filter(F.col("snapshot_date") == RUN_DATE)
 report_item_lookup = item_lookup.withColumnRenamed("item_sk", "report_item_sk")
 gold_fact_semantic_model_report = (
@@ -421,7 +421,7 @@ gold_fact_semantic_model_report.write.format("delta").mode("overwrite") \
     .option("replaceWhere", f"snapshot_date = '{RUN_DATE}'").partitionBy("snapshot_date").saveAsTable("gold_fact_semantic_model_report")
 
 # %%
-# --- gold_fact_workspace_principal_role: snapshot periódico ---
+# --- gold_fact_workspace_principal_role: periodic snapshot ---
 principal_lookup = spark.table("gold_dim_principal").select(
     F.col("principal_bk"), F.col("principal_sk")
 )
@@ -438,7 +438,7 @@ gold_fact_workspace_principal_role.write.format("delta").mode("overwrite") \
     .option("replaceWhere", f"snapshot_date = '{RUN_DATE}'").partitionBy("snapshot_date").saveAsTable("gold_fact_workspace_principal_role")
 
 # %%
-# --- gold_fact_deployment_stage_item: snapshot periódico ---
+# --- gold_fact_deployment_stage_item: periodic snapshot ---
 deploy_stage_item_bronze = spark.table("bronze_deployment_pipeline_stage_items").filter(F.col("snapshot_date") == RUN_DATE)
 deployment_pipeline_lookup = spark.table("gold_dim_deployment_pipeline").select(
     F.col("deployment_pipeline_id"), F.col("deployment_pipeline_sk")
@@ -479,7 +479,7 @@ gold_fact_deployment_stage_item.write.format("delta").mode("overwrite") \
 print("Gold: hechos restantes (semantic_model_source/report, workspace_principal_role, deployment_stage_item) listos.")
 
 # %% [markdown]
-# ## Validación rápida dentro del propio notebook (antes de la Fase 5 externa)
+# ## Quick validation inside the notebook itself (before the external check)
 
 # %%
 for table_name in [

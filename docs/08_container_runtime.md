@@ -54,13 +54,13 @@ The project folder is mounted at:
 ## Build
 
 ```powershell
-docker compose build fabric-mapper
+docker compose build lineageiq
 ```
 
 ## Open Shell
 
 ```powershell
-docker compose run --rm fabric-mapper bash
+docker compose run --rm lineageiq bash
 ```
 
 ## Automatic Semantic Lineage Web
@@ -68,13 +68,13 @@ docker compose run --rm fabric-mapper bash
 The container starts the semantic lineage web app automatically from:
 
 ```text
-site/semantic-lineage
+frontend/semantic-lineage
 ```
 
 Default runtime behavior:
 - Local URL: `http://127.0.0.1:8765/`.
 - Docker port mapping: `8765:8765`.
-- Public Cloudflare quick tunnel: enabled in `docker-compose.yml`.
+- Public Cloudflare quick tunnel: off by default (`LINEAGE_WEB_PUBLIC_TUNNEL=false` in `docker-compose.yml`); opt in per run when you need it.
 - Docker Compose runs the mounted repo entrypoint at `/workspace/docker/entrypoint.sh`.
 - Current URL files:
   - `analysis/public_web_forward_current/status.txt`
@@ -84,7 +84,7 @@ Default runtime behavior:
 Check the active URLs:
 
 ```powershell
-docker exec hyperledger-fabric-mapper cat /workspace/analysis/public_web_forward_current/status.txt
+docker exec lineageiq cat /workspace/analysis/public_web_forward_current/status.txt
 ```
 
 Inside an already open container shell:
@@ -93,40 +93,40 @@ Inside an already open container shell:
 cat analysis/public_web_forward_current/status.txt
 ```
 
-The public quick tunnel URL changes on each fresh start and is only intended for temporary peer review. It is not a production deployment.
+When enabled, the public quick tunnel URL changes on each fresh start and is only intended for temporary peer review. It exposes the viewer to anyone with the URL, so only enable it for sign-in-protected data and never together with `LINEAGE_DEMO_MODE`. It is not a production deployment.
 
 To disable automatic startup for one run:
 
 ```powershell
-docker compose run --rm -e LINEAGE_WEB_AUTOSTART=false fabric-mapper bash
+docker compose run --rm -e LINEAGE_WEB_AUTOSTART=false lineageiq bash
 ```
 
-To keep the local web server but disable the public tunnel:
+To open the temporary public tunnel for one run (opt-in):
 
 ```powershell
-docker compose run --rm -e LINEAGE_WEB_PUBLIC_TUNNEL=false fabric-mapper bash
+docker compose run --rm -e LINEAGE_WEB_PUBLIC_TUNNEL=true lineageiq bash
 ```
 
 ## Preflight Inside Container
 
 ```powershell
-docker compose run --rm fabric-mapper bash -lc "az --version && fab --version && python --version && pwsh -NoLogo -Command '$PSVersionTable.PSVersion' && node --version && npm --version && chromium --version"
+docker compose run --rm lineageiq bash -lc "az --version && fab --version && python --version && pwsh -NoLogo -Command '$PSVersionTable.PSVersion' && node --version && npm --version && chromium --version"
 ```
 
 ## Browser Visual Validation
 
-The image includes Chromium and Node.js so the interactive lineage explorer can be validated with Playwright before continuing visual phases.
+The image includes Chromium and Node.js so the interactive lineage explorer can be validated with Playwright.
 
 Standalone browser validation:
 
 ```powershell
-pwsh -NoLogo -File scripts/12_validate_lineage_visual.ps1
+pwsh -NoLogo -File backend/scripts/12_validate_lineage_visual.ps1
 ```
 
 Integrated local refresh plus browser validation:
 
 ```powershell
-pwsh -NoLogo -File scripts/99_refresh_lineage_project.ps1 -Mode local-artifacts -RunVisualValidation
+pwsh -NoLogo -File backend/scripts/99_refresh_lineage_project.ps1 -Mode local-artifacts -RunVisualValidation
 ```
 
 Outputs:
@@ -157,21 +157,21 @@ Fabric CLI encrypted cache fallback:
 Azure CLI login inside container:
 
 ```powershell
-docker compose run --rm fabric-mapper az login --use-device-code --tenant <tenant-id> --allow-no-subscriptions
+docker compose run --rm lineageiq az login --use-device-code --tenant <tenant-id> --allow-no-subscriptions
 ```
 
-Preferred Phase 1 discovery inside container:
+Preferred discovery inside the container:
 
 ```powershell
-docker compose run --rm fabric-mapper az login --use-device-code --tenant <tenant-id> --allow-no-subscriptions
-docker compose run --rm fabric-mapper pwsh -NoLogo -File scripts/01_discover_workspaces.ps1 -AuthMethod azure-cli
+docker compose run --rm lineageiq az login --use-device-code --tenant <tenant-id> --allow-no-subscriptions
+docker compose run --rm lineageiq pwsh -NoLogo -File backend/scripts/01_discover_workspaces.ps1 -AuthMethod azure-cli
 ```
 
 Inside an already open container shell:
 
 ```bash
 az login --use-device-code --tenant <tenant-id> --allow-no-subscriptions
-pwsh -NoLogo -File scripts/01_discover_workspaces.ps1 -AuthMethod azure-cli
+pwsh -NoLogo -File backend/scripts/01_discover_workspaces.ps1 -AuthMethod azure-cli
 ```
 
 This path uses Azure CLI to acquire a Fabric REST bearer token and avoids Fabric CLI's interactive browser callback inside Linux containers.
@@ -179,20 +179,20 @@ This path uses Azure CLI to acquire a Fabric REST bearer token and avoids Fabric
 Fabric CLI login inside container:
 
 ```powershell
-docker compose run --rm fabric-mapper fab auth login --tenant <tenant-id>
+docker compose run --rm lineageiq fab auth login --tenant <tenant-id>
 ```
 
 If `fab auth login` fails with `Unsupported method POST` inside a container, do not keep retrying the browser flow. Use the Azure CLI device-code path above for read-only discovery, or use service principal login only after the SPN has been explicitly approved:
 
 ```powershell
-docker compose run --rm fabric-mapper fab auth login -u <client_id> -p <secret> --tenant <tenant_id>
+docker compose run --rm lineageiq fab auth login -u <client_id> -p <secret> --tenant <tenant_id>
 ```
 
 If Fabric CLI still reports an encrypted cache error inside the Linux container, enable its plaintext token fallback in the isolated Fabric auth volume manually, then retry login:
 
 ```powershell
-docker compose run --rm fabric-mapper fab config set encryption_fallback_enabled true
-docker compose run --rm fabric-mapper fab auth login --tenant <tenant-id>
+docker compose run --rm lineageiq fab config set encryption_fallback_enabled true
+docker compose run --rm lineageiq fab auth login --tenant <tenant-id>
 ```
 
 Inside an already open container shell, the equivalent commands are:
@@ -211,17 +211,17 @@ Security note:
 Check Fabric CLI status:
 
 ```powershell
-docker compose run --rm fabric-mapper fab auth status
+docker compose run --rm lineageiq fab auth status
 ```
 
 ## Secret Files
 
 Do not copy secret files into the repository.
 
-When a phase needs local secrets, pass them explicitly:
+When a script needs local secrets, pass them explicitly:
 
 ```powershell
-docker compose --env-file C:\path\to\secrets\lineageiq.local.env run --rm fabric-mapper bash
+docker compose --env-file C:\path\to\secrets\lineageiq.local.env run --rm lineageiq bash
 ```
 
 ## Safety

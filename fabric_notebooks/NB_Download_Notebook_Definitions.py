@@ -1,33 +1,33 @@
 # NB_Download_Notebook_Definitions
 #
-# Fuente para un notebook Python de Fabric -- undécimo paso del pipeline de
-# descubrimiento nativo (ver docs/105_fabric_native_discovery_setup.md).
-# Cada bloque "# %%" es una celda -- pégalas en orden.
+# Source for a Fabric Python notebook -- eleventh step of the native
+# discovery pipeline (see docs/105_fabric_native_discovery_setup.md).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Puerto fiel de backend/scripts/51_download_notebook_definitions.ps1 --
-# mismo algoritmo (API getDefinition + patrón LRO estándar de Fabric,
-# decodificación base64 de cada parte), con dos cambios de E/S:
-#   - Ya no descubre notebooks leyendo index/items.csv/workspaces.csv --
-#     los lee de dbo.bronze_items/dbo.bronze_workspaces (ya poblados por
+# Faithful port of backend/scripts/51_download_notebook_definitions.ps1 --
+# same algorithm (getDefinition API + standard Fabric LRO pattern,
+# base64 decoding of each part), with two I/O changes:
+#   - It no longer discovers notebooks by reading index/items.csv/workspaces.csv --
+#     it reads them from dbo.bronze_items/dbo.bronze_workspaces (already populated by
 #     NB_Discover_Workspaces_Items).
-#   - Ya no escribe cada parte descargada como fichero en disco bajo
-#     data/notebook_definitions/<workspace>/<item>.Notebook/<part> -- las
-#     escribe como filas de dbo.bronze_notebook_definitions (una fila por
-#     (item, part), con el texto ya decodificado). El notebook siguiente
-#     del pipeline (NB_Build_Notebook_Super_Lineage) las consume desde ahí
-#     mediante un "path virtual" en memoria, en vez de recorrer una
-#     jerarquía de carpetas real -- ver ese notebook para el porqué.
+#   - It no longer writes each downloaded part as a file on disk under
+#     data/notebook_definitions/<workspace>/<item>.Notebook/<part> -- it
+#     writes them as rows of dbo.bronze_notebook_definitions (one row per
+#     (item, part), with the text already decoded). The next notebook
+#     of the pipeline (NB_Build_Notebook_Super_Lineage) consumes them from there
+#     through an in-memory "virtual path", instead of walking a real
+#     folder hierarchy -- see that notebook for the rationale.
 #
-# Nota: dbo.bronze_notebook_definitions es la ÚNICA tabla bronze de este
-# proyecto con una columna VARCHAR(MAX) (part_text) -- el código fuente de
-# un notebook real supera los 8000 caracteres del VARCHAR(8000) que usan
-# el resto de tablas bronze, así que esta tabla tiene su propio creador/
-# insertor en vez de reusar el replace_table genérico de los demás
-# notebooks (y evita fast_executemany, que puede truncar binds VARCHAR(MAX)
-# grandes al inferir el tamaño de columna del primer lote).
+# Note: dbo.bronze_notebook_definitions is the ONLY bronze table of this
+# project with a VARCHAR(MAX) column (part_text) -- the source code of
+# a real notebook exceeds the 8000 characters of the VARCHAR(8000) that the
+# rest of the bronze tables use, so this table has its own creator/
+# inserter instead of reusing the generic replace_table of the other
+# notebooks (and it avoids fast_executemany, which can truncate large VARCHAR(MAX)
+# binds when inferring the column size from the first batch).
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -55,12 +55,12 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 REQUEST_DELAY_SECONDS = 0.35
 RETRY_COUNT = 5
@@ -69,14 +69,14 @@ MAX_OPERATION_POLLS = 30
 OPERATION_POLL_DELAY_SECONDS = 3
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación (mismo patrón que los notebooks anteriores)
+# ## Authentication (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -134,7 +134,7 @@ def connect_warehouse():
 WAREHOUSE_CONNECTION = connect_warehouse()
 
 # %% [markdown]
-# ## Helpers Fabric REST (GET paginado + POST/LRO para getDefinition)
+# ## Fabric REST helpers (paginated GET + POST/LRO for getDefinition)
 
 # %%
 def fabric_get(path, headers, retry_count=RETRY_COUNT):
@@ -204,7 +204,7 @@ def decode_part_text(payload_b64):
 
 
 # %% [markdown]
-# ## Escritura en el Warehouse (dbo.bronze_notebook_definitions -- VARCHAR(MAX), sin fast_executemany)
+# ## Write to the Warehouse (dbo.bronze_notebook_definitions -- VARCHAR(MAX), without fast_executemany)
 
 # %%
 NOTEBOOK_DEFINITION_COLUMNS = [
@@ -232,8 +232,8 @@ def replace_notebook_definitions_table(connection, rows):
     # notebook's source code easily exceeds the ~2000-char threshold)
     # using the legacy TEXT/NTEXT DAE wire format, which Fabric Warehouse's
     # default UTF-8 collation (Latin1_General_100_BIN2_UTF8) rejects with
-    # "Cannot convert to text/ntext or collate..." (confirmed live,
-    # 2026-08-12) -- forcing SQL_WVARCHAR on every parameter makes pyodbc
+    # "Cannot convert to text/ntext or collate..." (confirmed live)
+    # forcing SQL_WVARCHAR on every parameter makes pyodbc
     # use the modern varchar(max)-compatible binding instead.
     input_sizes = [(pyodbc.SQL_WVARCHAR, 0, 0)] * 9
     for row in rows:
@@ -350,12 +350,12 @@ for item in notebook_items:
             "error": "", "downloaded_at": now_iso,
         })
 
-# Reconectar con un token de base de datos fresco -- la conexion de
-# arriba lleva abierta desde antes del bucle por notebook (todo el
-# tenant, con getDefinition + polling LRO de hasta 90s por item), el
-# mismo patron que ya causo un fallo real de conexion ("TCP Provider:
-# Error code 0x20") en NB_Discover_Dependencies.py -- mismo fix aplicado
-# aqui preventivamente.
+# Reconnect with a fresh database token -- the connection
+# above has been open since before the per-notebook loop (the whole
+# tenant, with getDefinition + LRO polling of up to 90s per item), the
+# same pattern that already caused a real connection failure ("TCP Provider:
+# Error code 0x20") in NB_Discover_Dependencies.py -- same fix applied
+# here preventively.
 WAREHOUSE_CONNECTION.close()
 WAREHOUSE_CONNECTION = connect_warehouse()
 

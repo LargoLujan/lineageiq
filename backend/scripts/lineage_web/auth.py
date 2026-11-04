@@ -1,6 +1,6 @@
 """Auth: Entra ID device-code sign-in + sessions.
 
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion,
+Split out of lineage_web_server.py -- pure code motion,
 no logic changed from the original.
 """
 import secrets
@@ -31,7 +31,7 @@ from .state import (
 )
 from .utils import _hash_api_key, _now_iso
 
-# 2026-08-24: persisted counterpart to _session_history (state.py) --
+# Persisted counterpart to _session_history (state.py) --
 # process-memory-only history explained "no one ever connects" once this
 # server started restarting/redeploying often enough to matter. Same
 # append-only pattern as collaboration.py's node_comments/node_favorites.
@@ -199,8 +199,8 @@ def _create_session_from_token_result(result, serialized_cache, client_ip="", us
 
 def _record_ended_session(session, reason):
     """Appends one row to the bounded in-memory session-history log
-    (2026-08-18, admin panel Sessions tab) AND to dbo.session_history
-    (2026-08-24) -- the in-memory list alone explained "no one ever
+    (admin panel Sessions tab) AND to dbo.session_history
+    -- the in-memory list alone explained "no one ever
     connects" once this server started restarting/redeploying often
     enough for it to matter (it's process-lifetime only). Every call site
     already holds _session_lock at the point a session gets removed, so
@@ -273,7 +273,7 @@ def _list_sessions_for_admin():
             "accessible_workspace_count": workspace_count,
             # Already computed at sign-in (see _create_session_from_token_
             # result above) but never actually surfaced here until now
-            # (2026-08-18 admin-panel audit finding) -- whether a session
+            #  -- whether a session
             # holds elevated Fabric-tenant-admin scan rights is exactly
             # what an admin auditing active sessions would want to see.
             "is_fabric_tenant_admin": bool(session.get("is_fabric_tenant_admin")),
@@ -284,8 +284,8 @@ def _list_sessions_for_admin():
 
 def _list_session_history_for_admin(limit=100):
     """Read-only snapshot of ended sessions for the admin panel's Sessions
-    tab (2026-08-18), newest first, capped to `limit`. Reads dbo.
-    session_history (2026-08-24) so this survives a server restart --
+    tab, newest first, capped to `limit`. Reads dbo.
+    session_history so this survives a server restart --
     falls back to the process-lifetime-only in-memory list (state.py's
     _session_history) only if the Warehouse isn't configured or the read
     fails, same degrade-gracefully contract as every other Warehouse-
@@ -385,7 +385,7 @@ def _session_expired(session, now):
     """True if `session` is past its absolute lifetime or idle timeout, or
     has an unparseable timestamp (treated as expired rather than trusted).
     Shared by _get_session (which also prunes+refreshes on every real
-    request) and _list_sessions_for_admin (2026-08-17: the admin panel's
+    request) and _list_sessions_for_admin (the admin panel's
     Users tab used to list every entry in _sessions verbatim, showing a
     session as "active" for however long nothing else happened to touch
     it and trigger _get_session's own prune -- same criteria here so the
@@ -427,13 +427,13 @@ def _end_session(session_id):
 
 
 def _generate_api_key():
-    # "flm_" prefix (Fabric Lineage Mapper) makes a leaked key recognizable
+    # "flm_" prefix (from the project's original name, Fabric Lineage Mapper; kept for compatibility with existing keys) makes a leaked key recognizable
     # in logs/scans, same idea as GitHub's "ghp_"/Stripe's "sk_" prefixes.
     return "flm_" + secrets.token_urlsafe(32)
 
 
 def _api_key_expired(entry):
-    """expires_at (2026-08-18, optional -- blank/absent means never) is an
+    """expires_at (optional -- blank/absent means never) is an
     ISO timestamp, same format _now_iso() produces. A malformed value, or a
     non-string value from a hand-edited config, is treated as not-expired
     rather than raising, so a corrupt field degrades to the old always-
@@ -454,14 +454,14 @@ def _api_key_expired(entry):
 def _valid_api_key(raw_key, settings):
     """Constant-time lookup so response timing can't be used to narrow down
     a valid key byte-by-byte. Returns (name, scope) from the matched entry,
-    or (None, None) -- also (None, None) once its expires_at (2026-08-18,
-    optional) has passed, treated identically to no match so a caller
+    or (None, None) -- also (None, None) once its expires_at
+    (optional) has passed, treated identically to no match so a caller
     can't distinguish "expired" from "never existed" by response shape.
     Compares key_hash, never the raw key itself -- admin_settings.json
-    only ever stores the hash (2026-08-17 security audit; see
+    only ever stores the hash (see
     admin_settings._migrate_api_keys for entries created before this).
 
-    scope is "read_only" or "full" (2026-08-18) -- missing/legacy entries
+    scope is "read_only" or "full" -- missing/legacy entries
     (created before this field existed) default to "full" so an already-
     deployed automation caller (e.g. a Fabric pipeline's Web activity
     triggering scans) doesn't silently lose access on upgrade; new keys
@@ -474,7 +474,7 @@ def _valid_api_key(raw_key, settings):
     modify-write, so a race can still produce one), and a by-name lookup
     would silently resolve to whichever entry happens to come first in
     the list -- possibly not the one the caller actually authenticated
-    as (2026-08-18 code review finding)."""
+    as."""
     if not raw_key:
         return None, None
     candidate_hash = _hash_api_key(raw_key)

@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/15_build_object_type_
--- resolution_queue.ps1 (Phase 2 migration continuation, 2026-07-21).
+-- resolution_queue.ps1 (SQL migration).
 -- Reads dbo.bronze_semantic_model_view_candidates/item_object_lineage_
 -- candidates/pipeline_object_lineage_candidates/manual_lineage_object_
 -- evidence/source_object_type_overrides/source_object_type_metadata_

@@ -1,5 +1,5 @@
 """Unit tests for the pure-logic pieces of backend/scripts/lineage_web/
-external_sources.py added 2026-08-18 (Fabric connection assignment /
+external_sources.py (Fabric connection assignment /
 notifications). The subprocess-based connection tests aren't covered here
 -- see the module's own docstrings for why those are "verified live, not
 unit-tested" by this project's convention.

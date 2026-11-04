@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # D.0: anchor default paths to the repo, not $PWD
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # Anchor default paths to the repo, not $PWD
 
 EXACT_TYPE_PATTERN = re.compile(r"(^|; )(table|view|stored_procedure|file|shortcut|query)(;|$)")
 AMBIGUOUS_TYPE_PATTERN = re.compile(r"table_or_view|native_query_object")

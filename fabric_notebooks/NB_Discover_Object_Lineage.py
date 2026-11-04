@@ -1,39 +1,39 @@
 # NB_Discover_Object_Lineage
 #
-# Fuente para un notebook Python de Fabric -- tercer paso del pipeline de
-# descubrimiento nativo, después de NB_Discover_Workspaces_Items y
-# NB_Discover_Dependencies (ver docs/105_fabric_native_discovery_setup.md).
-# Cada bloque "# %%" es una celda -- pégalas en orden.
+# Source for a Fabric Python notebook -- third step of the native
+# discovery pipeline, after NB_Discover_Workspaces_Items and
+# NB_Discover_Dependencies (see docs/105_fabric_native_discovery_setup.md).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Réplica fiel de scripts/18_extract_item_object_lineage.ps1: a diferencia
-# de NB_Discover_Dependencies (linaje item<->item por coincidencia de
-# GUID), este extrae linaje item->OBJETO EXTERNO (qué tabla/vista/
-# procedimiento almacenado/archivo lee o escribe cada Notebook, CopyJob,
+# Faithful replica of scripts/18_extract_item_object_lineage.ps1: unlike
+# NB_Discover_Dependencies (item<->item lineage by GUID match), this one
+# extracts item->EXTERNAL OBJECT lineage (which table/view/
+# stored procedure/file each Notebook, CopyJob,
 # Dataflow, Eventstream, KQLQueryset, Reflex, UserDataFunction, GraphQLApi
-# o DataAgent), parseando de verdad el contenido de texto/JSON de cada
-# tipo de definición -- sin IA/LLM, solo expresiones regulares y recorridos
-# de JSON estructurado (igual que el original: ver su cabecera y los
-# comentarios de cada parser específico por tipo).
+# or DataAgent reads or writes), by really parsing the text/JSON content of each
+# definition type -- no AI/LLM, only regular expressions and structured
+# JSON traversals (same as the original: see its header and the
+# comments of each type-specific parser).
 #
-# Escribe en dbo.bronze_item_object_lineage_candidates -- misma tabla y
-# columnas (17) que scripts/67_upload_bronze_to_warehouse.ps1 ya sube desde
+# Writes to dbo.bronze_item_object_lineage_candidates -- the same table and
+# columns (17) that scripts/67_upload_bronze_to_warehouse.ps1 already uploads from
 # analysis/item_object_lineage_candidates.csv.
 #
-# Deliberadamente NO incluido (mismo alcance que 18): confirmar el TIPO
-# exacto de cada objeto contra un catálogo SQL externo real
-# (scripts/20_extract_source_object_type_metadata.ps1 y afines) -- esos
-# candidatos quedan como "likely"/"table_or_view" sin confirmar, igual que
-# en local hasta que alguien los revisa o el catálogo externo los cruza.
-# Esto es alcanzable en principio (misma mecánica: abrir una conexión SQL
-# con pyodbc, como ya hace warehouse.py), pero requiere que el servidor SQL
-# externo sea alcanzable por red desde el runtime de Fabric (VNet/gateway/
-# reglas de firewall) -- una pregunta de infraestructura del tenant, no de
-# código, así que no se ha intentado aquí.
+# Deliberately NOT included (same scope as 18): confirming the exact
+# TYPE of each object against a real external SQL catalog
+# (scripts/20_extract_source_object_type_metadata.ps1 and related) -- those
+# candidates stay as "likely"/"table_or_view" unconfirmed, same as
+# locally until someone reviews them or the external catalog cross-checks them.
+# This is reachable in principle (same mechanics: open a SQL connection
+# with pyodbc, as warehouse.py already does), but it requires the external SQL server
+# to be reachable over the network from the Fabric runtime (VNet/gateway/
+# firewall rules) -- a tenant infrastructure question, not a code one,
+# so it has not been attempted here.
 #
-# Self-contained a propósito, mismo criterio que NB_Discover_Dependencies.
+# Self-contained on purpose, same criterion as NB_Discover_Dependencies.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -58,27 +58,27 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-# Ya no se lee de Key Vault (bloqueado) NI de un parámetro del pipeline
-# (probado 2026-08-12: filtró el valor en texto plano al fallar la
-# conversión de tipo -- nunca más por ahí). Fichero privado en el área
-# Files del Lakehouse del workspace, leído con notebookutils.fs.head() --
-# gobernado por el rol de Fabric del SP sobre este workspace, no por RBAC
-# de Azure sobre un recurso aparte.
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# No longer read from Key Vault (blocked) NOR from a pipeline parameter
+# (tested: it leaked the value in plain text when the
+# type conversion failed -- never again that way). Private file in the
+# Files area of the workspace Lakehouse, read with notebookutils.fs.head() --
+# governed by the SP's Fabric role on this workspace, not by Azure RBAC
+# on a separate resource.
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 REQUEST_DELAY_SECONDS = 0.25
 RETRY_COUNT = 5
 MAX_OPERATION_POLLS = 20
 MAX_OPERATION_DELAY_SECONDS = 15
 
-# Mismo conjunto que $ItemTypes en 18_extract_item_object_lineage.ps1.
-# Warehouse y VariableLibrary excluidos a propósito -- ver la cabecera de
-# ese script: Warehouse no tiene formato de definición que leer, y
-# VariableLibrary no tiene linaje de objetos propio.
+# Same set as $ItemTypes in 18_extract_item_object_lineage.ps1.
+# Warehouse and VariableLibrary are excluded on purpose -- see the header of
+# that script: Warehouse has no definition format to read, and
+# VariableLibrary has no object lineage of its own.
 ITEM_TYPES = {
     "Notebook", "CopyJob", "Dataflow", "Eventstream", "KQLQueryset",
     "Reflex", "UserDataFunction", "GraphQLApi", "DataAgent",
@@ -91,14 +91,14 @@ CANDIDATE_COLUMNS = [
 ]
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación y Warehouse (mismo patrón que los notebooks anteriores)
+# ## Authentication and Warehouse (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -129,8 +129,8 @@ def token_struct(token):
 
 def pick_odbc_driver():
     # Fabric's managed Spark runtime doesn't always ship the same ODBC
-    # driver major version as a local dev machine (confirmed live,
-    # 2026-08-11: "ODBC Driver 17 for SQL Server" -- file not found).
+    # driver major version as a local dev machine (confirmed live:
+    # "ODBC Driver 17 for SQL Server" -- file not found).
     # Picks whichever "ODBC Driver NN for SQL Server" is actually
     # installed, newest major version first, instead of a fixed guess.
     available = sorted(
@@ -173,7 +173,7 @@ def normalize_key(value):
 
 
 # %% [markdown]
-# ## Fabric REST: paginación, reintento, y el mismo sondeo LRO de getDefinition
+# ## Fabric REST: pagination, retry, and the same getDefinition LRO polling
 
 # %%
 def fabric_request(method, path, headers, retry_count=RETRY_COUNT):
@@ -255,7 +255,7 @@ def decode_definition_parts(definition_payload):
 
 
 # %% [markdown]
-# ## Helpers de identificador de objeto (Split-ObjectIdentifier / Test-ObjectIdentifierNoise / Get-ContextUsage / Find-FirstJsonStringValue)
+# ## Object identifier helpers (Split-ObjectIdentifier / Test-ObjectIdentifierNoise / Get-ContextUsage / Find-FirstJsonStringValue)
 
 # %%
 _NOISE_WORDS = re.compile(r"^(?i:select|with|where|join|from|on|and|or|as)$")
@@ -267,15 +267,15 @@ _NOISE_URLS = re.compile(
     r"[^/]+\.database\.windows\.net|management\.azure\.com|api\.powerbi\.com)(?:/|$))"
 )
 
-# URLs externas (formularios SaaS, CRM, sitios de SharePoint...)
-# colapsaban todas en un unico nodo generico "File" en el grafo porque
-# source_database quedaba vacio -- build_graph_map_index agrupa por
-# source_type+server+database, y con los tres iguales (vacios) para
-# muchas filas distintas, todas caian en el mismo cajon. Ahora se
-# extrae el host real como source_database, y las rutas de OneLake interno
-# (abfss://...@onelake.dfs.fabric.microsoft.com/...) se reclasifican como
-# "Fabric" en vez de "File" -- son almacenamiento propio de Fabric, no un
-# origen externo real.
+# External URLs (SaaS forms, CRM, SharePoint sites...)
+# used to collapse into a single generic "File" node in the graph because
+# source_database was left empty -- build_graph_map_index groups by
+# source_type+server+database, and with all three equal (empty) for
+# many different rows, they all fell into the same bucket. Now the
+# real host is extracted as source_database, and internal OneLake paths
+# (abfss://...@onelake.dfs.fabric.microsoft.com/...) are reclassified
+# as "Fabric" instead of "File" -- they are Fabric's own storage, not a real
+# external source.
 _ONELAKE_HOST_PATTERN = re.compile(r"(?i:onelake\.(?:dfs|blob)\.fabric\.microsoft\.com$)")
 
 
@@ -360,7 +360,7 @@ def find_first_json_string_value(node, names, max_depth=6):
 
 
 # %% [markdown]
-# ## Registro de candidatos (Add-Candidate: dedup + fila final)
+# ## Candidate registration (Add-Candidate: dedup + final row)
 
 # %%
 def add_candidate(rows, seen, item, object_parts, definition_path, usage_type, object_type,
@@ -400,7 +400,7 @@ def add_candidate(rows, seen, item, object_parts, definition_path, usage_type, o
 
 
 # %% [markdown]
-# ## Parsers genéricos: patrones de texto y SQL embebido (Add-StringPatternCandidates / Add-SqlObjectCandidates / Add-EmbeddedSqlCandidates)
+# ## Generic parsers: text patterns and embedded SQL (Add-StringPatternCandidates / Add-SqlObjectCandidates / Add-EmbeddedSqlCandidates)
 
 # %%
 _STRING_PATTERNS = [
@@ -799,7 +799,7 @@ if filter_set:
 print(f"Target items: {len(target_items)} ({'filtered: ' + WorkspaceNameFilter if filter_set else 'full tenant'})")
 
 # %% [markdown]
-# ## Ejecutar: por cada item, getDefinition + parseo por tipo
+# ## Run: for each item, getDefinition + per-type parsing
 
 # %%
 fabric_token = acquire_token("https://api.fabric.microsoft.com/.default")
@@ -836,15 +836,15 @@ for item in target_items:
 print(f"Definitions succeeded: {success_count} / {len(target_items)}. Object candidates: {len(rows)}.")
 
 # %% [markdown]
-# ## Escribir en el Warehouse (dbo.bronze_item_object_lineage_candidates),
-# conservando lo que pertenece a workspaces fuera de WorkspaceNameFilter
+# ## Write to the Warehouse (dbo.bronze_item_object_lineage_candidates),
+# keeping what belongs to workspaces outside WorkspaceNameFilter
 
 # %%
-# Reconectar con un token de base de datos fresco -- la conexion de arriba
-# lleva abierta desde antes del bucle por item (todo el tenant, con
-# getDefinition + reintentos), el mismo patron que ya causo un fallo real
-# de conexion ("TCP Provider: Error code 0x20") en NB_Discover_
-# Dependencies.py -- mismo fix aplicado aqui preventivamente.
+# Reconnect with a fresh database token -- the connection above
+# has been open since before the per-item loop (the whole tenant, with
+# getDefinition + retries), the same pattern that already caused a real
+# connection failure ("TCP Provider: Error code 0x20") in NB_Discover_
+# Dependencies.py -- same fix applied here preventively.
 connection.close()
 connection = connect_warehouse()
 cursor = connection.cursor()

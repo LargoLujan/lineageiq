@@ -1,45 +1,45 @@
 # NB_Harden_Object_Lineage_Candidates
 #
-# Fuente para un notebook Python de Fabric -- Fase D del "escaneo profundo"
-# (ver docs/105_fabric_native_discovery_setup.md para el patron general).
-# Cada bloque "# %%" es una celda -- pegalas en orden.
+# Source for a Fabric Python notebook -- part of the "deep scan"
+# (see docs/105_fabric_native_discovery_setup.md for the general pattern).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Replica fiel de scripts/33_harden_object_lineage_candidates.ps1: limpia
-# ruido obvio del parser (nombre de workspace mal interpretado como objeto,
-# URL de storage, GUID, palabra clave SQL genérica, fragmento de
-# expresión...) de los candidatos de linaje a nivel de objeto, y rellena
-# servidor/base de datos cuando el item tiene EXACTAMENTE una dependencia
-# SQL confirmada en otro sitio. A diferencia de los demas notebooks de este
-# proyecto, este es puramente local (Warehouse -> Warehouse) -- no llama a
-# ninguna API de Fabric ni conecta a ningun SQL endpoint externo, solo lee
-# y reescribe sus propias tablas bronze.
+# Faithful replica of scripts/33_harden_object_lineage_candidates.ps1: it cleans
+# obvious parser noise (workspace name misread as an object,
+# storage URL, GUID, generic SQL keyword, expression
+# fragment...) from the object-level lineage candidates, and fills in
+# server/database when the item has EXACTLY one SQL dependency
+# confirmed elsewhere. Unlike the other notebooks of this
+# project, this one is purely local (Warehouse -> Warehouse) -- it calls no
+# Fabric API and connects to no external SQL endpoint, it only reads
+# and rewrites its own bronze tables.
 #
-# Motivado directamente por lo visto en la prueba en vivo de NB_Extract_
-# Object_Column_Catalog (Fase B, 2026-08-19): 2 de 4 fallos fueron un
-# nombre de workspace ("digitalanalytics-sample_contoso_pro") tratado como
-# si fuera un servidor SQL real -- exactamente el tipo de ruido que este
-# notebook existe para eliminar.
+# Directly motivated by what was seen in the live test of NB_Extract_
+# Object_Column_Catalog: 2 of 4 failures were a
+# workspace name ("digitalanalytics-sample_contoso_pro") treated as
+# if it were a real SQL server -- exactly the kind of noise this
+# notebook exists to remove.
 #
-# Reescribe EN SITIO (tras limpiar/rellenar): dbo.bronze_item_object_
+# Rewrites IN PLACE (after cleaning/filling): dbo.bronze_item_object_
 # lineage_candidates, dbo.bronze_pipeline_object_lineage_candidates, dbo.
-# bronze_semantic_model_view_candidates. Escribe ademas dbo.bronze_object_
-# lineage_candidate_hardening_review (un review row por cada fila tocada)
-# y dbo.bronze_object_lineage_candidate_hardening_summary.
+# bronze_semantic_model_view_candidates. Also writes dbo.bronze_object_
+# lineage_candidate_hardening_review (one review row per touched row)
+# and dbo.bronze_object_lineage_candidate_hardening_summary.
 #
-# Debe correr DESPUES de NB_Discover_Dependencies, NB_Discover_Object_
-# Lineage, NB_Discover_Pipeline_Object_Lineage y NB_Discover_Semantic_
-# Model_Lineage -- limpia lo que esos cuatro ya escribieron.
+# Must run AFTER NB_Discover_Dependencies, NB_Discover_Object_
+# Lineage, NB_Discover_Pipeline_Object_Lineage and NB_Discover_Semantic_
+# Model_Lineage -- it cleans what those four already wrote.
 #
-# Sin celda de parametros -- a diferencia de los notebooks "Discover"/
-# "Extract", este limpia SIEMPRE las 3 tablas enteras (igual que el script
-# local, que tampoco tiene filtro de workspace): un candidato ruidoso en un
-# workspace no incluido en un rescan concreto seguiria siendo ruido, no
-# tiene sentido dejarlo sin limpiar.
+# No parameters cell -- unlike the "Discover"/
+# "Extract" notebooks, this one ALWAYS cleans the 3 full tables (same as the local
+# script, which also has no workspace filter): a noisy candidate in a
+# workspace not included in a given rescan would still be noise, so
+# there is no point in leaving it uncleaned.
 
 # %% [markdown]
-# ## Configuracion
-# Mismos valores que en NB_Discover_Workspaces_Items -- copia aqui los que
-# ya rellenaste alli.
+# ## Configuration
+# Same values as in NB_Discover_Workspaces_Items -- copy here the ones you
+# already filled in there.
 
 # %%
 try:
@@ -60,15 +60,15 @@ import struct
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 # %% [markdown]
-# ## Autenticacion + Warehouse (mismo patron que los demas notebooks)
+# ## Authentication + Warehouse (same pattern as the other notebooks)
 
 # %%
 def get_client_secret():
@@ -153,8 +153,8 @@ def normalize_key(value):
     return re.sub(r"\s+", " ", str(value).strip().lower())
 
 # %% [markdown]
-# ## Deteccion de ruido (replica de Get-NoiseReason) + emparejamiento SQL
-# unico por item (replica de Get-UniqueEndpointForRow / Test-HasMultipleSqlEndpoints)
+# ## Noise detection (replica of Get-NoiseReason) + unique SQL pairing
+# per item (replica of Get-UniqueEndpointForRow / Test-HasMultipleSqlEndpoints)
 
 # %%
 _OBJECT_TYPE_ALIASES = {"storedprocedure": "stored_procedure", "procedure": "stored_procedure", "proc": "stored_procedure", "sp": "stored_procedure"}
@@ -164,7 +164,7 @@ _GENERIC_KEYWORDS = {
     "catalog", "catalogue", "directory", "record", "list", "inventory", "chronology", "lineage",
 }
 _SCHEMA_LIKE = {"dbo", "hst", "stg", "ctl", "dim", "fct", "pln"}
-# 2026-08-19 fix: Python's re (unlike PowerShell's regex engine) requires an
+# Fix: Python's re (unlike PowerShell's regex engine) requires an
 # inline (?i) flag to be the very first thing in the pattern -- confirmed
 # live, every single row failed the whole notebook with "global flags not
 # at the start of the expression" because ^ came before (?i) here. Using
@@ -279,7 +279,7 @@ def row_item_keys(row):
     return keys
 
 # %% [markdown]
-# ## Procesar una tabla de candidatos (limpiar ruido + rellenar servidor/bd)
+# ## Process a candidates table (clean noise + fill in server/db)
 
 # %%
 def harden_candidate_table(rows, columns, known_workspace_keys, sql_connections_by_item, review_rows, summary, file_label):

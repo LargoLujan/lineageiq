@@ -1,4 +1,4 @@
-"""Unit tests for the optional Fabric-pipeline scan trigger (2026-07-24):
+"""Unit tests for the optional Fabric-pipeline scan trigger:
 backend/scripts/lineage_web/fabric_pipeline.py and the discovery_pipeline
 branch it adds to scan_manager.py's _start_scan/_start_full_scan/_stop_scan.
 
@@ -235,7 +235,7 @@ def test_local_mode_never_calls_fabric_pipeline(monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# _recover_scan_state_on_startup (2026-08-11): a Fabric-pipeline scan has no
+# _recover_scan_state_on_startup: a Fabric-pipeline scan has no
 # local process, so it must re-attach to the real job on restart instead of
 # assuming "pid not alive" means "failed" -- see the function's own comment
 # for why a naive restart would otherwise mislabel a scan that's still

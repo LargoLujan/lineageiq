@@ -1,4 +1,4 @@
-"""In-memory request metrics (Tanda 5, E.3) -- counts by (method, path,
+"""In-memory request metrics -- counts by (method, path,
 status_code), reset on server restart, same tradeoff as every other piece
 of in-memory-only shared state in this package. Exists so an admin can see
 real traffic/error shape (including rate-limit rejections) from inside the

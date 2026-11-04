@@ -1,6 +1,5 @@
-"""Lineage-usage analytics (Fase 6, 2026-08-24) -- what the admin panel's
-"Analíticas" tab renamed itself for in Fase 1 but never actually had until
-now: real usage of the EXPLORER (which items people look at, how often,
+"""Lineage-usage analytics -- what the admin panel's
+"Analytics" tab is named for: real usage of the EXPLORER (which items people look at, how often,
 by whom) instead of just raw server-request counts (still shown too, see
 observability.py, since it's cheap and already useful for debugging).
 
@@ -26,7 +25,7 @@ from .utils import _now_iso
 # Recorded event types -- keep this list short and additive; each new type
 # needs a real question it answers on the Analíticas tab, not "might be
 # useful someday" (see this module's own docstring on write-volume care).
-# mcp_tool_call added 2026-08-25 alongside the remote MCP server
+# mcp_tool_call was added alongside the remote MCP server
 # (mcp_http_server.py): "is anyone actually using this, and with what" is
 # exactly the kind of real question this table exists to answer, and
 # reuses the same 5 columns with no schema change -- qualified_name holds
@@ -82,7 +81,7 @@ def get_usage_analytics(top_n=10, days=30):
     except warehouse.WarehouseError as exc:
         return {"found": False, "reason": f"Warehouse read failed: {exc}"}
     if not rows:
-        return {"found": False, "reason": "No hay eventos de uso registrados todavía."}
+        return {"found": False, "reason": "No usage events have been recorded yet."}
 
     item_view_counts = {}
     events_by_day = {}
@@ -133,7 +132,7 @@ def get_mcp_usage_analytics(days=30):
         return {"found": False, "reason": f"Warehouse read failed: {exc}"}
     mcp_rows = [row for row in rows if row.get("event_type") == "mcp_tool_call"]
     if not mcp_rows:
-        return {"found": False, "reason": "No hay llamadas MCP registradas todavía."}
+        return {"found": False, "reason": "No MCP calls have been recorded yet."}
 
     calls_by_tool = {}
     calls_by_caller = {}

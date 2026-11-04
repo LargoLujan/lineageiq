@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/60_backfill_semantic_catalog_model_source_targets.py
--- (Phase 1 migration, 2026-07-21). Chains off dbo.silver_semantic_model_view_candidates_v59
+-- (SQL migration). Chains off dbo.silver_semantic_model_view_candidates_v59
 -- (59's output) plus dbo.bronze_semantic_model_datamart_dependencies,
 -- dbo.bronze_sql_server_deep_catalog_objects, and
 -- dbo.bronze_sql_endpoint_object_catalog. Unlike 58/59, this one can also

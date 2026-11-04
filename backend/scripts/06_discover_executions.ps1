@@ -852,8 +852,8 @@ foreach ($item in ($targetItems | Sort-Object -Property workspace_name, item_typ
 # because newer runs pushed it out of that window. Until now, this
 # script's per-item rows were fully replaced by whatever came back this
 # time, silently discarding that older history on every re-run -- exactly
-# the "es imposible que algo que ya paso se cambie, no deberiamos perder lo
-# que ya sabemos" gap the user pointed out 2026-07-18. Merge this run's
+# the "history that already happened can never change, so we should never
+# lose what we already know" gap. Merge this run's
 # freshly-fetched job_instance rows with whatever the SAME items already
 # had on disk, deduped by (qualified_name, job_instance_id): nothing
 # already captured is ever dropped, and nothing gets duplicated. Schedule

@@ -1,5 +1,5 @@
 # Pester tests for backend/scripts/common/LineageCommon.psm1 -- see
-# docs/102_admin_panel_and_user_auth.md, Fase 2/Fase 3. Run with:
+# docs/102_admin_panel_and_user_auth.md. Run with:
 #   Invoke-Pester tests/powershell/LineageCommon.Tests.ps1
 
 $modulePath = Join-Path $PSScriptRoot "../../backend/scripts/common/LineageCommon.psm1"

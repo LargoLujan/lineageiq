@@ -10,17 +10,16 @@ from pathlib import Path
 
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # D.0: anchor default paths to the repo, not $PWD
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # Anchor default paths to the repo, not $PWD
 
 EXACT_TYPES = {"table", "view", "stored_procedure", "file", "shortcut", "query"}
 # Fallback only, for a lineage-explorer.json built before "modes" existed as
 # a top-level field -- the real coverage source is payload["modes"] (see
 # main()), which lists every real Fabric item type actually present in the
-# tenant (Report, Lakehouse, PaginatedReport, ... 21 as of 2026-07-11), not
+# tenant (Report, Lakehouse, PaginatedReport, ... 21 at the time of writing), not
 # just these original 5. Iterating only this fixed tuple silently skipped
 # every item of any other type from the whole object-impact index -- found
-# live 2026-07-11 while investigating an unrelated file-size issue in the
-# same pipeline.
+# while investigating an unrelated file-size issue in the same pipeline.
 MODES = ("semantic", "notebooks", "copyjobs", "pipelines", "dataflows")
 
 

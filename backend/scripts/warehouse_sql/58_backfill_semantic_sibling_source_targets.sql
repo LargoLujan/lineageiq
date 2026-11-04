@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/58_backfill_semantic_sibling_source_targets.py
--- (Phase 1 migration, 2026-07-21). Unlike D1-D7 (read bronze, write new
+-- (SQL migration). Unlike D1-D7 (read bronze, write new
 -- silver tables), this one is a genuine self-referential UPDATE pattern:
 -- the Python original reads AND overwrites analysis/semantic_model_view_
 -- candidates.csv in place. Rather than mutate the bronze mirror of that

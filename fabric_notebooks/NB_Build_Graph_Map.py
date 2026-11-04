@@ -1,40 +1,40 @@
 # NB_Build_Graph_Map
 #
-# Fuente para un notebook Python de Fabric -- décimo paso del pipeline de
-# descubrimiento nativo, después de NB_Build_Object_Impact (ver docs/
-# 105_fabric_native_discovery_setup.md). Cada bloque "# %%" es una celda
-# -- pégalas en orden.
+# Source for a Fabric Python notebook -- tenth step of the native discovery
+# pipeline, after NB_Build_Object_Impact (see docs/
+# 105_fabric_native_discovery_setup.md). Each "# %%" block is a cell
+# -- paste them in order.
 #
-# Puerto fiel de backend/scripts/build_graph_map_index.py -- el ALGORITMO
-# es exactamente el mismo, sin reescribir una sola línea de esa lógica;
-# lo único que cambia es la capa de E/S:
-#   - index/workspaces.csv, index/items.csv, index/dependencies.csv ahora
-#     son consultas al Warehouse (bronze_workspaces/bronze_items/
-#     bronze_dependencies, ya existen).
-#   - object-impact.json y lineage-explorer.json se leen de OneLake (ya
-#     los publican los dos pasos anteriores del pipeline) en vez de disco
-#     local.
-#   - analysis/execution_duration_by_item.csv no existe como tabla bronze
-#     propia -- se reconstruye su misma agregación (una entrada por
-#     qualified_name, run_count/failed_count/último estado) directamente
-#     sobre las filas crudas de bronze_executions (record_type=
-#     "job_instance"), sin pasar por el CSV intermedio.
-#   - config/admin_settings.json's certified_items (paneL de administración
-#     de la web, "Certificaciones") no es accesible desde Fabric -- es un
-#     ajuste local/del despliegue Render, no parte del pipeline de
-#     descubrimiento. Degrada a lista vacía (sin insignias de
-#     certificación); si se quiere paridad total ahí, el sitio de la
-#     mejora sería que la web fusione sus certified_items sobre el JSON en
-#     el momento de servirlo, no aquí.
-#   - lineage_web.sensitivity_classifier.classify_columns no tiene E/S
-#     propia (solo regex) -- copiado tal cual, sin cambios.
-#   - graph-map-index.json y graph-map-index-objects.json se escriben a
-#     OneLake (Files/generated/) en vez de al disco local.
+# Faithful port of backend/scripts/build_graph_map_index.py -- the ALGORITHM
+# is exactly the same, without rewriting a single line of that logic;
+# the only thing that changes is the I/O layer:
+#   - index/workspaces.csv, index/items.csv, index/dependencies.csv are now
+#     queries against the Warehouse (bronze_workspaces/bronze_items/
+#     bronze_dependencies, which already exist).
+#   - object-impact.json and lineage-explorer.json are read from OneLake
+#     (the two previous pipeline steps already publish them) instead of
+#     local disk.
+#   - analysis/execution_duration_by_item.csv does not exist as its own
+#     bronze table -- the same aggregation is rebuilt (one entry per
+#     qualified_name, run_count/failed_count/last status) directly
+#     over the raw rows of bronze_executions (record_type=
+#     "job_instance"), without going through the intermediate CSV.
+#   - config/admin_settings.json's certified_items (the web admin panel's
+#     "Certifications") is not reachable from Fabric -- it is a
+#     local/Render-deployment setting, not part of the discovery pipeline.
+#     It degrades to an empty list (no certification badges); if full
+#     parity is wanted there, the right place for the improvement would be
+#     for the web app to merge its certified_items onto the JSON at
+#     serving time, not here.
+#   - lineage_web.sensitivity_classifier.classify_columns has no I/O of
+#     its own (regex only) -- copied as-is, unchanged.
+#   - graph-map-index.json and graph-map-index-objects.json are written to
+#     OneLake (Files/generated/) instead of local disk.
 #
-# Self-contained a propósito, mismo criterio que los notebooks anteriores.
+# Self-contained on purpose, same criterion as the previous notebooks.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -58,11 +58,11 @@ from datetime import datetime, timezone
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
 OBJECT_IMPACT_ONELAKE_PATH = "Files/generated/object-impact.json"
@@ -78,7 +78,7 @@ INPUT_TABLE_BY_ARG = {
 }
 
 # %% [markdown]
-# ## Autenticación, Warehouse y OneLake (mismo patrón que los notebooks anteriores)
+# ## Authentication, Warehouse and OneLake (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -160,7 +160,7 @@ def read_onelake_json(onelake_relative_path):
         f"{ONELAKE_LAKEHOUSE_NAME}.Lakehouse/{onelake_relative_path}"
     )
     # notebookutils.fs.head() silently truncates well below whatever
-    # max_bytes you pass it (confirmed live, 2026-08-12) -- it's a preview
+    # max_bytes you pass it (confirmed live) -- it's a preview
     # API, not a full-read one. spark.read.text(..., wholetext=True) reads
     # the whole file as a single row with no such cap.
     content = spark.read.text(abfss_path, wholetext=True).collect()[0][0]
@@ -176,7 +176,7 @@ def write_json(onelake_relative_path, payload):
 
 
 # %% [markdown]
-# ## Clasificador de sensibilidad (puerto fiel de lineage_web/sensitivity_classifier.py, sin E/S propia)
+# ## Sensitivity classifier (faithful port of lineage_web/sensitivity_classifier.py, no I/O of its own)
 
 # %%
 SENSITIVITY_CATEGORIES = {
@@ -227,7 +227,7 @@ def classify_columns(column_names):
 
 
 # %% [markdown]
-# ## Puerto fiel de backend/scripts/build_graph_map_index.py
+# ## Faithful port of backend/scripts/build_graph_map_index.py
 
 # %%
 ITEM_TYPE_LAYER = {
@@ -676,7 +676,7 @@ execution_rows = read_csv("executions_path")
 item_counts_by_workspace = compute_workspace_item_counts(item_rows)
 storage_table_counts = compute_storage_table_counts(impact_payload)
 execution_health = build_execution_health_index(execution_rows)
-certification_index = build_certification_index([])  # ver nota arriba: no accesible desde Fabric
+certification_index = build_certification_index([])  # see note above: not reachable from Fabric
 
 workspace_nodes, known_workspace_ids, workspace_technical_id_by_name = build_workspace_nodes(
     workspace_rows, item_counts_by_workspace

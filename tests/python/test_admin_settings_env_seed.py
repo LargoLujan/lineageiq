@@ -1,5 +1,5 @@
-"""Unit tests for lineage_web/admin_settings.py's env-var email seeding
-(2026-08-11): lets a deploy populate admin_emails/full_scan_emails from
+"""Unit tests for lineage_web/admin_settings.py's env-var email seeding:
+lets a deploy populate admin_emails/full_scan_emails from
 the hosting platform's own env vars (ADMIN_EMAILS/FULL_SCAN_EMAILS)
 instead of ever committing a real name/email list to config/
 admin_settings.json in a git repo.

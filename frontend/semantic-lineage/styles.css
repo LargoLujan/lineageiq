@@ -20,7 +20,7 @@
   --green: #15803d;
   --red: #b91c1c;
   --shadow: 0 18px 45px rgba(31, 48, 72, 0.11);
-  /* 2026-08-19 admin-panel visual redesign: a lighter, closer-in shadow
+  /* Admin panel: a lighter, closer-in shadow
      for individual cards/rows (settings sections, list rows) -- --shadow
      itself is tuned for large floating overlays (modals, the scan queue),
      too heavy for a small in-page card. Same two-layer recipe .node-card
@@ -44,8 +44,8 @@
   --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
 }
 
-/* Dark theme (G/theme-1, 2026-07-08; repaletted + component pass G/theme-2
-   same day after live review looked muddy/low-contrast). Applied via
+/* Dark theme (repaletted, with a component pass, after a live review found
+   it muddy/low-contrast). Applied via
    data-theme="dark" (explicit choice) or automatically when the OS prefers
    dark and the user hasn't explicitly picked "light" -- see app.js's
    applyTheme()/initTheme(). The neutral surface/text/border values below
@@ -347,9 +347,9 @@ h2 {
   padding: 3px;
 }
 
-/* Monocromos vía currentColor (2026-07-20) -- los emoji ☀🌙🌗 de antes
-   siempre se pintaban en color pese al tema, la fuente del sistema decide
-   eso, no CSS. */
+/* Monochrome icons via currentColor -- the old ☀🌙🌗 emoji
+   were always painted in color regardless of the theme, because the system
+   font decides that, not CSS. */
 .theme-icon {
   display: block;
 }
@@ -385,7 +385,7 @@ h2 {
   display: none;
 }
 
-/* Scan queue (Tanda 10): a small floating card under the toolbar rather
+/* Scan queue: a small floating card under the toolbar rather
    than a flex sibling in the row above -- its row count is dynamic
    (0..MAX_QUEUED_SCANS entries), which doesn't fit a single-line toolbar. */
 .local-scan-queue {
@@ -601,7 +601,7 @@ h2 {
   z-index: 401;
 }
 
-/* Grow-from-click open (2026-08-18, see openModal()/applyModalGrowOrigin()
+/* Grow-from-click open (see openModal()/applyModalGrowOrigin()
    in app.js): transform-origin is set inline per open to wherever the
    trigger button was clicked, so this scale-up always appears to travel
    from that button to the panel's normal centered resting place. Both
@@ -698,10 +698,10 @@ h2 {
 }
 
 /* Same subsection-heading pattern as .glossary-section-title, reused for
-   the admin panel's Data Sensitivity tab (2026-08-18): it now shows two
+   the admin panel's Data Sensitivity tab: it now shows two
    distinct signals (name-pattern vs. content-verified) that need a clear
    visual separator between them. */
-/* Purview-style classification chips (2026-08-18, Data Sensitivity tab) --
+/* Purview-style classification chips (Data Sensitivity tab) --
    see adminSensitivityCategoryColor() in app.js for the --cat-color
    rotation each tile gets inline. */
 .admin-sensitivity-categories {
@@ -774,7 +774,7 @@ h2 {
   font-style: italic;
 }
 
-/* .impact-breakdown-table embedded directly in an admin-card (2026-08-24,
+/* .impact-breakdown-table embedded directly in an admin-card (the
    Capacidad tab) rather than inside its usual modal body -- just needs
    its own horizontal scroll container, none of the modal's max-height. */
 .admin-embedded-table-scroll {
@@ -782,7 +782,7 @@ h2 {
 }
 
 /* Inline-editable full name/job title cells in the "Usuarios permitidos"
-   table (2026-08-24) -- same visual language as .admin-add-row input, just
+   table -- same visual language as .admin-add-row input, just
    sized to sit inside a table cell instead of a full-width form row. */
 .admin-users-table input[type="text"] {
   background: var(--panel-solid);
@@ -808,7 +808,7 @@ h2 {
   cursor: pointer;
 }
 
-/* Content-sensitivity table (2026-08-25 redesign) -- one row per flagged
+/* Content-sensitivity table -- one row per flagged
    column, replacing the old category-pill-opens-a-modal flow. */
 .admin-sensitivity-content-table td {
   vertical-align: middle;
@@ -974,7 +974,7 @@ h2 {
 }
 
 /* Deliberately narrower than the standard 1100px .impact-breakdown-panel
-   (2026-08-24) -- this one always opens ON TOP of another already-open
+   -- this one always opens ON TOP of another already-open
    modal-panel (see pushStackedModal() in app.js), not in place of one, so
    staying visibly smaller than whatever's behind it is what makes the
    nesting itself legible, not just the fact that it's not disappearing. */
@@ -983,7 +983,7 @@ h2 {
   width: min(640px, 92vw);
 }
 
-/* Multi-tenant installer wizard (2026-08-24 Fase 5) -- wider than the
+/* Multi-tenant installer wizard -- wider than the
    workspace-access panel above since it has its own step nav + form. */
 .installer-wizard-panel {
   box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.45);
@@ -1062,9 +1062,9 @@ h2 {
   vertical-align: top;
 }
 
-/* Campo/Valor: un modal mucho más angosto que el de desglose de impacto
-   (que necesita sitio para varias columnas de categoría) -- este es sólo
-   dos, así que 1100px de ancho se veía vacío. */
+/* Field/Value: a much narrower modal than the impact breakdown one
+   (which needs room for several category columns) -- this one has only
+   two, so 1100px wide looked empty. */
 .planning-evidence-panel {
   width: min(560px, 92vw);
 }
@@ -1404,7 +1404,7 @@ h2 {
   flex: none;
 }
 
-/* Entra profile photo (2026-08-18): the avatar circle is the SAME markup
+/* Entra profile photo: the avatar circle is the SAME markup
    pattern at two sizes (toolbar badge + dropdown header) -- initials render
    immediately as the base layer, the <img> (hidden until /api/me/photo
    resolves with a real photo) sits absolutely positioned on top so no extra
@@ -1449,7 +1449,7 @@ h2 {
   display: none;
 }
 
-/* --- Profile dropdown (2026-08-18): replaces the old separate account-info
+/* --- Profile dropdown: replaces the old separate account-info
    modal + loose toolbar icons -- one menu, anchored under the avatar+name
    badge, holding identity, language, theme, settings, help, sign-out. --- */
 .profile-menu {
@@ -1499,7 +1499,7 @@ h2 {
   white-space: nowrap;
 }
 
-/* Quick language/theme row (2026-08-18): deliberately smaller than the
+/* Quick language/theme row: deliberately smaller than the
    Perfil/Configuración/Ayuda rows above it -- these are fast toggles, not
    destinations, so they shouldn't compete visually with the menu items
    that navigate somewhere. Sits last, below Cerrar sesión. */
@@ -1570,7 +1570,7 @@ h2 {
   background: color-mix(in srgb, var(--red) 12%, var(--panel-soft));
 }
 
-/* Profile panel (2026-08-18): its own destination opened from the "Perfil"
+/* Profile panel: its own destination opened from the "Perfil"
    menu item -- same modal-panel/openModal() mechanism as Configuración/
    Ayuda (grow-from-click animation included), not a dropdown disclosure
    like before. */
@@ -1646,7 +1646,7 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-/* 2026-08-24: scoped to .graph-surface (the one place with real
+/* Scoped to .graph-surface (the one place with real
    tenant-specific content to hide pre-auth), not the whole viewport --
    see the HTML comment above #authGate for why. .graph-surface itself is
    `position: relative` (search that selector below), which is what makes
@@ -1679,7 +1679,7 @@ h2 {
   /* Extra top clearance: the language switch floats top-right
      (position: absolute), tall enough to run into the title at the
      default --space-5 top padding. The topbar's own theme switch is
-     always visible now (2026-08-24 -- see the HTML comment above
+     always visible now (see the HTML comment above
      #authGate), so this card no longer duplicates one of its own. */
   padding: 52px calc(var(--space-5) + 8px) var(--space-5);
   position: relative;
@@ -1694,7 +1694,7 @@ h2 {
 }
 
 .auth-gate-theme {
-  display: none; /* dead selector, kept only so nothing errors if referenced -- markup removed 2026-08-24 */
+  display: none; /* dead selector, kept only so nothing errors if referenced -- markup removed */
   position: absolute;
   right: var(--space-4);
   top: calc(var(--space-4) + 38px);
@@ -1828,7 +1828,7 @@ h2 {
    resizes the panel itself: only .admin-tab-panel.active's own content
    scrolls, so a short tab (Tenant) and a long one (Auditoría de accesos,
    one row per workspace) both sit inside the exact same frame. */
-/* 2026-08-19 visual redesign: the admin panel was the one major surface in
+/* Visual redesign: the admin panel was the one major surface in
    this app still reading as a bare HTML form -- flat rows, no card
    language, no depth -- next to the main explorer's node cards/detail
    sections/modals, which all share a consistent "bordered card + soft
@@ -1878,7 +1878,7 @@ h2 {
   padding-bottom: 14px;
 }
 
-/* Grouped sidebar nav (2026-08-14 redesign) -- replaced the old single
+/* Grouped sidebar nav -- replaced the old single
    wrapping row of 14+ tabs (.admin-tabs/.admin-tab-button, unreadable past
    ~8 tabs) with a vertical nav grouped by "what kind of thing is this"
    (setup / access / read-only insight / curated content), same taxonomy
@@ -1958,7 +1958,7 @@ h2 {
   flex: 1;
 }
 
-/* Governance group icon (2026-08-26) -- a slow, subtle rock, like a chess
+/* Governance group icon -- a slow, subtle rock, like a chess
    piece being considered mid-move. Kept gentle on purpose: this sits in
    the nav rail, visible constantly while the panel is open, so anything
    louder would be distracting rather than delightful. */
@@ -1981,7 +1981,7 @@ h2 {
   }
 }
 
-/* Top-bar Gobernanza shortcut (2026-08-26) -- a peer to Grafo/Avisos, not
+/* Top-bar Gobernanza shortcut -- a peer to Grafo/Avisos, not
    just nested two clicks deep under Configuración; same pill button, same
    rock animation as the nav-group icon above for a consistent "this is the
    governance thing" visual cue wherever it shows up. */
@@ -2010,7 +2010,7 @@ h2 {
   padding-left: 20px;
 }
 
-/* Governance panel's flat tab list (2026-08-26) -- no group header above
+/* Governance panel's flat tab list -- no group header above
    it (it's the only thing in the nav), so no indent to show it "belongs"
    to anything. */
 .admin-nav-group-body-flat {
@@ -2108,7 +2108,7 @@ h2 {
 /* Groups a tab's related fields/actions into one elevated, titled section
    instead of a single long flat scroll -- the same "bordered card with a
    header" language .detail-section already uses in the main explorer.
-   Introduced 2026-08-19 for the Setup tabs (Tenant, Write storage,
+   Introduced for the Setup tabs (Tenant, Write storage,
    Fabric-native scan, OneLake, Notifications), which had the most
    undifferentiated walls of fields; the row-based tabs (Sessions, API
    keys, Access audit, ...) get the same card treatment on their own rows
@@ -2133,7 +2133,7 @@ h2 {
   margin: 0 0 4px;
 }
 
-/* Sessions tab history (2026-08-18): a <details> reusing .admin-card so it
+/* Sessions tab history: a <details> reusing .admin-card so it
    looks like every other card at rest, just collapsible -- the summary
    takes over .admin-card-title's exact type treatment so opening it
    doesn't shift anything visually besides revealing the rows below. */
@@ -2166,7 +2166,7 @@ h2 {
   opacity: 0.82;
 }
 
-/* Generic collapsible "how to" block (2026-08-24, Capacidad tab install
+/* Generic collapsible "how to" block (Capacidad tab install
    help) -- same chevron-summary mechanics as .admin-session-history-*
    above, kept as its own class pair since it's used for step-by-step
    instructions rather than a data list. */
@@ -2247,7 +2247,7 @@ h2 {
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-/* password_ref/service_account_key_ref (2026-08-25): input + "Sugerir
+/* password_ref/service_account_key_ref: input + "Sugerir
    nombre" button on one row -- see renderSecretRefField. */
 .admin-secret-ref-row {
   align-items: center;
@@ -2274,7 +2274,7 @@ h2 {
   outline: none;
 }
 
-/* A field with only one possible value (2026-08-24 cleanup: scan mode is
+/* A field with only one possible value (cleanup: scan mode is
    always Fabric/Pipeline, OneLake is always the live data location) --
    same box as a disabled input/select, without being an actual disabled
    form control (nothing to toggle, so nothing to disable). */
@@ -2310,7 +2310,7 @@ h2 {
   margin: 2px 0 0;
 }
 
-/* Info-icon popover (2026-08-18): a small "i" trigger sits inline right
+/* Info-icon popover: a small "i" trigger sits inline right
    after a field's label; clicking it shows the full explanation in
    .admin-info-popover instead of it always taking up space on the panel. */
 .admin-info-icon {
@@ -2403,7 +2403,7 @@ h2 {
    metrics, dependency changes, ...) shares this one card treatment --
    solid surface, real border, a close/soft shadow pair, and a gentle lift
    on hover -- instead of the flat var(--panel-soft) fill every row used
-   before 2026-08-19, which read as a plain gray strip with no depth. */
+   before, which read as a plain gray strip with no depth. */
 .admin-list-row {
   align-items: center;
   background: var(--panel-solid);
@@ -2427,7 +2427,7 @@ h2 {
    row button") because the session/api-key rows that use it live inside
    .admin-session-row, not .admin-list-row -- without this, "Cerrar
    sesión"/"Revocar" silently rendered in the default text color instead
-   of red (caught in the 2026-08-14 redesign audit). */
+   of red (caught in a design review). */
 .admin-list-row button,
 .admin-list-row-remove {
   background: none;
@@ -2446,7 +2446,7 @@ h2 {
   background: color-mix(in srgb, var(--red) 12%, transparent);
 }
 
-/* Data-quality rule rows (Roadmap Fase 1, 2026-08-31) have 7 fields --
+/* Data-quality rule rows have 7 fields --
    too many for .admin-list-row's plain flex split -- so this gets its own
    grid, same reasoning as .admin-capacity-row just below. */
 .admin-quality-rule-row {
@@ -2529,7 +2529,7 @@ h2 {
 .admin-quality-badge-not_profiled { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); }
 .admin-quality-badge-invalid_rule { background: color-mix(in srgb, var(--amber) 16%, transparent); color: var(--amber); }
 
-/* Roadmap Fase 5 (2026-08-31): the "Privacidad" panel -- search + risk
+/* The "Privacidad" panel -- search + risk
    filter row, category chips per table, and risk badges reusing the same
    4-level risk vocabulary sensitivity_classifier.py's RISK_LABELS already
    defines (low/medium/high/very_high), own color scale rather than
@@ -2589,11 +2589,11 @@ h2 {
   vertical-align: top;
 }
 
-/* Roadmap Fase 6 (2026-08-31): the "Por normativa" browse view -- one
+/* The "Por normativa" browse view -- one
    <details> per legal framework (native disclosure, no custom accordion
    JS needed beyond remembering which ones were open, see
    privacyExpandedFrameworks), each expanding to its categories, each
-   category showing Fabric-located tables (Fase 5's own locator data)
+   category showing Fabric-located tables (the locator's own data)
    alongside admin-logged external systems. */
 /* .admin-panel-body (shared with the admin/governance panels) is a FLEX
    ROW by design, meant for a nav sidebar + main content sitting side by
@@ -2601,7 +2601,7 @@ h2 {
    sidebar -- without its own single wrapper here, the hint paragraph,
    tab row, and view content each became their OWN flex-row item instead
    of stacking, which is exactly the "squeezed into a narrow column,
-   nothing else visible" layout bug reported live (2026-09-01). Mirrors
+   nothing else visible" layout bug reported live. Mirrors
    .admin-tab-panels/.admin-tab-panel.active's own combined "flex column +
    its own scroll" treatment. */
 .privacy-panel-content {
@@ -2620,7 +2620,7 @@ h2 {
   margin: 10px 0 14px;
 }
 
-/* 2026-09-01 (real feedback): "Por normativa" is now a real left-nav +
+/* "Por normativa" is now a real left-nav +
    content layout, same primitives (.admin-nav/.admin-nav-tab/.admin-tab-
    panels) renderAdminPanel()/renderGovernancePanel() already use for
    their own section index -- only this one nested flex row (the
@@ -2728,7 +2728,7 @@ h2 {
   text-align: right;
 }
 
-/* 2026-08-18: a proportional bar under each capacity's label -- the raw
+/* A proportional bar under each capacity's label -- the raw
    item_count numbers alone don't make it easy to see at a glance which
    capacity dominates the tenant. */
 .admin-capacity-bar-track {
@@ -2770,7 +2770,7 @@ h2 {
   outline: none;
 }
 
-/* Tenant directory typeahead (2026-08-18, Usuarios permitidos) -- results
+/* Tenant directory typeahead (Usuarios permitidos) -- results
    float directly under the add-row input instead of pushing the rest of
    the card down, since they're transient (cleared on pick or on the next
    keystroke). */
@@ -2825,7 +2825,7 @@ h2 {
   font-size: 11px;
 }
 
-/* Dependency changes (roadmap Nivel 1, 2026-08-17) -- an edge's two
+/* Dependency changes -- an edge's two
    qualified names run long, so this row wraps to two lines (label+edge on
    top, relationship type below) instead of squeezing everything onto one
    like the shorter item-change rows above it. */
@@ -2849,7 +2849,7 @@ h2 {
   grid-template-columns: 44px 1fr 44px 64px;
 }
 
-/* 2026-08-25: a generic "name + proportional bar, count on the right" row
+/* A generic "name + proportional bar, count on the right" row
    -- .admin-metrics-row's 4-column template above is purpose-built for
    the HTTP routes list (method/path/status/count) and silently truncated
    anything with only 2 children (name+bar, count) into its 44px first
@@ -2897,7 +2897,7 @@ h2 {
 .admin-metrics-status-4xx { color: var(--amber); }
 .admin-metrics-status-5xx { color: var(--red); }
 
-/* Status-class donut (2026-08-18) -- conic-gradient built inline per
+/* Status-class donut -- conic-gradient built inline per
    render (see buildAdminMetricsDonutGradient in app.js), so this is
    purely the frame/hole/legend around it. */
 .admin-metrics-donut-wrap {
@@ -3113,7 +3113,7 @@ h2 {
   outline: none;
 }
 
-/* Glossary "linked assets" chip list (2026-08-18) -- replaces a free-text
+/* Glossary "linked assets" chip list -- replaces a free-text
    "one per line" textarea with removable chips + an autocomplete input,
    same pattern as certifications/tags' own qualified_name fields. */
 .admin-chip-list {
@@ -3195,7 +3195,7 @@ h2 {
    selector here has the SAME specificity as the plain .badge rule below
    it in file order, so .badge would silently win every property and
    these badges rendered generic-indigo, indistinguishable from every
-   other badge (2026-08-18 code review finding -- also true of
+   other badge (also true of
    .sensitivity-badge above, fixed alongside these). */
 .badge.admin-api-key-scope-badge {
   background: color-mix(in srgb, var(--blue) 12%, var(--panel-soft));
@@ -3271,7 +3271,7 @@ h2 {
   color: var(--red);
 }
 
-/* Green/red/grey connection-status dot (2026-08-24 Fase 4) -- replaces
+/* Green/red/grey connection-status dot -- replaces
    the old text badge and the separate "assigned but not reachable" card,
    see externalSourceStatusDotHtml's own comment in app.js. */
 .admin-source-status-dot {
@@ -3295,8 +3295,7 @@ h2 {
   opacity: 0.5;
 }
 
-/* Reusable interactive time-series bar chart (2026-08-25 Analíticas
-   redesign) -- a plain flex row of height-scaled bars, same lightweight
+/* Reusable interactive time-series bar chart -- a plain flex row of height-scaled bars, same lightweight
    approach as .admin-capacity-bar-* elsewhere on this tab rather than
    pulling in a charting library. Hover feedback is pure CSS: each bar
    carries data-tooltip, shown as a floating label via ::after so it reads
@@ -3446,7 +3445,7 @@ h2 {
 .admin-change-type-chip.is-removed { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); }
 .admin-change-type-chip.is-modified { background: color-mix(in srgb, var(--amber) 16%, transparent); color: var(--amber); }
 
-/* Governance scan diagnosis (2026-08-26) -- one row per check
+/* Governance scan diagnosis -- one row per check
    (ok/blocked/error/skipped), reusing .admin-change-type-chip's own
    semantic colors for the status badge so this doesn't need its own
    palette. The fix text is a persistent paragraph, not a tooltip -- the
@@ -3561,8 +3560,8 @@ h2 {
 /* Non-destructive actions that aren't "save this form" (connection tests,
    one-off "copy/publish now" triggers) -- outlined instead of filled so
    Guardar reads as the one clearly primary action per tab, not one of an
-   undifferentiated row of identical blue buttons (2026-08-14 redesign;
-   every one of these used to share .admin-save-button). */
+   undifferentiated row of identical blue buttons (every one of these used to share
+   .admin-save-button). */
 .admin-button-secondary {
   background: transparent;
   border: 1px solid var(--border-2);
@@ -3707,7 +3706,7 @@ h2 {
   margin-top: 4px;
 }
 
-/* One-time API key reveal (2026-08-14): the raw key only ever exists in
+/* One-time API key reveal: the raw key only ever exists in
    the creation response, so this banner gets a visibly different
    treatment (amber, not the neutral --panel-soft every other list/row
    uses) to read as "this is your one chance", not just another result row. */
@@ -3745,7 +3744,7 @@ h2 {
 }
 
 /* <a download> styled like .admin-button-secondary but reset from its
-   anchor defaults (2026-08-24, "Conectar un agente MCP" card's script
+   anchor defaults ("Conectar un agente MCP" card's script
    download link) -- .admin-button-secondary itself has no `display`, fine
    for a <button> but an <a> defaults to inline, which clips the padding
    oddly and keeps the underline/link color. */
@@ -3755,7 +3754,7 @@ h2 {
   text-decoration: none;
 }
 
-/* Copyable shell-command blocks (2026-08-24, "Conectar un agente MCP"
+/* Copyable shell-command blocks ("Conectar un agente MCP"
    card) -- same monospace/panel-solid/border treatment as .admin-key-
    reveal-row code above, just multi-line and its own selector since it
    isn't paired with a copy button. */
@@ -3803,12 +3802,11 @@ h2 {
    reads as "graph" -- colored with the same accent set already used
    throughout the app (blue/teal/violet/amber for the four outer nodes),
    not a one-off palette. */
-/* Own, larger button (2026-08-18) -- deliberately NOT folded into the
+/* Own, larger button -- deliberately NOT folded into the
    profile dropdown alongside settings/help/language/theme: opening the 3D
    map is a primary, frequent action, not an account-settings concern, so
    it stays a big, always-visible, self-explanatory button in the toolbar. */
-/* Same pill shape/size as .user-badge right next to it (2026-08-18 --
-   the two used to look like mismatched families, a tall stacked card vs.
+/* Same pill shape/size as .user-badge right next to it (the two used to look like mismatched families, a tall stacked card vs.
    a slim pill; matching proportions reads as one coherent toolbar). */
 .graph-map-3d-button {
   align-items: center;
@@ -3846,7 +3844,7 @@ h2 {
   color: var(--blue-dark);
 }
 
-/* Notifications button (2026-08-18) -- same pill as Grafo/the profile
+/* Notifications button -- same pill as Grafo/the profile
    badge next to it, plus a small unread-count badge pinned to its corner. */
 .notifications-button {
   position: relative;
@@ -4014,7 +4012,7 @@ h2 {
   fill: var(--ink);
 }
 
-/* Roadmap Fase 4 (2026-08-31): the "Flujo" toolbar button's icon -- one
+/* The "Flujo" toolbar button's icon -- one
    source node feeding two downstream ones, distinct from the 3D graph
    icon's 4-node diamond so the two buttons read as different tools at a
    glance. No spin animation (that one's specific to the 3D icon's spirit,
@@ -4037,7 +4035,7 @@ h2 {
   fill: var(--violet);
 }
 
-/* Roadmap Fase 5 (2026-08-31): the "Privacidad" toolbar button's animated
+/* The "Privacidad" toolbar button's animated
    padlock -- shackle swings open/shut on a loop, same "small looping
    animation on an otherwise static toolbar icon" idea as the 3D graph
    icon's spin above, just a swing instead of a rotation (a lock doesn't
@@ -4148,7 +4146,7 @@ select {
   transform: scale(0.72);
 }
 
-/* "Clipboard tab" switch feedback (2026-08-18, see animateModeSwitch() in
+/* "Clipboard tab" switch feedback (see animateModeSwitch() in
    app.js): a quick scale pulse on whichever button just became active --
    mode buttons are fully rebuilt on every render(), so this class is
    re-applied to the fresh element each time rather than persisting. */
@@ -4923,7 +4921,7 @@ select {
   min-height: 0;
 }
 
-/* "Clipboard tab" switch feedback (2026-08-18, see animateModeSwitch() in
+/* "Clipboard tab" switch feedback (see animateModeSwitch() in
    app.js): a left-to-right clip-path wipe reveals the just-rebuilt content
    whenever the dependency-tree mode changes, so the switch reads as moving
    to a new tab even on the (fairly common) case where the new mode happens
@@ -4943,13 +4941,13 @@ select {
   }
 }
 
-/* Mapa de Inspección (2026-07-20): a diferencia del mapa de Planificación
-   (una vista aparte con su propio motor de render), Inspección reutiliza
-   tal cual su árbol +/- normal -- no hay una segunda copia del árbol que
-   mantener sincronizada. Maximizar sólo mueve .graph-surface (cabecera +
-   filtro + árbol + leyenda, todo junto) a pantalla completa vía position:
-   fixed; no hace falta desplazarlo en el DOM ni ocultar el resto a mano,
-   porque cubre todo lo demás por z-index. */
+/* Inspection map: unlike the Planning map
+   (a separate view with its own render engine), Inspection reuses
+   its normal +/- tree as is -- there is no second copy of the tree to
+   keep in sync. Maximizing only moves .graph-surface (header +
+   filter + tree + legend, all together) to full screen via position:
+   fixed; there is no need to move it in the DOM or hide the rest by hand,
+   because it covers everything else by z-index. */
 .graph-surface.maximized {
   border: none;
   border-radius: 0;
@@ -5073,12 +5071,12 @@ body.inspection-map-open { overflow: hidden; }
   color: #166534;
 }
 
-/* Filtro por dominio nativo de Fabric (roadmap Nivel 2, 2026-08-17) --
-   oculto por completo (populateWorkspaceDomainFilter) cuando el tenant no
-   tiene domain_name en más de un workspace, así que solo aparece cuando
-   de verdad sirve para algo. Mismos colores/tamaño que .workspace-search-
-   toggle justo debajo, para que ambos controles del panel lean como el
-   mismo nivel de jerarquía. */
+/* Filter by native Fabric domain --
+   hidden entirely (populateWorkspaceDomainFilter) when the tenant has no
+   domain_name on more than one workspace, so it only appears when it
+   is actually useful. Same colors/size as .workspace-search-
+   toggle right below, so both controls in the panel read as the
+   same level of hierarchy. */
 .workspace-domain-filter-row {
   align-items: center;
   border-bottom: 1px solid var(--border);
@@ -5110,10 +5108,10 @@ body.inspection-map-open { overflow: hidden; }
   padding: 0 6px;
 }
 
-/* Desplegable "filtro de columna de Excel" para buscar y marcar un
-   workspace/deployment pipeline concreto sin desplazarte por la lista de
-   abajo (2026-07-20) -- esa lista sigue mostrando todo, sin filtrar; esto
-   es un atajo aparte que dispara la misma selección de siempre. */
+/* "Excel column filter" style dropdown to search and tick a specific
+   workspace/deployment pipeline without scrolling through the list
+   below -- that list keeps showing everything, unfiltered; this
+   is a separate shortcut that triggers the same selection as always. */
 .workspace-search-filter {
   border-bottom: 1px solid var(--border);
   padding: 0 8px 8px;
@@ -6964,9 +6962,9 @@ body.inspection-map-open { overflow: hidden; }
   transform: none;
 }
 
-/* Fila de encabezados fija (Tabla/vista/SP · Nombre · Base/origen · Schema)
-   -- un <div>, no un <button>, así que no reacciona a :hover ni recibe
-   clics; sólo marca visualmente dónde empieza cada columna. */
+/* Fixed header row (Table/view/SP · Name · Base/origin · Schema)
+   -- a <div>, not a <button>, so it does not react to :hover or receive
+   clicks; it only marks visually where each column starts. */
 .semantic-object-row-header {
   background: transparent;
   border: none;
@@ -7098,10 +7096,10 @@ body.inspection-map-open { overflow: hidden; }
   padding: 10px;
 }
 
-/* Mismo contenido (buscador + chips de orígenes) que .planning-source-selector,
-   ahora embebido dentro de #filterMenu en vez de flotar sobre el lienzo --
-   una sola columna angosta en vez de la rejilla de 3 columnas, para caber en
-   el ancho fijo del panel de filtro. */
+/* Same content (search box + origin chips) as .planning-source-selector,
+   now embedded inside #filterMenu instead of floating over the canvas --
+   a single narrow column instead of the 3-column grid, to fit in
+   the fixed width of the filter panel. */
 #planningFilterSources {
   border-top: 1px solid var(--border);
   display: grid;
@@ -7814,9 +7812,9 @@ body.inspection-map-open { overflow: hidden; }
   padding: 6px 0;
 }
 
-/* Tipo/Nombre/Origen/Schema, sin las cuentas de impacto -- ésas ya viven
-   en la tabla grande de abajo (impactObjectTable); esto es sólo para picar
-   objetos concretos a mano cuando el buscador solo no basta. */
+/* Type/Name/Origin/Schema, without the impact counts -- those already live
+   in the big table below (impactObjectTable); this is only for picking
+   individual objects by hand when the search box alone is not enough. */
 .impact-pick-row {
   align-items: center;
   background: #f8fafc;
@@ -7966,11 +7964,11 @@ body.inspection-map-open { overflow: hidden; }
   box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
 }
 
-/* Tipo/Nombre/Origen/Schema como columnas propias (2026-07-20) -- antes
-   nombre+origen vivían apilados dentro de una sola celda con el nombre
-   completo "base.schema.tabla"; ahora el nombre va solo (recortado, el
-   completo queda en el title) y origen/schema son columnas angostas
-   aparte, igual que en el listado de objetos de Inspección. */
+/* Type/Name/Origin/Schema as their own columns -- before,
+   name+origin were stacked inside a single cell with the full
+   "base.schema.table" name; now the name stands alone (truncated, the
+   full one stays in the title) and origin/schema are narrow
+   separate columns, as in the Inspection object list. */
 .impact-table-type {
   color: var(--muted);
   font-size: 10px;
@@ -8377,12 +8375,12 @@ body.inspection-map-open { overflow: hidden; }
   white-space: pre-line;
 }
 
-/* Comentarios y favoritos por nodo (roadmap Nivel 1, 2026-08-17) -- vive
-   dentro del mismo <details class="detail-section"> que el resto del
-   panel para heredar el borde/cabecera colapsable, pero con su propio
-   contenedor interno (no .detail-grid) porque ese selector aplica su
-   estilo de "tarjeta" a CUALQUIER div descendiente, no solo a los hijos
-   directos -- habría anidado una tarjeta dentro de cada fila de comentario. */
+/* Per-node comments and favorites -- lives
+   inside the same <details class="detail-section"> as the rest of the
+   panel to inherit the collapsible border/header, but with its own
+   inner container (not .detail-grid) because that selector applies its
+   "card" style to ANY descendant div, not just direct children --
+   it would have nested a card inside every comment row. */
 .node-comments-body {
   display: flex;
   flex-direction: column;
@@ -8502,11 +8500,10 @@ body.inspection-map-open { overflow: hidden; }
   padding: 6px 14px;
 }
 
-/* Perfil y sensibilidad de columnas (roadmap Fase 2, nativo de Fabric,
-   2026-08-18) -- mismo contenedor .detail-section que el resto del
-   panel de detalle, filas propias porque cada columna lleva estadisticas
-   + posibles insignias de sensibilidad, no una sola linea etiqueta/valor
-   como el resto de "row(...)". */
+/* Column profile and sensitivity (Fabric-native) -- same .detail-section
+   container as the rest of the detail panel, with its own rows because each
+   column carries statistics + possible sensitivity badges, not a single
+   label/value line like the rest of "row(...)". */
 .column-profile-list {
   display: flex;
   flex-direction: column;
@@ -8540,8 +8537,7 @@ body.inspection-map-open { overflow: hidden; }
 }
 
 /* .badge.sensitivity-badge, not a bare class -- see the identical
-   specificity note on .admin-api-key-scope-badge (2026-08-18 code review
-   finding: a bare .sensitivity-badge tied with the plain .badge rule
+   specificity note on .admin-api-key-scope-badge (a bare .sensitivity-badge tied with the plain .badge rule
    below and lost every property to it). */
 .badge.sensitivity-badge {
   background: color-mix(in srgb, var(--amber) 12%, var(--panel-soft));
@@ -8822,7 +8818,7 @@ body.inspection-map-open { overflow: hidden; }
 
 
 /* ---------------------------------------------------------------------
-   Dark theme: component dark overrides (G/theme-2, 2026-07-08)
+   Dark theme: component dark overrides
    ---------------------------------------------------------------------
    Generated from every raw hardcoded hex/rgba color actually used across
    this file's component selectors (badges, status pills, icon tiles,
@@ -8931,15 +8927,15 @@ body.inspection-map-open { overflow: hidden; }
 :root[data-theme="dark"] .mode-overflow-item {
   color: #7b99c1;
 }
-/* Los iconos reales (assets/fabric-icons/*.svg vía --icon-image, ver
-   ".ms-icon { background-image: var(--icon-image) }" más arriba)
-   sustituyeron al viejo sistema de formas dibujadas con ::before/::after
-   -- pero estas reglas de tema oscuro seguían fijando `background` con la
-   propiedad abreviada, que reinicia background-image a "none". Con mayor
-   especificidad que ".ms-icon" normal, esto apagaba TODOS los iconos en
-   modo oscuro (leído en vivo 2026-07-20). Los iconos SVG reales ya vienen
-   con su propio color de marca y se ven bien sobre fondo oscuro sin tocar
-   nada aquí -- por eso este bloque entero se quita en vez de arreglarse.
+/* The real icons (assets/fabric-icons/*.svg via --icon-image, see
+   ".ms-icon { background-image: var(--icon-image) }" above)
+   replaced the old system of shapes drawn with ::before/::after
+   -- but these dark theme rules kept setting `background` with the
+   shorthand property, which resets background-image to "none". With higher
+   specificity than the plain ".ms-icon", this turned off ALL icons in
+   dark mode (seen live). The real SVG icons already carry
+   their own brand color and look fine on a dark background without touching
+   anything here -- that is why this whole block is removed instead of fixed.
 */
 :root[data-theme="dark"] .panel-collapse-button {
   background: #121826;
@@ -9109,12 +9105,12 @@ body.inspection-map-open { overflow: hidden; }
 :root[data-theme="dark"] .diagram-stage-button i {
   color: #899ab3;
 }
-/* Antes casi el mismo tono que --panel (el fondo del propio lienzo, ver
-   :root[data-theme="dark"] arriba) -- las tarjetas se fundían con el
-   fondo. Un gris oscuro claramente más claro que --bg/--panel para que se
-   distingan, con el texto de apoyo (.node-main span, normalmente
-   var(--muted)) también aclarado aquí porque ese gris medio pierde
-   contraste según el fondo se aclara. */
+/* Before, almost the same tone as --panel (the canvas background itself, see
+   :root[data-theme="dark"] above) -- the cards blended into the
+   background. A dark gray clearly lighter than --bg/--panel so they
+   stand out, with the supporting text (.node-main span, normally
+   var(--muted)) also lightened here because that mid gray loses
+   contrast as the background gets lighter. */
 :root[data-theme="dark"] .node-card {
   background: #1f2937;
   border-color: #2e3a4d;
@@ -9638,8 +9634,7 @@ body.inspection-map-open { overflow: hidden; }
 /* Status/scope badge variants need their own dark colors, not the generic
    indigo .badge above -- --amber/--green/--red/--blue aren't redefined
    for dark mode anywhere in this file, and their light-mode hex values
-   read at ~2:1 contrast against the dark panel background, well under AA
-   (2026-08-18 code review finding). */
+   read at ~2:1 contrast against the dark panel background, well under AA. */
 :root[data-theme="dark"] .badge.sensitivity-badge {
   background: #3a2a05;
   border-color: #5c4208;
@@ -9784,9 +9779,9 @@ body.inspection-map-open { overflow: hidden; }
   :root:not([data-theme="light"]) .mode-overflow-item {
     color: #7b99c1;
   }
-  /* Ídem al bloque :root[data-theme="dark"] equivalente más arriba: dead
-     weight del sistema de iconos viejo que apagaba background-image de
-     los SVG reales. */
+  /* Same as the equivalent :root[data-theme="dark"] block above: dead
+     weight from the old icon system that turned off the background-image of
+     the real SVGs. */
   :root:not([data-theme="light"]) .panel-collapse-button {
     background: #121826;
     border: 1px solid #1f2633;
@@ -10680,7 +10675,7 @@ body.inspection-map-open { overflow: hidden; }
 .planning-map-legend-hidden { opacity: 0.75; font-style: italic; }
 
 /* ------------------------------------------------------------------ */
-/* Diagram toolbar cleanup 2026-07-19: legend moved into the diagram   */
+/* Diagram toolbar cleanup: legend moved into the diagram   */
 /* canvas (always visible, bottom-left), two-block toolbar, search box */
 /* and back button hidden (kept in the DOM -- several JS call sites    */
 /* touch them unguarded -- see app.js comments).                      */

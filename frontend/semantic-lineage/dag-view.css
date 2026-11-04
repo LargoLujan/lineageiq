@@ -1,4 +1,4 @@
-/* Roadmap Fase 4 (2026-08-31): the 2D DAG lineage diagram (dag-view.js).
+/* The 2D DAG lineage diagram (dag-view.js).
    The full-screen shell (.graph-map-view/.graph-map-backdrop/.graph-map-
    topbar/.graph-map-body/.graph-map-sidebar/.graph-map-search-*) is reused
    directly from graph-map.css -- #dagView/#dagViewBackdrop carry those same

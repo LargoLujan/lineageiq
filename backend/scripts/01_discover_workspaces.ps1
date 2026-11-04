@@ -262,7 +262,7 @@ function Invoke-FabricCliWorkspaceDiscovery {
     # neither a .value property nor was itself an array, so the caller's
     # own fallback silently treated the single wrapper OBJECT as "one
     # workspace" with no displayName/id -- producing exactly one garbage
-    # "Unknown workspace" row. Found live 2026-07-11 the hard way: `fab`
+    # "Unknown workspace" row. Found the hard way: `fab`
     # turned out to have a real, valid cached login on this machine (no
     # previous run had ever exercised this path, since it always failed
     # the auth-status check before), and this silently wiped

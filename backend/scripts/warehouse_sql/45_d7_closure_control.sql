@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/45_build_d7_closure_control.ps1
--- (Phase 1 migration, 2026-07-21). Reads dbo.bronze_d7_orchestration_review_queue,
+-- (SQL migration). Reads dbo.bronze_d7_orchestration_review_queue,
 -- dbo.bronze_d7_nonprod_candidate_queue,
 -- dbo.bronze_d7_wave_promotion_queue, and dbo.silver_d6_closure_control_queue
 -- (D6's OWN silver output -- second cross-D-phase dependency; must run

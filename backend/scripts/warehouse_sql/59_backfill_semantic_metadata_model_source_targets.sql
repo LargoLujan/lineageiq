@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/59_backfill_semantic_metadata_model_source_targets.py
--- (Phase 1 migration, 2026-07-21). Chains off dbo.silver_semantic_model_view_candidates
+-- (SQL migration). Chains off dbo.silver_semantic_model_view_candidates
 -- (58's output -- the real pipeline runs 58 then 59 then 60 then 61 in
 -- sequence, each backfilling on top of the previous one's result) plus
 -- dbo.bronze_semantic_model_datamart_dependencies and
@@ -35,7 +35,7 @@ model_targets AS (
     -- like every other key here, matching PowerShell's hashtable default
     -- (Fabric Warehouse's own default collation is case-sensitive binary --
     -- see 05_build_graph.sql's header comment for the real case this
-    -- caused, 2026-07-21).
+    -- caused).
     SELECT DISTINCT LOWER(LTRIM(RTRIM(semantic_model_qualified_name))) AS model_name,
         LOWER(LTRIM(RTRIM(source_server))) AS norm_server,
         LOWER(LTRIM(RTRIM(datamart_name))) AS norm_database

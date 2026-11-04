@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """MCP server exposed over the standard "Streamable HTTP" remote transport
-(2026-08-24) -- the piece mcp_server.py (local, stdio) and
+ -- the piece mcp_server.py (local, stdio) and
 mcp_server_remote.py (stdio, but calling a remote REST API) were both
 missing: something a HOSTED AI product (ChatGPT Connectors, Claude's
 remote-connector settings, or any other MCP-compliant client that only
@@ -63,13 +63,13 @@ from lineage_web.auth import _valid_api_key
 
 BASE_URL = (os.environ.get("FABRIC_LINEAGE_API_BASE_URL") or "http://127.0.0.1:8765").rstrip("/")
 
-mcp = FastMCP("fabric-lineage-http")
+mcp = FastMCP("lineageiq-http")
 
 # Set by _ApiKeyAuthMiddleware for the lifetime of one HTTP request, read by
 # every tool below when it makes its own downstream REST API call --
 # contextvars are per-asyncio-Task, so concurrent requests on the shared
 # Starlette/uvicorn event loop never see each other's key (verified
-# 2026-08-24 against Starlette's own request-scoped Task model).
+# against Starlette's own request-scoped Task model).
 _current_api_key: contextvars.ContextVar[str] = contextvars.ContextVar("current_api_key", default="")
 # The validated key's own NAME (not the raw key -- never logged/stored),
 # for _tracked_tool's usage-analytics event below. Set alongside
@@ -80,7 +80,7 @@ _current_key_name: contextvars.ContextVar[str] = contextvars.ContextVar("current
 def _tracked_tool(fn):
     """Wraps a plain function in @mcp.tool() (same as calling mcp.tool()(fn)
     directly) plus a best-effort usage-analytics event -- see analytics.
-    record_usage_event's own 2026-08-25 comment on why "mcp_tool_call"
+    record_usage_event's own comment on why "mcp_tool_call"
     reuses bronze_usage_events' existing 5 columns rather than a new table.
     Recorded BEFORE the tool body runs, not after: this is "did an agent
     ask for this", not "did it succeed" -- a downstream REST call failing
@@ -349,8 +349,8 @@ def get_data_quality_for_table(workspace_name: str, lakehouse_name: str, table_n
 
 @_tracked_tool
 def get_data_products() -> dict[str, Any]:
-    """The admin-curated list of Purview-Unified-Catalog-style data products
-    (Roadmap Fase 3): name, owner_email, description, and linked
+    """The admin-curated list of Purview-Unified-Catalog-style data products:
+    name, owner_email, description, and linked
     qualified_names. Distinct from Fabric's own native per-workspace
     "Domain" field, a different, already-scanned concept."""
     return _request("GET", "/api/data-products")
@@ -358,7 +358,7 @@ def get_data_products() -> dict[str, Any]:
 
 @_tracked_tool
 def get_privacy_coverage_map() -> dict[str, Any]:
-    """Data-subject-rights/privacy locator (Roadmap Fase 5): which Fabric
+    """Data-subject-rights/privacy locator: which Fabric
     tables contain columns matching a sensitivity category (email,
     biometric, academic record, disciplinary record, financial, guardian/
     family data, etc.), one row per table with EVERY matched category
@@ -375,7 +375,7 @@ def get_privacy_coverage_map() -> dict[str, Any]:
 def get_privacy_framework_map() -> dict[str, Any]:
     """Same privacy locator data as get_privacy_coverage_map, grouped by
     legal FRAMEWORK first (GDPR, GDPR special category, GDPR criminal/
-    disciplinary, FERPA, CCPA/CPRA), then by category (Roadmap Fase 6) --
+    disciplinary, FERPA, CCPA/CPRA), then by category --
     for "what data do we have under GDPR" questions. A table appears
     under EVERY framework/category it matches (deliberately not
     deduplicated, unlike the per-object coverage map). Also folds in
@@ -498,7 +498,7 @@ class _ApiKeyAuthMiddleware:
                 "headers": [
                     (b"content-type", b"application/json"),
                     (b"content-length", str(len(body)).encode("latin-1")),
-                    (b"www-authenticate", b'Bearer realm="fabric-lineage-mcp"'),
+                    (b"www-authenticate", b'Bearer realm="lineageiq-mcp"'),
                 ],
             })
             await send({"type": "http.response.body", "body": body})

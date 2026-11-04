@@ -1,5 +1,5 @@
-"""Unit tests for backend/scripts/lineage_web/data_quality.py (Roadmap
-Fase 1, 2026-08-31) -- pure aggregation over dbo.bronze_column_profile
+"""Unit tests for backend/scripts/lineage_web/data_quality.py
+-- pure aggregation over dbo.bronze_column_profile
 rows, so warehouse.query_bronze_table is monkeypatched to return
 synthetic profile rows rather than touching a real Warehouse, matching
 how test_purview_insights.py tests similar aggregation logic.

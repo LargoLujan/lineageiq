@@ -20,6 +20,7 @@ Auth: Azure CLI AAD token for https://database.windows.net (never printed).
 import argparse
 import csv
 import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -33,10 +34,12 @@ EXECUTED_BY_SUFFIX = re.compile(r"[_ ]\d{4}/\d{2}/\d{2}[- ]\d{2}:\d{2}(:\d{2})?$
 
 
 def get_token(az_command):
+    # Resolve the full path (az.cmd/az.bat on Windows) so no shell is needed.
+    az_executable = shutil.which(az_command) or az_command
     result = subprocess.run(
-        [az_command, "account", "get-access-token", "--resource", "https://database.windows.net",
+        [az_executable, "account", "get-access-token", "--resource", "https://database.windows.net",
          "--query", "accessToken", "-o", "tsv"],
-        capture_output=True, text=True, shell=True, timeout=120,
+        capture_output=True, text=True, timeout=120,
     )
     if result.returncode != 0:
         raise RuntimeError(f"az token acquisition failed: {result.stderr.strip()[:300]}")

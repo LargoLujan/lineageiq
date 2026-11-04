@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/25_build_likely_
--- conflict_cleanup_plan.ps1 (Phase 2 migration continuation, 2026-07-21).
+-- conflict_cleanup_plan.ps1 (SQL migration).
 -- Reads only THIS migration's own already-validated silver_* outputs:
 -- silver_orchestration_v2_plan/object_conflicts/parallel_candidates (24),
 -- silver_evidence_hardening_queue (22), silver_object_read_write_

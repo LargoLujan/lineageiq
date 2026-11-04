@@ -1,59 +1,57 @@
-# MCP remoto (Streamable HTTP) — conectar Claude, ChatGPT, y otros agentes
+# Remote MCP (Streamable HTTP): connect Claude, ChatGPT and other agents
 
-## Qué es esto
+## What this is
 
-Este servidor expone su catálogo de linaje (workspaces, dependencias, impacto de objetos, estado de escaneos, roles de acceso, historial de ejecuciones y más) como un servidor MCP real, alcanzable por **una sola URL pública**:
-
-```
-https://<el mismo dominio donde ya ves el visor>/mcp
-```
-
-No hace falta instalar nada, ni descargar ningún script, ni tener el repositorio en ningún sitio — cualquier cliente MCP que sepa añadir un conector remoto por URL puede usarlo directamente. Esto es lo que hace falta para que un producto de IA **hospedado** (ChatGPT, Claude en la web, etc.) pueda conectarse: esos productos no pueden lanzar un proceso en tu máquina, solo alcanzar una URL.
-
-Implementación: `backend/scripts/mcp_http_server.py`, un subproceso que `lineage_web_server.py` arranca automáticamente (puerto interno, nunca expuesto directamente), con `backend/scripts/lineage_web/handler.py` haciendo de proxy inverso desde `/mcp` en el puerto público. Transporte: **Streamable HTTP**, el transporte remoto estándar del protocolo MCP.
-
-## Autenticación
-
-Un token Bearer — exactamente la misma API key que ya se crea desde el panel de administración, pestaña **API keys**. Cada llamada (incluida la primera, `initialize`) exige la cabecera:
+The server exposes its lineage catalogue (workspaces, dependencies, object impact, scan status, access roles, run history and more) as a real MCP server, reachable through **one public URL**:
 
 ```
-Authorization: Bearer <tu-api-key>
+https://<the same domain where you see the viewer>/mcp
 ```
 
-Sin ella, o con una clave inválida/caducada/revocada, el servidor responde `401`. No hay flujo OAuth — es una clave estática de larga duración, más simple de configurar para un despliegue propio como este; si en el futuro se necesitara OAuth real (por ejemplo, para que cada persona tenga su propia identidad en vez de compartir una clave), sería un cambio bastante más grande y no está construido.
+There is nothing to install, no script to download and no repository checkout needed. Any MCP client that can add a remote connector by URL can use it directly. This is what a **hosted** AI product (ChatGPT, Claude on the web and so on) needs to connect: those products cannot launch a process on your machine, they can only reach a URL.
 
-## Por proveedor
+Implementation: `backend/scripts/mcp_http_server.py`, a subprocess that `lineage_web_server.py` starts automatically (on an internal port that is never exposed directly). `backend/scripts/lineage_web/handler.py` acts as a reverse proxy from `/mcp` on the public port. Transport: **Streamable HTTP**, the standard remote transport of the MCP protocol.
 
-Lo único realmente estable aquí es "URL + token Bearer" — el protocolo MCP en sí. Las pantallas concretas de cada producto cambian con el tiempo; lo de abajo es lo verificado o lo más razonable a la fecha de esta nota (2026-08-24), no una promesa de que el clic-a-clic no haya cambiado.
+## Authentication
+
+A Bearer token, which is exactly the same API key you create in the admin panel's **API keys** tab (see [102](102_admin_panel_and_user_auth.md)). Every call, including the first one (`initialize`), needs this header:
+
+```
+Authorization: Bearer <your-api-key>
+```
+
+Without it, or with an invalid, expired or revoked key, the server answers `401`. There is no OAuth flow. It is a long-lived static key, which is simpler to set up for a self-hosted deployment like this one. If you later need real OAuth (for example, so that each person has their own identity instead of sharing a key), that would be a much bigger change and it is not built.
+
+## By client
+
+The only stable part is "URL + Bearer token", which is the MCP protocol itself. The exact screens of each product change over time. What follows is the general pattern, not a guarantee that every click is still the same.
 
 ### Claude Code (CLI)
 
-Verificado el patrón general del comando (no la versión exacta instalada en cada máquina):
-
 ```bash
-claude mcp add --transport http fabric-lineage https://<tu-dominio>/mcp --header "Authorization: Bearer <tu-api-key>"
+claude mcp add --transport http lineageiq https://<your-domain>/mcp --header "Authorization: Bearer <your-api-key>"
 ```
 
-Si tu versión de `claude mcp add` no reconoce `--transport http` o `--header`, ejecuta `claude mcp add --help` para ver los flags que sí acepta esa versión.
+If your version of `claude mcp add` does not recognise `--transport http` or `--header`, run `claude mcp add --help` to see the flags that version accepts.
 
-### Claude Desktop / claude.ai (conectores)
+### Claude Desktop / claude.ai (connectors)
 
-Ajustes → Conectores (o "Connectors") → Añadir un conector personalizado → pega la URL (`https://<tu-dominio>/mcp`) y, si la interfaz lo pide, la cabecera `Authorization: Bearer <tu-api-key>`. Si esa versión concreta de la interfaz no ofrece un campo de cabecera personalizada para conectores remotos, usa la vía de Claude Code de arriba en su lugar.
+Settings, then Connectors, then Add a custom connector. Paste the URL (`https://<your-domain>/mcp`) and, if the interface asks for it, the header `Authorization: Bearer <your-api-key>`. If your version of the interface has no custom-header field for remote connectors, use the Claude Code route above instead.
 
 ### ChatGPT (Connectors / Apps)
 
-Ajustes → Connectors (o Apps, según la cuenta) → Añadir conector personalizado → URL del servidor MCP (`https://<tu-dominio>/mcp`) y la cabecera de autenticación cuando la pida. La disponibilidad de "conectores personalizados por URL" depende del tipo de cuenta/plan.
+Settings, then Connectors (or Apps, depending on the account), then Add a custom connector. Enter the MCP server URL (`https://<your-domain>/mcp`) and the authentication header when asked. The availability of custom connectors by URL depends on the account type and plan.
 
 ### Cursor
 
-`~/.cursor/mcp.json` (o el equivalente por proyecto, `.cursor/mcp.json`):
+`~/.cursor/mcp.json` (or the per-project equivalent, `.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "fabric-lineage": {
-      "url": "https://<tu-dominio>/mcp",
-      "headers": { "Authorization": "Bearer <tu-api-key>" }
+    "lineageiq": {
+      "url": "https://<your-domain>/mcp",
+      "headers": { "Authorization": "Bearer <your-api-key>" }
     }
   }
 }
@@ -61,28 +59,28 @@ Ajustes → Connectors (o Apps, según la cuenta) → Añadir conector personali
 
 ### Windsurf
 
-Mismo patrón que Cursor, en su propio archivo de configuración MCP (`~/.codeium/windsurf/mcp_config.json` en instalaciones recientes) con la misma forma `{"url": ..., "headers": {...}}`.
+Same pattern as Cursor, in its own MCP configuration file (`~/.codeium/windsurf/mcp_config.json` in recent installs), with the same `{"url": ..., "headers": {...}}` shape.
 
 ### GitHub Copilot (VS Code)
 
-Copilot Chat en modo agente soporta servidores MCP remotos vía `.vscode/mcp.json` en el workspace, con la misma forma `url` + `headers`.
+Copilot Chat in agent mode supports remote MCP servers through `.vscode/mcp.json` in the workspace, with the same `url` plus `headers` shape.
 
-### Cualquier otro cliente compatible con MCP
+### Any other MCP-compatible client
 
-Si el cliente no está en esta lista, busca en su documentación "MCP remote server", "Streamable HTTP", o "custom connector by URL" — si soporta añadir un servidor por URL con una cabecera personalizada, esta URL y este token funcionan igual que con cualquiera de los de arriba.
+If your client is not listed, search its documentation for "MCP remote server", "Streamable HTTP" or "custom connector by URL". If it can add a server by URL with a custom header, this URL and this token work the same way as with the clients above.
 
-## Verificación rápida (sin cliente de IA)
+## Quick check (without an AI client)
 
 ```bash
-curl -s -D - -X POST https://<tu-dominio>/mcp \
+curl -s -D - -X POST https://<your-domain>/mcp \
   -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
-  -H "Authorization: Bearer <tu-api-key>" \
+  -H "Authorization: Bearer <your-api-key>" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke-test","version":"1.0"}}}'
 ```
 
-Una respuesta `200` con `event: message` y un `serverInfo` en el JSON confirma que el servidor está vivo y la clave es válida. Un `401` significa clave ausente/inválida. Un `503` significa que el subproceso `mcp_http_server.py` no arrancó (revisa el log de arranque del servidor; probablemente falte `pip install -r requirements-mcp.txt`).
+A `200` response with `event: message` and a `serverInfo` in the JSON confirms that the server is alive and the key is valid. A `401` means the key is missing or invalid. A `503` means the `mcp_http_server.py` subprocess did not start (check the server's startup log; you probably need `pip install -r requirements-mcp.txt`).
 
-## Qué NO es esto
+## What this is not
 
-- No sustituye a `backend/scripts/mcp_server.py` (local, lee archivos directamente, sin llamadas de red) ni a `backend/scripts/mcp_server_remote.py` (stdio, pero llamando a la REST API) — siguen existiendo para quien prefiera ejecutar el proceso MCP en su propia máquina. Ambos siguen documentados en el README.
-- No implementa OAuth 2.1 completo (registro dinámico de clientes, emisión de tokens, etc.) — solo verificación de un token Bearer estático contra las claves ya emitidas desde el panel. Suficiente para "cualquier agente autenticado se puede conectar", no pensado para escenarios multi-tenant con identidades por usuario dentro del propio agente.
+- It does not replace `backend/scripts/mcp_server.py` (local, reads files directly, no network calls) or `backend/scripts/mcp_server_remote.py` (stdio, but calling the REST API). Both still exist for anyone who prefers to run the MCP process on their own machine. Both are documented in the README.
+- It does not implement full OAuth 2.1 (dynamic client registration, token issuance and so on). It only verifies a static Bearer token against the keys already issued from the panel. That is enough for "any authenticated agent can connect", and it is not meant for multi-tenant scenarios with per-user identities inside the agent.

@@ -1,32 +1,30 @@
 # NB_Discover_Column_Profile
 #
-# Fuente para un notebook Python de Fabric -- roadmap Fase 2 ("profiling
-# estadístico de columnas"), 2026-08-17. Réplica del pipeline de
-# descubrimiento nativo ya establecido (ver docs/105_fabric_native_
-# discovery_setup.md), pero de solo lectura contra Lakehouses de Fabric
-# en vez de contra la API de Fabric -- primera versión, alcance
-# deliberadamente acotado a los workspaces donde esta service principal
-# YA tiene rol de datos (Contributor/Member/Viewer) hoy, sin conceder
-# nada nuevo. Ver docs/108_column_profiling_native_scope.md para el
-# porqué de este alcance y cómo ampliarlo.
+# Source for a Fabric Python notebook -- column statistical profiling.
+# Replica of the already established native discovery pipeline (see
+# docs/105_fabric_native_discovery_setup.md), but read-only against Fabric
+# Lakehouses instead of against the Fabric API -- first version, scope
+# deliberately limited to the workspaces where this service principal
+# ALREADY has a data role (Contributor/Member/Viewer) today, without granting
+# anything new.
 #
-# A diferencia del profiling contra SQL externo (bloqueado -- ver
-# docs/105, sección "Verificado 2026-08-17"), esto conecta a Lakehouses
-# 100% dentro de Fabric via su propio SQL analytics endpoint -- misma
-# ruta de red que ya usa connect_warehouse() en todos los notebooks
-# "Discover" existentes, sin ningún Data Gateway ni conectividad externa
-# de por medio.
+# Unlike profiling against external SQL (blocked -- see
+# docs/105), this connects to Lakehouses
+# 100% inside Fabric via their own SQL analytics endpoint -- the same
+# network route that connect_warehouse() already uses in all the existing
+# "Discover" notebooks, without any Data Gateway or external connectivity
+# in between.
 #
-# De solo lectura: SELECT agregados (COUNT/MIN/MAX/COUNT DISTINCT) por
-# columna, nunca valores individuales de fila -- ver NB_Discover_Column_
-# Sensitivity.py (siguiente pieza del roadmap) para el caso que sí
-# necesita mirar contenido real, con sus propias salvaguardas.
+# Read-only: aggregate SELECTs (COUNT/MIN/MAX/COUNT DISTINCT) per
+# column, never individual row values -- see NB_Discover_Column_
+# Sensitivity.py (the next piece of the pipeline) for the case that does
+# need to look at real content, with its own safeguards.
 #
-# Escribe en dbo.bronze_column_profile (solo-reemplazo, igual que el
-# resto del pipeline).
+# Writes to dbo.bronze_column_profile (replace-only, like the
+# rest of the pipeline).
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -51,24 +49,24 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
-# Alcance Fase 1 (2026-08-17): solo workspaces donde la SP ya tiene rol
-# de datos, confirmado en vivo el mismo día contra dbo.bronze_workspace_
-# role_assignments -- cero permisos nuevos concedidos para esta primera
-# pasada. Ampliar esta lista es una decisión de gobernanza del usuario,
-# no un cambio de código (ver docs/108).
+# Current scope: only workspaces where the SP already has a data role,
+# confirmed live against dbo.bronze_workspace_
+# role_assignments -- zero new permissions granted for this first
+# pass. Extending this list is a governance decision for the user,
+# not a code change.
 TARGET_WORKSPACE_NAMES = [
     "Datamart-Sales_Contoso_Pro",
     "DigitalAnalytics-Sample_Contoso_Dev",
     "DigitalAnalytics-Sample_Contoso_Pro",
 ]
 
-MAX_TABLES_PER_LAKEHOUSE = 200  # tope defensivo, no un límite esperado
+MAX_TABLES_PER_LAKEHOUSE = 200  # defensive cap, not an expected limit
 PROFILE_COLUMNS = [
     "workspace_name", "lakehouse_name", "table_name", "column_name", "data_type",
     "row_count", "null_count", "null_percentage", "distinct_count",
@@ -76,7 +74,7 @@ PROFILE_COLUMNS = [
 ]
 
 # %% [markdown]
-# ## Autenticación (mismo patrón que los notebooks de descubrimiento)
+# ## Authentication (same pattern as the discovery notebooks)
 
 # %%
 def get_sp_client_secret():
@@ -131,8 +129,8 @@ def fabric_get(path):
         return json.loads(resp.read().decode("utf-8"))
 
 # %% [markdown]
-# ## Paso 1: resolver workspace_id + lakehouses + su SQL endpoint, desde
-# el propio catálogo ya descubierto (dbo.bronze_items/bronze_workspaces)
+# ## Step 1: resolve workspace_id + lakehouses + their SQL endpoint, from
+# the already discovered catalog itself (dbo.bronze_items/bronze_workspaces)
 
 # %%
 connection = connect_warehouse()
@@ -156,8 +154,8 @@ connection.close()
 print(f"Lakehouses in scope: {len(lakehouses)}")
 
 # %% [markdown]
-# ## Paso 2: por cada Lakehouse, resolver su SQL endpoint (API de
-# detalle, properties.sqlEndpointProperties.connectionString)
+# ## Step 2: for each Lakehouse, resolve its SQL endpoint (detail
+# API, properties.sqlEndpointProperties.connectionString)
 
 # %%
 profile_rows = []
@@ -184,8 +182,8 @@ lakehouses_with_endpoint = [lh for lh in lakehouses if lh.get("sql_endpoint")]
 print(f"Lakehouses with a resolved SQL endpoint: {len(lakehouses_with_endpoint)}")
 
 # %% [markdown]
-# ## Paso 3: por cada Lakehouse, listar tablas y perfilar columnas
-# (agregados de solo lectura, ninguna fila individual)
+# ## Step 3: for each Lakehouse, list tables and profile columns
+# (read-only aggregates, no individual rows)
 
 # %%
 def connect_lakehouse(sql_endpoint, database_name):
@@ -291,8 +289,8 @@ for lh in lakehouses_with_endpoint:
 print(f"Profiled columns: {len(profile_rows)}. Gaps: {len(gap_rows)}.")
 
 # %% [markdown]
-# ## Escribir en el Warehouse (reemplazo completo, igual que el resto
-# del pipeline)
+# ## Write to the Warehouse (full replacement, like the rest
+# of the pipeline)
 
 # %%
 connection = connect_warehouse()

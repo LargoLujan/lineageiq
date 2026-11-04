@@ -1,31 +1,31 @@
 # NB_Discover_Executions
 #
-# Fuente para un notebook Python de Fabric -- séptimo paso del pipeline de
-# descubrimiento nativo, después de NB_Confirm_Source_Object_Types (ver
-# docs/105_fabric_native_discovery_setup.md). Cada bloque "# %%" es una
-# celda -- pégalas en orden.
+# Source for a Fabric Python notebook -- seventh step of the native
+# discovery pipeline, after NB_Confirm_Source_Object_Types (see
+# docs/105_fabric_native_discovery_setup.md). Each "# %%" block is a
+# cell -- paste them in order.
 #
-# Réplica fiel de scripts/06_discover_executions.ps1: historial de
-# ejecuciones (Job Scheduler de Fabric) y horarios programados, para los
-# mismos tipos de item que el original (DataPipeline, Notebook,
+# Faithful replica of scripts/06_discover_executions.ps1: execution
+# history (Fabric Job Scheduler) and schedules, for the
+# same item types as the original (DataPipeline, Notebook,
 # SemanticModel, CopyJob, Dataflow, Eventstream, Reflex, KQLQueryset,
-# KQLDashboard, UserDataFunction) -- SemanticModel vía la API de Power BI
-# (historial/horario de refresco), el resto vía el Job Scheduler de
-# Fabric. Sin IA/LLM, solo llamadas REST directas, igual que el original.
+# KQLDashboard, UserDataFunction) -- SemanticModel via the Power BI API
+# (refresh history/schedule), the rest via the Fabric Job Scheduler.
+# No AI/LLM, only direct REST calls, same as the original.
 #
-# Escribe en dbo.bronze_executions -- mismas 24 columnas que index/
-# executions.csv ya usa, así que backend/scripts/11_build_lineage_
-# explorer_fast.py (adaptado en NB_Build_Lineage_Explorer) puede leerla
-# sin cambios de esquema.
+# Writes to dbo.bronze_executions -- the same 24 columns that index/
+# executions.csv already uses, so backend/scripts/11_build_lineage_
+# explorer_fast.py (adapted in NB_Build_Lineage_Explorer) can read it
+# without schema changes.
 #
-# Es la ÚNICA entrada que 11_build_lineage_explorer_fast.py exige que
-# exista (junto con workspaces/items/dependencies) -- sin esto, el
-# ensamblador final del grafo no arranca en absoluto.
+# It is the ONLY input that 11_build_lineage_explorer_fast.py requires to
+# exist (together with workspaces/items/dependencies) -- without it, the final
+# graph assembler does not start at all.
 #
-# Self-contained a propósito, mismo criterio que los notebooks anteriores.
+# Self-contained on purpose, same criterion as the previous notebooks.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -48,31 +48,31 @@ POWER_BI_API_BASE_URL = "https://api.powerbi.com/v1.0/myorg"
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-# Ya no se lee de Key Vault (bloqueado) NI de un parámetro del pipeline
-# (probado 2026-08-12: filtró el valor en texto plano al fallar la
-# conversión de tipo -- nunca más por ahí). Fichero privado en el área
-# Files del Lakehouse del workspace, leído con notebookutils.fs.head() --
-# gobernado por el rol de Fabric del SP sobre este workspace, no por RBAC
-# de Azure sobre un recurso aparte.
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# No longer read from Key Vault (blocked) NOR from a pipeline parameter
+# (tested: it leaked the value in plain text when the
+# type conversion failed -- never again that way). Private file in the
+# Files area of the workspace Lakehouse, read with notebookutils.fs.head() --
+# governed by the SP's Fabric role on this workspace, not by Azure RBAC
+# on a separate resource.
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 REQUEST_DELAY_SECONDS = 0.35
 RETRY_COUNT = 5
 POWER_BI_REFRESH_HISTORY_TOP = 60
 
-# Mismo conjunto que $ExecutionItemTypes en 06_discover_executions.ps1.
+# Same set as $ExecutionItemTypes in 06_discover_executions.ps1.
 EXECUTION_ITEM_TYPES = {
     "DataPipeline", "Notebook", "SemanticModel", "CopyJob", "Dataflow",
     "Eventstream", "Reflex", "KQLQueryset", "KQLDashboard", "UserDataFunction",
 }
 
-# Mismo mapeo que Get-CandidateScheduleJobTypes en el original -- job types
-# a probar por tipo de item cuando no hay ninguno conocido todavía por un
-# job instance real.
+# Same mapping as Get-CandidateScheduleJobTypes in the original -- job types
+# to try per item type when none is known yet from a real
+# job instance.
 CANDIDATE_SCHEDULE_JOB_TYPES = {
     "DataPipeline": ["Execute", "DefaultJob"],
     "Notebook": ["RunNotebook", "Execute", "DefaultJob"],
@@ -94,14 +94,14 @@ EXECUTION_COLUMNS = [
 ]
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación y Warehouse (mismo patrón que los notebooks anteriores)
+# ## Authentication and Warehouse (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -137,8 +137,8 @@ def token_struct(token):
 
 
 def pick_odbc_driver():
-    # Ver la misma nota en NB_Discover_Workspaces_Items.py -- Fabric no
-    # siempre trae "ODBC Driver 17 for SQL Server" instalado.
+    # See the same note in NB_Discover_Workspaces_Items.py -- Fabric does not
+    # always have "ODBC Driver 17 for SQL Server" installed.
     available = sorted(
         (d for d in pyodbc.drivers() if "ODBC Driver" in d and "SQL Server" in d),
         reverse=True,
@@ -174,19 +174,19 @@ def replace_table(connection, table_name, columns, rows):
     cursor.execute(f"CREATE TABLE dbo.{table_name} ({column_defs});")
     connection.commit()
     if rows:
-        # 2026-08-21: mismo fix ya aplicado en NB_Extract_Object_Column_Catalog
-        # (2026-08-20) -- row-by-row executemany (incluso con
-        # fast_executemany=True) no consigue el acelerón de bulk-copy contra
-        # Fabric Warehouse (motor analitico distribuido, no transaccional):
-        # cada set de parametros paga overhead real de round-trip/compilacion
-        # por sentencia. Confirmado como la causa real de que este notebook
-        # pareciera "50x mas lento de lo esperado" -- el bucle de descubrimiento
-        # por item termina en segundos, pero preserved_job_rows conserva miles
-        # de filas historicas fuera del filtro actual y el INSERT fila a fila
-        # de esas miles de filas es lo que se comia el tiempo. Batches VALUES
-        # multi-fila convierten miles de sentencias en decenas. batch_size=60
-        # (no 100 como en Object_Column_Catalog) porque esta tabla tiene 24
-        # columnas, no 14 -- 60*24=1440 parametros, bajo el limite ~2100 de
+        # Same fix already applied in NB_Extract_Object_Column_Catalog
+        # -- row-by-row executemany (even with
+        # fast_executemany=True) does not get the bulk-copy speedup against
+        # Fabric Warehouse (distributed analytical engine, not transactional):
+        # each parameter set pays real round-trip/compilation overhead
+        # per statement. Confirmed as the real reason this notebook
+        # seemed "50x slower than expected" -- the per-item discovery loop
+        # finishes in seconds, but preserved_job_rows keeps thousands
+        # of historical rows outside the current filter and the row-by-row INSERT
+        # of those thousands of rows is what ate the time. Multi-row VALUES
+        # batches turn thousands of statements into dozens. batch_size=60
+        # (not 100 as in Object_Column_Catalog) because this table has 24
+        # columns, not 14 -- 60*24=1440 parameters, under the ~2100 limit of
         # SQL Server.
         batch_size = 60
         placeholders_one_row = "(" + ", ".join("?" for _ in columns) + ")"
@@ -212,7 +212,7 @@ def read_existing_table(connection, table_name, columns):
 
 
 # %% [markdown]
-# ## Helpers Fabric / Power BI REST (paginación + reintento en 429)
+# ## Fabric / Power BI REST helpers (pagination + retry on 429)
 
 # %%
 def api_get(path, headers, base_url, retry_count=RETRY_COUNT):
@@ -290,7 +290,7 @@ def compact_json(value, max_len=1200):
 
 
 # %% [markdown]
-# ## Descubrimiento: job instances + schedules por item
+# ## Discovery: job instances + schedules per item
 
 # %%
 def discover_for_semantic_model(item, workspace_id, item_id, pbi_headers, rows):
@@ -432,19 +432,19 @@ try:
 
     print(f"New execution/schedule rows discovered: {len(new_rows)}")
 
-    # Ver la nota de 06_discover_executions.ps1 (líneas 847-888): las APIs
-    # de Fabric/Power BI solo devuelven una ventana reciente acotada, así
-    # que un job_instance real puede desaparecer de esa ventana sin que
-    # haya dejado de haber pasado -- se preserva lo que ya había en el
-    # Warehouse y no vino en esta pasada, en vez de perderlo en cada
-    # reescaneo. Las filas de tipo "schedule" describen configuración
-    # ACTUAL y sí se reemplazan por completo, igual que el original.
-    # Reconectar con un token de base de datos fresco -- la conexion de
-    # arriba lleva abierta desde antes del bucle por item (potencialmente
-    # cientos/miles de llamadas a la API de Fabric/Power BI con
-    # reintentos), el mismo patron que ya causo un fallo real de
-    # conexion ("TCP Provider: Error code 0x20") en NB_Discover_
-    # Dependencies.py -- mismo fix aplicado aqui preventivamente.
+    # See the note in 06_discover_executions.ps1 (lines 847-888): the Fabric/
+    # Power BI APIs only return a bounded recent window, so
+    # a real job_instance can disappear from that window without
+    # the run having stopped existing -- what was already in the
+    # Warehouse and did not come in this pass is preserved, instead of losing it on every
+    # rescan. "schedule" rows describe the CURRENT configuration
+    # and are replaced entirely, same as the original.
+    # Reconnect with a fresh database token -- the connection above
+    # has been open since before the per-item loop (potentially
+    # hundreds/thousands of Fabric/Power BI API calls with
+    # retries), the same pattern that already caused a real
+    # connection failure ("TCP Provider: Error code 0x20") in NB_Discover_
+    # Dependencies.py -- same fix applied here preventively.
     connection.close()
     connection = connect_warehouse()
     existing_rows = read_existing_table(connection, "bronze_executions", EXECUTION_COLUMNS)
@@ -453,17 +453,17 @@ try:
     preserved_job_rows = [
         r for r in existing_job_rows
         if (r.get("qualified_name"), r.get("job_instance_id")) not in seen_job_keys
-        # Fuera del alcance del filtro actual: se conserva tal cual sin
-        # tocar (igual que bronze_items en el notebook de workspaces/items).
+        # Outside the scope of the current filter: kept as is without
+        # touching (same as bronze_items in the workspaces/items notebook).
         or (filter_set and (r.get("workspace_name") or "").strip().lower() not in filter_set)
     ]
     if preserved_job_rows:
         print(f"Preserving {len(preserved_job_rows)} existing job_instance row(s) not covered by this run's fetch window.")
 
     if filter_set:
-        # Los schedules SÍ son configuración actual -- pero solo se han
-        # vuelto a consultar para los workspaces dentro del filtro, así que
-        # los de fuera del filtro también se conservan tal cual.
+        # Schedules ARE current configuration -- but they were only
+        # queried again for the workspaces inside the filter, so
+        # those outside the filter are also kept as is.
         existing_schedule_rows_outside_filter = [
             r for r in existing_rows
             if r.get("record_type") == "schedule" and (r.get("workspace_name") or "").strip().lower() not in filter_set

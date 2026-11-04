@@ -1,5 +1,5 @@
 """Unit tests for the persisted-service-session fallback added to
-lineage_web/warehouse.py (2026-07-24) -- live Warehouse reads no longer
+lineage_web/warehouse.py -- live Warehouse reads no longer
 strictly require a service principal; the persisted delegated "service
 session" (see service_session.py) is tried as a middle tier between the
 SP path and failing outright.

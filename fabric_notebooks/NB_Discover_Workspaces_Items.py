@@ -1,45 +1,45 @@
 # NB_Discover_Workspaces_Items
 #
-# Fuente para un notebook Python de Fabric. Fabric no se puede crear/editar
-# de forma remota desde este repositorio, así que este archivo se pega a
-# mano en un notebook nuevo (ver docs/105_fabric_native_discovery_setup.md
-# para el paso a paso completo: Key Vault, cuenta de servicio, Data
-# Pipeline). Cada bloque delimitado por "# %%" es una celda independiente
-# -- pégalas en el mismo orden. La celda "## Parámetros" debe marcarse
-# como celda de parámetros (icono "..." de la celda -> "Alternar celda de
-# parámetros" en la barra de Fabric) para que el pipeline pueda pasarle
-# WorkspaceNameFilter en cada ejecución.
+# Source for a Fabric Python notebook. Fabric cannot be created/edited
+# remotely from this repository, so this file is pasted by hand into a
+# new notebook (see docs/105_fabric_native_discovery_setup.md
+# for the complete walkthrough: Key Vault, service account, Data
+# Pipeline). Each block delimited by "# %%" is an independent cell
+# -- paste them in the same order. The "## Parameters" cell must be marked
+# as a parameters cell (cell "..." icon -> "Toggle parameter
+# cell" in the Fabric toolbar) so that the pipeline can pass it
+# WorkspaceNameFilter on each run.
 #
-# Qué hace, en dos pasadas:
-#   1. Descubrimiento de workspaces (equivalente a scripts/01_discover_
-#      workspaces.ps1 + scripts/02_normalize_workspaces.ps1 combinados):
-#      API admin de Fabric (tenant completo) o, si la cuenta de servicio no
-#      es admin, la API normal (solo lo que esa identidad puede ver) +
-#      detalle por workspace (capacidad, dominio, admins).
-#   2. Inventario de items (equivalente a scripts/03_discover_items.ps1):
-#      un GET paginado por workspace, con el mismo WorkspaceNameFilter que
-#      ya usan scan_single_workspace.ps1/99_refresh_lineage_project.ps1 --
-#      si viene relleno, solo se re-descubren esos workspaces y el resto se
-#      mantiene tal cual estaba en el Warehouse.
+# What it does, in two passes:
+#   1. Workspace discovery (equivalent to scripts/01_discover_
+#      workspaces.ps1 + scripts/02_normalize_workspaces.ps1 combined):
+#      Fabric admin API (whole tenant) or, if the service account is not
+#      an admin, the regular API (only what that identity can see) +
+#      per-workspace detail (capacity, domain, admins).
+#   2. Item inventory (equivalent to scripts/03_discover_items.ps1):
+#      one paginated GET per workspace, with the same WorkspaceNameFilter that
+#      scan_single_workspace.ps1/99_refresh_lineage_project.ps1 already use --
+#      if filled in, only those workspaces are rediscovered and the rest
+#      is kept as it was in the Warehouse.
 #
-# Escribe directo en dbo.bronze_workspaces / dbo.bronze_items del Warehouse
-# configurado -- MISMAS 17 y 14 columnas respectivamente que ya escribe
-# scripts/67_upload_bronze_to_warehouse.ps1 desde local, así que
-# backend/scripts/lineage_web/warehouse.py (lectura en vivo) no necesita
-# saber cuál de los dos caminos rellenó la tabla la última vez.
+# Writes directly to dbo.bronze_workspaces / dbo.bronze_items of the configured
+# Warehouse -- the SAME 17 and 14 columns respectively that
+# scripts/67_upload_bronze_to_warehouse.ps1 already writes from local, so
+# backend/scripts/lineage_web/warehouse.py (live read) does not need to
+# know which of the two paths filled the table last time.
 #
-# Por qué login MSAL propio y no notebookutils.credentials.getToken: bajo
-# cuenta de servicio, ese helper nativo solo da alcance limitado (Dataset/
-# Lakehouse/Notebook/Workspace.ReadWrite.All -- no cubre listar todos los
-# workspaces del tenant ni leer metadatos de capacidad/dominio). Confirmado
-# 2026-07-24 contra la documentación de NotebookUtils credentials. Por eso
-# este notebook hace su propio login de cliente confidencial (idéntico
-# patrón que backend/scripts/lineage_web/warehouse.py y
-# scripts/67_upload_bronze_to_warehouse.ps1), usando un secreto leído de
-# Azure Key Vault, nunca escrito en el propio notebook.
+# Why its own MSAL login and not notebookutils.credentials.getToken: under a
+# service account, that native helper only gives limited scope (Dataset/
+# Lakehouse/Notebook/Workspace.ReadWrite.All -- it does not cover listing all the
+# tenant's workspaces or reading capacity/domain metadata). Confirmed
+# against the NotebookUtils credentials documentation. That is why
+# this notebook does its own confidential client login (same
+# pattern as backend/scripts/lineage_web/warehouse.py and
+# scripts/67_upload_bronze_to_warehouse.ps1), using a secret read from
+# Azure Key Vault, never written in the notebook itself.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -61,51 +61,51 @@ import requests
 
 FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 
-# -- Cuenta de servicio: la misma que uses en admin_settings.json ->
-# lakehouse.sp_* / discovery_pipeline.sp_* (puede ser la misma app
-# registration para las tres cosas -- Warehouse, disparo del pipeline, y
-# este notebook -- o una distinta, tu elección). Necesita, como mínimo, el
-# rol "Fabric Administrator" en Entra ID para que el paso de descubrimiento
-# de workspaces vea el tenant completo (ver docs/105).
+# -- Service account: the same one you use in admin_settings.json ->
+# lakehouse.sp_* / discovery_pipeline.sp_* (it can be the same app
+# registration for all three things -- Warehouse, pipeline trigger, and
+# this notebook -- or a different one, your choice). It needs, at a minimum, the
+# "Fabric Administrator" role in Entra ID so that the workspace discovery
+# step sees the whole tenant (see docs/105).
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 
-# -- Ya no se lee de Key Vault (bloqueado: falta rol "Key Vault Secrets
-# User" para el SP y nadie disponible para concederlo) NI de un parámetro
-# del pipeline (probado 2026-08-12: un fallo de conversión de tipo de
-# Fabric al pasar SpClientSecret como parámetro filtró el valor en texto
-# plano dentro del propio failureReason del job -- nunca más por ahí). En
-# vez de eso, un fichero privado en el área Files del propio Lakehouse del
-# workspace, leído con notebookutils.fs.head() -- gobernado por el rol de
-# Fabric del SP sobre ESTE workspace (Contributor, ya concedido), no por
-# RBAC de Azure sobre un recurso aparte. Nunca sale en logs/historial de
-# ejecuciones porque es una simple lectura de fichero dentro del propio
-# código del notebook, no un valor que Fabric serialice en ningún sitio.
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# -- No longer read from Key Vault (blocked: the "Key Vault Secrets
+# User" role is missing for the SP and nobody was available to grant it) NOR from a pipeline
+# parameter (tested: a Fabric type conversion failure when passing
+# SpClientSecret as a parameter leaked the value in plain text
+# inside the job's own failureReason -- never again that way). Instead,
+# a private file in the Files area of the workspace's own Lakehouse,
+# read with notebookutils.fs.head() -- governed by the SP's Fabric role on
+# THIS workspace (Contributor, already granted), not by Azure
+# RBAC on a separate resource. It never shows up in logs/run history
+# because it is a plain file read inside the notebook's own
+# code, not a value that Fabric serializes anywhere.
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-# -- Warehouse de escritura: mismo elemento que admin_settings.json ->
+# -- Write Warehouse: same item as admin_settings.json ->
 # lakehouse.sql_endpoint_connection_string / lakehouse_name.
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 REQUEST_DELAY_SECONDS = 0.35
 RETRY_COUNT = 5
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric (ver cabecera del
-# archivo). El pipeline la sobreescribe con el WorkspaceNameFilter real en
-# cada ejecución -- ver fabric_pipeline.trigger_pipeline_run en
-# backend/scripts/lineage_web/fabric_pipeline.py, que envía este mismo
-# nombre de parámetro. Vacío = tenant completo.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric (see the file
+# header). The pipeline overrides it with the real WorkspaceNameFilter on
+# each run -- see fabric_pipeline.trigger_pipeline_run in
+# backend/scripts/lineage_web/fabric_pipeline.py, which sends this same
+# parameter name. Empty = whole tenant.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación: token propio de cuenta de servicio (MSAL)
+# ## Authentication: own service account token (MSAL)
 
 # %%
 def get_client_secret():
@@ -134,8 +134,8 @@ def acquire_token(scope):
 
 
 # %% [markdown]
-# ## Helpers Fabric REST (paginación + reintento en 429) -- mismo
-# comportamiento que Invoke-FabricGet/Get-PagedFabricValues en
+# ## Fabric REST helpers (pagination + retry on 429) -- same
+# behavior as Invoke-FabricGet/Get-PagedFabricValues in
 # scripts/01_discover_workspaces.ps1 / 02_normalize_workspaces.ps1 /
 # 03_discover_items.ps1.
 
@@ -189,7 +189,7 @@ def field(obj, *names):
 
 
 # %% [markdown]
-# ## Fase 1 -- Descubrimiento de workspaces (01 + 02 combinados)
+# ## Step 1 -- Workspace discovery (01 + 02 combined)
 
 # %%
 ENV_RULES = [
@@ -239,36 +239,36 @@ def admins_to_text(role_assignments):
 
 
 # %% [markdown]
-# ## Fase 1b -- Role assignments vía API admin (tenant completo, con límite
-# de 200 peticiones/hora)
+# ## Step 1b -- Role assignments via admin API (whole tenant, with a limit
+# of 200 requests/hour)
 #
-# `workspaces/{id}/roleAssignments` (self-scoped, usado más abajo hasta
-# hoy) solo ve los workspaces donde el propio SP tenga un rol explícito --
-# confirmado en vivo (2026-08-14): casi todos los workspaces devolvían
-# "InsufficientPrivileges". `admin/workspaces/{id}/users` es el
-# equivalente admin de verdad (mismo patrón que ya arregló el
-# descubrimiento de items ayer con admin/items), pero a diferencia de esa,
-# esta API SÍ está limitada a 200 peticiones/hora y no tiene variante
-# "todo el tenant en una llamada" -- hay que llamarla una vez por
-# workspace. En un tenant grande eso son horas solo para este paso (18s
-# mínimo entre llamadas para no pasarse de 200/h) -- a propósito: se
-# prioriza la cobertura completa del tenant sobre la velocidad, igual que
-# el proceso local, que también tarda horas.
+# `workspaces/{id}/roleAssignments` (self-scoped, used further down until
+# now) only sees the workspaces where the SP itself has an explicit role --
+# confirmed live: almost all workspaces returned
+# "InsufficientPrivileges". `admin/workspaces/{id}/users` is the real
+# admin equivalent (same pattern that already fixed items
+# discovery with admin/items), but unlike that one,
+# this API IS limited to 200 requests/hour and has no
+# "whole tenant in one call" variant -- it has to be called once per
+# workspace. In a large tenant that is hours for this step alone (18s
+# minimum between calls so as not to exceed 200/h) -- on purpose: full
+# tenant coverage is prioritized over speed, same as the
+# local process, which also takes hours.
 
 # %%
-ROLE_ASSIGNMENT_MIN_SECONDS_BETWEEN_CALLS = 3600 / 190  # margen bajo 200/h
-ROLE_ASSIGNMENT_TOKEN_REFRESH_SECONDS = 1200  # refresco proactivo cada 20min
+ROLE_ASSIGNMENT_MIN_SECONDS_BETWEEN_CALLS = 3600 / 190  # margin below 200/h
+ROLE_ASSIGNMENT_TOKEN_REFRESH_SECONDS = 1200  # proactive refresh every 20 min
 
 
 class _HeaderProvider:
-    """Cabeceras Authorization con refresco de token proactivo (cada
-    ROLE_ASSIGNMENT_TOKEN_REFRESH_SECONDS) y reactivo (bajo demanda, si
-    fabric_get_with_refresh ve un 401) -- un bucle de ~3 horas agota de
-    sobra la vida útil normal de un token (~60-90 min); el refresco
-    proactivo solo no basta si el reloj de expiración real no coincide
-    exactamente con el asumido, de ahí el 401 -> refresco inmediato
-    también (misma lección que ya se aplicó para escaneos largos vía
-    PowerShell -- ver memoria del proyecto)."""
+    """Authorization headers with proactive token refresh (every
+    ROLE_ASSIGNMENT_TOKEN_REFRESH_SECONDS) and reactive refresh (on demand, if
+    fabric_get_with_refresh sees a 401) -- a ~3 hour loop far exceeds
+    the normal lifetime of a token (~60-90 min); proactive
+    refresh alone is not enough if the real expiry clock does not match
+    exactly the assumed one, hence the 401 -> immediate refresh
+    as well (same lesson that was already applied for long scans via
+    PowerShell)."""
 
     def __init__(self, scope):
         self.scope = scope
@@ -314,7 +314,7 @@ def fabric_get_with_refresh(path, header_provider, retry_count=RETRY_COUNT):
 # fabric_get -- added after a scheduled run showed
 # discover_items() failing tenant-wide with "TokenExpired": admin/items
 # itself failed transiently that run, which cascaded into the per-workspace-call
-# per-workspace fallback below still using a single static token from Fase
+# per-workspace fallback below still using a single static token from Step
 # 1's acquisition -- long enough (rate-limit backoff across hundreds of
 # calls) to outlive a normal token's lifetime. discover_workspaces() above
 # stays on the plain, non-refreshing fabric_get_paged: it's a handful of
@@ -336,14 +336,14 @@ def fabric_get_paged_with_refresh(path, header_provider, value_key="value"):
 
 
 def fetch_all_role_assignments_admin(workspace_rows, header_provider):
-    """Una llamada a admin/workspaces/{id}/users por workspace, espaciada
-    para no superar las 200 peticiones/hora que impone la propia API.
-    Devuelve role_assignment_rows con la forma que espera
-    ROLE_ASSIGNMENT_COLUMNS, más admin_principals_by_workspace (workspace_
-    name -> mismo texto "Nombre <upn>; Nombre2 <upn2>" que producía
-    admins_to_text) para que el llamador pueda rellenar owner/
-    admin_principals de bronze_workspaces sin una segunda llamada
-    redundante por workspace."""
+    """One call to admin/workspaces/{id}/users per workspace, spaced out
+    so as not to exceed the 200 requests/hour imposed by the API itself.
+    Returns role_assignment_rows with the shape that
+    ROLE_ASSIGNMENT_COLUMNS expects, plus admin_principals_by_workspace (workspace_
+    name -> the same "Name <upn>; Name2 <upn2>" text that admins_to_text
+    used to produce) so the caller can fill in owner/
+    admin_principals of bronze_workspaces without a second
+    redundant call per workspace."""
     role_assignment_rows = []
     admin_principals_by_workspace = {}
     last_call_at = 0.0
@@ -362,9 +362,9 @@ def fetch_all_role_assignments_admin(workspace_rows, header_provider):
 
         if result["ok"]:
             access_details = (result["payload"] or {}).get("accessDetails", [])
-            # Normalizado a la misma forma plana {"principal":...,
-            # "role":...} que devolvía workspaces/{id}/roleAssignments, así
-            # admins_to_text() (sin cambios) sigue funcionando tal cual.
+            # Normalized to the same flat shape {"principal":...,
+            # "role":...} that workspaces/{id}/roleAssignments returned, so
+            # admins_to_text() (unchanged) keeps working as is.
             normalized = [
                 {"principal": entry.get("principal"), "role": field(entry.get("workspaceAccessDetails") or {}, "workspaceRole")}
                 for entry in access_details
@@ -432,12 +432,12 @@ def discover_workspaces(headers):
 
         domain_name = field(domains.get(domain_id) or {}, "displayName", "name") if domain_id else ""
 
-        # owner/admin_principals ya no se resuelven aquí -- ver Fase 1b:
-        # el fetch tenant-completo (admin/workspaces/{id}/users) va en una
-        # pasada aparte tras discover_workspaces() porque tiene su propio
-        # límite de 200 peticiones/hora y no debe mezclarse con las
-        # llamadas por-workspace de esta función. El llamador rellena
-        # ambos campos con fetch_all_role_assignments_admin().
+        # owner/admin_principals are no longer resolved here -- see Step 1b:
+        # the whole-tenant fetch (admin/workspaces/{id}/users) goes in a
+        # separate pass after discover_workspaces() because it has its own
+        # limit of 200 requests/hour and must not be mixed with the
+        # per-workspace calls of this function. The caller fills in
+        # both fields with fetch_all_role_assignments_admin().
         notes = []
         if not detail_result["ok"]:
             notes.append(f"Workspace detail lookup failed: {detail_result['status_code']} {detail_result['error']}")
@@ -469,7 +469,7 @@ def discover_workspaces(headers):
 
 
 # %% [markdown]
-# ## Fase 2 -- Inventario de items (03)
+# ## Step 2 -- Item inventory (03)
 
 # %%
 def convert_principal(principal):
@@ -509,7 +509,7 @@ def discover_items(header_provider, workspace_rows, workspace_name_filter):
         if not filter_set or w["workspace_name"].strip().lower() in filter_set
     }
 
-    # `workspaces/{id}/items` is role-scoped -- confirmed live (2026-08-13)
+    # `workspaces/{id}/items` is role-scoped -- confirmed live
     # that on a tenant this SP isn't individually a member of most
     # workspaces of, almost all came back "Unauthorized" even though
     # workspace discovery itself (admin/workspaces) saw the whole tenant
@@ -606,12 +606,12 @@ def discover_items(header_provider, workspace_rows, workspace_name_filter):
 
 
 # %% [markdown]
-# ## Fase 3 -- Escribir en el Warehouse (dbo.bronze_workspaces / dbo.bronze_items)
-# Reemplazo completo de cada tabla en cada ejecución (a diferencia de
-# scripts/67_upload_bronze_to_warehouse.ps1, que solo hace MERGE
-# incremental) -- más simple para esta primera versión, y con volúmenes de
-# metadatos habituales (filas de workspaces e items, no datos de negocio)
-# el coste de un DROP+CREATE+INSERT es igualmente pequeño.
+# ## Step 3 -- Write to the Warehouse (dbo.bronze_workspaces / dbo.bronze_items)
+# Full replacement of each table on every run (unlike
+# scripts/67_upload_bronze_to_warehouse.ps1, which only does an incremental
+# MERGE) -- simpler for this first version, and with usual metadata
+# volumes (workspace and item rows, not business data)
+# the cost of a DROP+CREATE+INSERT is just as small.
 
 # %%
 WORKSPACE_COLUMNS = [
@@ -627,8 +627,8 @@ ITEM_COLUMNS = [
 ]
 # Same 7 columns backend/scripts/68_discover_workspace_role_assignments.ps1
 # used to write to index/workspace_role_assignments.csv -- kept identical
-# so purview_insights.py's _get_access_audit() (admin panel's "Auditoría
-# de accesos" tab) reads the same shape regardless of which one produced it.
+# so purview_insights.py's _get_access_audit() (admin panel's "Access audit"
+# tab) reads the same shape regardless of which one produced it.
 ROLE_ASSIGNMENT_COLUMNS = [
     "workspace_name", "principal_id", "principal_name", "principal_type",
     "role", "status", "evidence",
@@ -642,8 +642,8 @@ def token_struct(token):
 
 def pick_odbc_driver():
     # Fabric's managed Spark runtime doesn't always ship the same ODBC
-    # driver major version as a local dev machine (confirmed live,
-    # 2026-08-11: "ODBC Driver 17 for SQL Server" -- file not found).
+    # driver major version as a local dev machine (confirmed live:
+    # "ODBC Driver 17 for SQL Server" -- file not found).
     # Picks whichever "ODBC Driver NN for SQL Server" is actually
     # installed, newest major version first, instead of a fixed guess.
     available = sorted(
@@ -722,31 +722,31 @@ fabric_headers = {"Authorization": f"Bearer {fabric_token}", "Content-Type": "ap
 workspace_rows = discover_workspaces(fabric_headers)
 print(f"Workspaces discovered: {len(workspace_rows)}")
 
-# Items primero, mientras fabric_headers (adquirido arriba, sin refresco)
-# todavía está fresco. discover_items() usaba este mismo token estático,
-# y en una ejecución programada la Fase 1b de abajo -- que tarda horas --
-# corría ANTES que esto, así que para cuando discover_items() arrancaba el
-# token ya llevaba horas caducado: todos los workspaces salieron
-# "workspace_items_unavailable" en
-# bronze_items (0 filas reales, 0 SemanticModel), lo que a su vez hizo
-# fallar NB_Discover_Semantic_Model_Lineage más abajo en el pipeline
-# ("No discovered SemanticModel rows in dbo.bronze_items"). Corregido
-# invirtiendo el orden: todo lo que dependa del token estático de arriba
-# (workspaces + items) se resuelve y ESCRIBE antes de arrancar la Fase 1b,
-# que sí tiene su propio refresco de token (_HeaderProvider) y por eso
-# puede permitirse tardar horas sin este mismo problema.
+# Items first, while fabric_headers (acquired above, without refresh)
+# is still fresh. discover_items() used this same static token,
+# and in a scheduled run Step 1b below -- which takes hours --
+# ran BEFORE this, so by the time discover_items() started the
+# token had been expired for hours: all workspaces came out
+# "workspace_items_unavailable" in
+# bronze_items (0 real rows, 0 SemanticModel), which in turn made
+# NB_Discover_Semantic_Model_Lineage fail further down the pipeline
+# ("No discovered SemanticModel rows in dbo.bronze_items"). Fixed by
+# reversing the order: everything that depends on the static token above
+# (workspaces + items) is resolved and WRITTEN before starting Step 1b,
+# which does have its own token refresh (_HeaderProvider) and can therefore
+# afford to take hours without this same problem.
 #
-# La reordenación anterior NO bastó -- esa misma ejecución
-# seguía dando "TokenExpired" en bronze_items
-# (all filas "workspace_items_unavailable"). Causa real: admin/items
-# falló de forma transitoria esa vez, lo que hizo caer TODO el tenant al
-# fallback lento por workspace (una llamada secuencial por workspace,
-# fabric_get_paged de toda la vida, sin refresco) -- con reintentos por
-# límite de tasa eso solo también puede superar la vida útil de un token.
-# discover_items() ahora recibe un _HeaderProvider (mismo mecanismo que
-# Fase 1b) y usa fabric_get_paged_with_refresh en sus dos llamadas
-# (admin/items y el fallback por workspace), así que ya no importa cuánto
-# tarde el fallback -- se refresca solo, igual que Fase 1b.
+# The previous reordering was NOT enough -- that same run
+# still gave "TokenExpired" in bronze_items
+# (all rows "workspace_items_unavailable"). Real cause: admin/items
+# failed transiently that time, which made the WHOLE tenant fall to the
+# slow per-workspace fallback (one sequential call per workspace,
+# plain fabric_get_paged, without refresh) -- with rate-limit
+# retries that alone can also exceed the lifetime of a token.
+# discover_items() now receives a _HeaderProvider (same mechanism as
+# Step 1b) and uses fabric_get_paged_with_refresh in both its calls
+# (admin/items and the per-workspace fallback), so it no longer matters how long
+# the fallback takes -- it refreshes itself, same as Step 1b.
 filter_set = {n.strip().lower() for n in re.split(r"[;,]", WorkspaceNameFilter or "") if n.strip()}
 items_header_provider = _HeaderProvider("https://api.fabric.microsoft.com/.default")
 new_item_rows = discover_items(items_header_provider, workspace_rows, WorkspaceNameFilter)
@@ -763,21 +763,21 @@ try:
     # never does a workspace-scoped run (there is no per-workspace
     # equivalent of 01_discover_workspaces.ps1's own retention logic,
     # since "list every workspace" has no partial mode to begin with).
-    # owner/admin_principals are still "" at this point (Fase 1b hasn't run
+    # owner/admin_principals are still "" at this point (Step 1b hasn't run
     # yet) -- this first write exists so bronze_workspaces/bronze_items are
-    # never left stale/empty if the notebook is killed during the ~3h Fase
+    # never left stale/empty if the notebook is killed during the ~3h Step
     # 1b that follows; the second write below overwrites bronze_workspaces
-    # with owner/admin_principals filled in once Fase 1b finishes.
+    # with owner/admin_principals filled in once Step 1b finishes.
     replace_table(connection, "bronze_workspaces", WORKSPACE_COLUMNS, workspace_rows)
     replace_table(connection, "bronze_items", ITEM_COLUMNS, new_item_rows + retained_item_rows)
 finally:
     connection.close()
 
-# Fase 1b -- tenant completo, ~18s entre llamadas (200/h) => horas en un
-# tenant grande. Deliberado: ver la nota de la Fase 1b más arriba. Va al
-# final, después de que workspaces/items ya estén escritos con el token
-# fresco de arriba, precisamente para no dejar que esta espera de horas
-# eche a perder el resto del notebook (ver el comentario más arriba).
+# Step 1b -- whole tenant, ~18s between calls (200/h) => hours in a large
+# tenant. Deliberate: see the Step 1b note further up. It goes at the
+# end, after workspaces/items are already written with the fresh token
+# from above, precisely so that this multi-hour wait does not
+# ruin the rest of the notebook (see the comment further up).
 role_header_provider = _HeaderProvider("https://api.fabric.microsoft.com/.default")
 role_assignment_rows, admin_principals_by_workspace = fetch_all_role_assignments_admin(workspace_rows, role_header_provider)
 for workspace in workspace_rows:
@@ -786,8 +786,8 @@ for workspace in workspace_rows:
     workspace["admin_principals"] = admin_principals
 print(f"Role assignments discovered: {len(role_assignment_rows)}")
 
-# Reconectar con un token de base de datos fresco -- la conexión de arriba
-# también llevaría ~3h abierta a estas alturas y no es de fiar reutilizarla.
+# Reconnect with a fresh database token -- the connection above
+# would also have been open for ~3h by now and cannot be trusted to be reused.
 connection = connect_warehouse()
 try:
     replace_table(connection, "bronze_workspaces", WORKSPACE_COLUMNS, workspace_rows)

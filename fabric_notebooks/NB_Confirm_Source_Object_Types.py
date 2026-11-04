@@ -1,49 +1,49 @@
 # NB_Confirm_Source_Object_Types
 #
-# Fuente para un notebook Python de Fabric -- sexto paso, opcional, del
-# pipeline de descubrimiento nativo (ver docs/105_fabric_native_discovery_
-# setup.md). Cada bloque "# %%" es una celda -- pégalas en orden.
+# Source for a Fabric Python notebook -- sixth, optional step of the
+# native discovery pipeline (see docs/105_fabric_native_discovery_
+# setup.md). Each "# %%" block is a cell -- paste them in order.
 #
-# Réplica fiel de scripts/20_extract_source_object_type_metadata.ps1: para
-# cada objeto candidato "ambiguo" (`table_or_view`/`native_query_object`,
-# es decir, no se sabe con certeza si es tabla, vista o procedimiento
-# almacenado) recogido en dbo.bronze_semantic_model_view_candidates +
+# Faithful replica of scripts/20_extract_source_object_type_metadata.ps1: for
+# each "ambiguous" candidate object (`table_or_view`/`native_query_object`,
+# i.e. it is not known for sure whether it is a table, view or stored
+# procedure) collected in dbo.bronze_semantic_model_view_candidates +
 # dbo.bronze_item_object_lineage_candidates + dbo.bronze_pipeline_object_
-# lineage_candidates, se conecta DE VERDAD al servidor SQL externo donde
-# vive ese objeto y consulta sys.objects/sys.schemas para resolver el tipo
-# exacto con certeza -- de solo lectura, nunca escribe nada en el origen.
+# lineage_candidates, it REALLY connects to the external SQL server where
+# that object lives and queries sys.objects/sys.schemas to resolve the
+# exact type with certainty -- read-only, it never writes anything to the source.
 #
-# ADVERTENCIA IMPORTANTE, distinta de todos los notebooks anteriores: este
-# es el ÚNICO paso de todo el pipeline nativo que sale de Fabric hacia un
-# servidor SQL que NO es de Fabric. Los notebooks 1-5 solo llaman a la API
-# de Fabric o al propio Warehouse -- ambos, por definición, alcanzables
-# desde un notebook de Fabric. Este en cambio necesita que el runtime de
-# Fabric tenga ruta de red hacia cada servidor SQL externo que aparezca en
-# los candidatos (VNet Data Gateway, IP de salida de la capacidad
-# permitida en el firewall del servidor, etc.) -- una pregunta de
-# infraestructura de tu tenant que este código NO resuelve ni verifica.
-# Si un servidor no es alcanzable, ese target concreto simplemente queda
-# como "gap" (igual que ya hace el script original si la conexión falla),
-# no rompe el resto del notebook -- pero si NINGÚN servidor es alcanzable,
-# este paso completo no aporta nada hasta que se resuelva esa conectividad
-# (Data Gateway de Fabric, o mantener este paso concreto corriendo en
-# local con scripts/20_extract_source_object_type_metadata.ps1 en vez de
-# aquí).
+# IMPORTANT WARNING, different from all the previous notebooks: this
+# is the ONLY step of the whole native pipeline that leaves Fabric towards a
+# SQL server that is NOT a Fabric one. Notebooks 1-5 only call the Fabric API
+# or the Warehouse itself -- both, by definition, reachable
+# from a Fabric notebook. This one, in contrast, needs the Fabric runtime
+# to have a network route to every external SQL server that appears in
+# the candidates (VNet Data Gateway, the capacity's outbound IP
+# allowed in the server firewall, etc.) -- an infrastructure question of
+# your tenant that this code neither solves nor verifies.
+# If a server is not reachable, that specific target simply ends up
+# as a "gap" (just as the original script does if the connection fails),
+# without breaking the rest of the notebook -- but if NO server is reachable,
+# this whole step contributes nothing until that connectivity is resolved
+# (Fabric Data Gateway, or keep this particular step running
+# locally with scripts/20_extract_source_object_type_metadata.ps1 instead of
+# here).
 #
-# Escribe en dbo.bronze_source_object_type_metadata_evidence (22 columnas)
-# y dbo.bronze_source_object_type_metadata_gaps (12 columnas) -- mismas
-# tablas que scripts/67_upload_bronze_to_warehouse.ps1 ya sube desde local.
+# Writes to dbo.bronze_source_object_type_metadata_evidence (22 columns)
+# and dbo.bronze_source_object_type_metadata_gaps (12 columns) -- the same
+# tables that scripts/67_upload_bronze_to_warehouse.ps1 already uploads from local.
 #
-# Autenticación al servidor externo: por servidor, usuario/contraseña SQL
-# (contraseña en Key Vault, igual que el secreto de la cuenta de servicio)
-# o el propio token AAD de la cuenta de servicio (solo funciona si ese
-# servidor confía en Entra ID y la cuenta de servicio tiene un login ahí)
-# -- ver EXTERNAL_SOURCES en la celda de configuración.
+# Authentication to the external server: per server, SQL username/password
+# (password in Key Vault, like the service account secret)
+# or the service account's own AAD token (only works if that
+# server trusts Entra ID and the service account has a login there)
+# -- see EXTERNAL_SOURCES in the configuration cell.
 #
-# Self-contained a propósito, mismo criterio que los notebooks anteriores.
+# Self-contained on purpose, same criterion as the previous notebooks.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -67,25 +67,25 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-# El secreto de la propia cuenta de servicio ya no se lee de Key Vault
-# (bloqueado) NI de un parámetro del pipeline (probado 2026-08-12: filtró
-# el valor en texto plano al fallar la conversión de tipo -- nunca más
-# por ahí). Fichero privado en el área Files del Lakehouse del workspace,
-# leído con notebookutils.fs.head(). AKV_ENDPOINT se queda solo para el
-# uso opcional de EXTERNAL_SOURCES (auth_mode "sql_auth" más abajo), que
-# sigue leyendo su propia contraseña de Key Vault si alguna vez se
-# rellena esa lista.
-AKV_ENDPOINT = "https://<tu-key-vault>.vault.azure.net/"
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# The service account's own secret is no longer read from Key Vault
+# (blocked) NOR from a pipeline parameter (tested: it leaked
+# the value in plain text when the type conversion failed -- never again
+# that way). Private file in the Files area of the workspace Lakehouse,
+# read with notebookutils.fs.head(). AKV_ENDPOINT is kept only for the
+# optional use of EXTERNAL_SOURCES (auth_mode "sql_auth" further down), which
+# still reads its own password from Key Vault if that list is ever
+# filled in.
+AKV_ENDPOINT = "https://<your-key-vault>.vault.azure.net/"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
-# Un registro por servidor SQL externo que quieras resolver aquí. auth_mode
-# "sql_auth" lee la contraseña de Key Vault (akv_secret_name); "aad_token"
-# reutiliza el propio token de la cuenta de servicio -- solo funciona si
-# ese servidor confía en Entra ID y la cuenta de servicio tiene acceso.
+# One record per external SQL server you want to resolve here. auth_mode
+# "sql_auth" reads the password from Key Vault (akv_secret_name); "aad_token"
+# reuses the service account's own token -- only works if
+# that server trusts Entra ID and the service account has access.
 EXTERNAL_SOURCES = [
     # {"host": "<sql-server-host>", "port": 1433, "auth_mode": "sql_auth", "user": "readonly_user", "akv_secret_name": "sql-readonly-password"},
 ]
@@ -107,14 +107,14 @@ GAP_COLUMNS = [
 ]
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación y Warehouse (mismo patrón que los notebooks anteriores)
+# ## Authentication and Warehouse (same pattern as the previous notebooks)
 
 # %%
 def get_secret(secret_name):
@@ -149,8 +149,8 @@ def token_struct(token):
 
 def pick_odbc_driver():
     # Fabric's managed Spark runtime doesn't always ship the same ODBC
-    # driver major version as a local dev machine (confirmed live,
-    # 2026-08-11: "ODBC Driver 17 for SQL Server" -- file not found).
+    # driver major version as a local dev machine (confirmed live:
+    # "ODBC Driver 17 for SQL Server" -- file not found).
     # Picks whichever "ODBC Driver NN for SQL Server" is actually
     # installed, newest major version first, instead of a fixed guess.
     available = sorted(
@@ -198,7 +198,7 @@ def normalize_server_host(value):
 
 
 # %% [markdown]
-# ## Conexión al servidor SQL externo (Invoke-ObjectMetadataQuery)
+# ## Connection to the external SQL server (Invoke-ObjectMetadataQuery)
 
 # %%
 def find_external_source(server):
@@ -255,7 +255,7 @@ def query_object_metadata(source_server, source_database):
 
 
 # %% [markdown]
-# ## Agregación de candidatos ambiguos (Add-Candidate / New-CandidateKey / New-TargetKey)
+# ## Aggregation of ambiguous candidates (Add-Candidate / New-CandidateKey / New-TargetKey)
 
 # %%
 def normalize_object_type(value):
@@ -305,7 +305,7 @@ def target_key(source_server, source_database):
 
 
 # %% [markdown]
-# ## Cargar candidatos ambiguos de las tres tablas de linaje de objetos
+# ## Load ambiguous candidates from the three object lineage tables
 
 # %%
 connection = connect_warehouse()
@@ -348,7 +348,7 @@ candidates = list(candidate_map.values())
 print(f"Ambiguous unique candidates: {len(candidates)}")
 
 # %% [markdown]
-# ## Agrupar por servidor/base de datos y filtrar por WorkspaceNameFilter
+# ## Group by server/database and filter by WorkspaceNameFilter
 
 # %%
 targets_by_key = {}
@@ -370,7 +370,7 @@ if filter_set:
 print(f"Metadata targets to query: {len(target_groups)} ({'filtered: ' + WorkspaceNameFilter if filter_set else 'full tenant'})")
 
 # %% [markdown]
-# ## Ejecutar: consultar cada servidor externo (de solo lectura), resolver tipo exacto
+# ## Run: query each external server (read-only), resolve the exact type
 
 # %%
 def sample_join(values, limit=12):
@@ -476,18 +476,18 @@ for target in target_groups:
 print(f"Evidence rows: {len(evidence_rows)}. Gap rows: {len(gap_rows)}.")
 
 # %% [markdown]
-# ## Escribir en el Warehouse, conservando targets fuera de WorkspaceNameFilter
-# que no se volvieron a consultar esta vez
+# ## Write to the Warehouse, keeping targets outside WorkspaceNameFilter
+# that were not queried again this time
 
 # %%
-# Reconectar con un token de base de datos fresco -- la conexion de
-# arriba lleva abierta desde antes del bucle de consultas de solo-lectura
-# contra cada servidor SQL externo distinto (con timeouts/reintentos por
-# target), el mismo patron que ya causo un fallo real de conexion ("TCP
-# Provider: Error code 0x20") en NB_Discover_Dependencies.py -- mismo fix
-# aplicado aqui preventivamente. Las funciones de abajo referencian
-# `connection`/`cursor` por closure, asi que basta con reasignarlas antes
-# de llamarlas.
+# Reconnect with a fresh database token -- the connection above
+# has been open since before the loop of read-only queries
+# against each distinct external SQL server (with timeouts/retries per
+# target), the same pattern that already caused a real connection failure ("TCP
+# Provider: Error code 0x20") in NB_Discover_Dependencies.py -- same fix
+# applied here preventively. The functions below reference
+# `connection`/`cursor` by closure, so it is enough to reassign them before
+# calling them.
 connection.close()
 connection = connect_warehouse()
 cursor = connection.cursor()

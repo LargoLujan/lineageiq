@@ -1,6 +1,6 @@
 """External (non-Fabric) source + Lakehouse connection tests.
 
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion,
+Split out of lineage_web_server.py -- pure code motion,
 no logic changed from the original.
 """
 import json
@@ -101,12 +101,12 @@ def _summarize_pending_external_sources(settings):
     into one bucket:
       - "pending": no Fabric Connection assigned at all yet.
       - "broken": a connection IS assigned, but the last time someone
-        pressed "Probar conexión (vía Fabric)" it came back Offline (see
+        pressed "Test connection (via Fabric)" it came back Offline (see
         handler.py's /api/admin/fabric-connections/test, which persists
         fabric_connection_last_test_status/_at onto the source).
     Both are returned, but the caller (handler.py's notifications-summary
-    route) deliberately only surfaces "broken" as an alert (fixed
-    2026-08-26). "pending" is optional config -- it only gates the "Probar
+    route) deliberately only surfaces "broken" as an alert.
+    "pending" is optional config -- it only gates the "Probar
     conexión" button and has zero effect on scan discovery -- so treating
     it as an alert was a false alarm; the Sources tab's own "Pendientes de
     conexión" card already shows it accurately, with that caveat.
@@ -140,7 +140,7 @@ def _get_detected_external_origins():
     """Distinct external (non-Fabric) hosts a completed scan actually found
     referenced by real dependencies -- lets the Sources tab offer "here's
     what to configure" instead of a blank form the admin has to guess a
-    hostname for (2026-08-24 Fase 4). Reuses catalog.py's own object-
+    hostname for. Reuses catalog.py's own object-
     lineage-candidate rows (bronze_item_object_lineage_candidates + bronze_
     pipeline_object_lineage_candidates, the same data _get_object_impact
     already searches) rather than re-reading anything -- those rows already
@@ -152,7 +152,7 @@ def _get_detected_external_origins():
     if rows is None:
         return {
             "found": False,
-            "reason": "Necesita que 'Almacén de escritura' -> modo de lectura esté en Warehouse y que ya se haya hecho un escaneo completo.",
+            "reason": "Needs the 'Write storage' read mode set to Warehouse and a completed full scan.",
         }
     origins = {}
     for row in rows:
@@ -184,11 +184,10 @@ def _get_detected_external_origins():
 def _persist_external_source_test_result(index, source, result):
     """Best-effort: writes last_test_ok/last_test_at/last_test_message onto
     the DISK copy of external_sources[index], not whatever the caller's own
-    in-memory list currently holds -- "Probar conexión" has no per-row save
+    in-memory list currently holds -- "Test connection" has no per-row save
     (only "Save all" exists), so touching the disk copy through the
     caller's possibly-mid-edit list would silently persist unrelated
-    unsaved changes elsewhere in the list too (2026-08-18 admin-panel audit
-    finding this project already avoided once, see app.js's
+    unsaved changes elsewhere in the list too (a mistake this project already avoided once, see app.js's
     adminExternalSourceTestResultsCache comment). Only writes when the disk
     row at this index still looks like the same source (matched by
     _external_source_identifier) -- covers reordering/insert/delete drift
@@ -214,7 +213,7 @@ def _test_subprocess_env(session):
     is given) -- meaning even a signed-in admin's own AAD-token test always
     fell back to the shared `az` CLI session on the machine running the
     server, and failed outright if that session didn't exist there (real
-    report, 2026-07-21: "Could not acquire ... token with 'az account
+    report: "Could not acquire ... token with 'az account
     get-access-token'" while testing a Warehouse from a signed-in browser
     session that had never touched that machine's own `az login`). Reuses
     the exact same per-session token minting a scan subprocess already
@@ -236,7 +235,7 @@ def _test_lakehouse_connection(lakehouse, session=None):
     if not pwsh_path:
         return {"ok": False, "message": "PowerShell ('pwsh') was not found on PATH."}
     if not lakehouse.get("sql_endpoint_connection_string") or not lakehouse.get("lakehouse_name"):
-        return {"ok": False, "message": "Rellena 'Workspace', 'Lakehouse' y 'SQL endpoint' antes de probar la conexión."}
+        return {"ok": False, "message": "Fill in 'Workspace', 'Lakehouse' and 'SQL endpoint' before testing the connection."}
 
     args = [
         pwsh_path, "-NoLogo", "-File", str(TEST_EXTERNAL_SOURCE_SCRIPT_PATH),

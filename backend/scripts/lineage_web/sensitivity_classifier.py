@@ -1,4 +1,4 @@
-"""Purview-inspired column sensitivity classifier (Tanda B, 2026-07-09) --
+"""Purview-inspired column sensitivity classifier --
 a simplified, pattern-based equivalent of Purview's built-in classifiers
 (email/national ID/credit card/etc.), run over column names this project
 has *already* catalogued (frontend/semantic-lineage/data/object-impact.json)
@@ -61,9 +61,9 @@ SENSITIVITY_CATEGORIES = {
         "patterns": [r"apellido", r"surname", r"last_?name", r"first_?name", r"full_?name"],
         "risk": "medium",
         "frameworks": ["gdpr", "ccpa"],
-        # Regex por contenido no es fiable para nombres de persona (ver
-        # CONTENT_PATTERN_CATEGORIES abajo) -- el riesgo real depende
-        # sobre todo de con qué OTRAS columnas aparece combinado.
+        # Content regex is not reliable for person names (see
+        # CONTENT_PATTERN_CATEGORIES below) -- the real risk depends
+        # mostly on which OTHER columns it appears combined with.
         "recommendation": {
             "es": "Por sí solo, riesgo moderado. Combinado con fecha de nacimiento, email o dirección, el riesgo de reidentificación sube -- revisar esas combinaciones en la misma tabla.",
             "en": "Moderate risk alone. Combined with birth date, email, or address, re-identification risk rises -- review those combinations within the same table.",
@@ -119,27 +119,26 @@ SENSITIVITY_CATEGORIES = {
             "en": "Low risk on its own, but treated as sensitive under some regulations -- review whether using it is actually justified.",
         },
     },
-    # --- 13 categorías pensadas para solicitudes de derechos de los
-    # interesados: una misma solicitud puede combinar acceso, oposición y
-    # datos biométricos. Investigadas contra RGPD (arts. 4/9/10/21/22),
-    # FERPA (expediente académico) y CCPA/CPRA (11 categorías estatutarias
-    # de datos personales); cada patrón se contrasta con nombres de columna
-    # habituales (catalogados en frontend/semantic-lineage/data/object-
-    # impact.json) antes de incluirlo -- misma disciplina que
-    # "movil(?!idad)" ya aplicaba arriba. Algunas (biometric/voice_
+    # --- 13 categories designed for data-subject-rights requests: a single
+    # request can combine access, objection and biometric data. Researched
+    # against GDPR (arts. 4/9/10/21/22), FERPA (academic record) and CCPA/CPRA
+    # (11 statutory categories of personal data); each pattern is checked
+    # against common column names (catalogued in frontend/semantic-lineage/data/object-
+    # impact.json) before being included -- the same discipline
+    # "movil(?!idad)" already applied above. Some (biometric/voice_
     # recording/ai_processing_flag/third_party_sharing/special_category_
-    # belief) rara vez aparecen como columna en Fabric y se incluyen igual
-    # -- son categorías legalmente obligatorias de tener detector listo
-    # (RGPD art. 9/22), o suelen vivir en un sistema fuera de Fabric
-    # (control de acceso físico, plataforma de grabación) y conviene que el
-    # patrón exista para el día que sí aparezca una columna así.
+    # belief) rarely show up as a column in Fabric and are included anyway
+    # -- they are categories that legally require a ready detector
+    # (GDPR art. 9/22), or they tend to live in a system outside Fabric
+    # (physical access control, recording platform) and the pattern should
+    # exist for the day such a column does appear.
     "image_media": {
         "es": "Imagen / fotografía", "en": "Image / photo",
-        # "video"/"videoconferencia" excluido a propósito -- columnas
-        # como SESION_VIDEOCONFERENCIA suelen ser metadato de una sesión
-        # o reunión (horario, enlace), no una imagen almacenada de una
-        # persona; incluir "video" habría sido puro ruido, mismo criterio
-        # que excluir "movilidad" de "phone".
+        # "video"/"videoconferencia" excluded on purpose -- columns such as
+        # VIDEO_MEETING_SESSION are usually metadata about a session or meeting
+        # (schedule, link), not a stored image of a person; including "video" would
+        # have been pure noise, the same criterion as excluding "movilidad" from
+        # "phone".
         # No \b on imagen/image -- columns are often camelCase
         # compounds (PersonImage) where \b never fires (no non-word char
         # between "Person" and "Image"), same underscore/camelCase pitfall
@@ -209,11 +208,10 @@ SENSITIVITY_CATEGORIES = {
         "patterns": [r"expediente", r"\bgrade\b", r"\bgpa\b", r"transcript", r"matricula", r"nota", r"calificacion"],
         "risk": "low",
         "frameworks": ["ferpa", "ccpa"],
-        # FERPA exige conservar el expediente académico -- a diferencia del
-        # resto de categorías, la recomendación aquí no es "restringir/
-        # anonimizar" sino "confirmar que el acceso amplio está
-        # justificado", ya que conservarlo es una obligación legal, no
-        # una opción.
+        # FERPA requires retaining the academic record -- unlike the other
+        # categories, the recommendation here is not "restrict/anonymize" but
+        # "confirm that the broad access is justified", since retaining it is a
+        # legal obligation, not an option.
         "recommendation": {
             "es": "Retención obligatoria (FERPA/normativa educativa) -- no es candidato a supresión. Confirmar que el acceso está limitado a quien lo necesita para fines académicos.",
             "en": "Mandatory retention (FERPA/education regulation) -- not an erasure candidate. Confirm access is limited to those who need it for academic purposes.",
@@ -221,10 +219,10 @@ SENSITIVITY_CATEGORIES = {
     },
     "marketing_consent": {
         "es": "Consentimiento de marketing", "en": "Marketing consent",
-        # "marketing" a secas queda fuera a propósito -- columnas
-        # habituales como MarketingCountry/MarketingRegion son territorio
-        # de CRM, no preferencia de contacto; newsletter/optout sí son
-        # señal real y limpia (EmailOptOutCRM, AddedToNewsletter).
+        # Bare "marketing" is left out on purpose -- common columns such as
+        # MarketingCountry/MarketingRegion are CRM territory, not a contact
+        # preference; newsletter/optout are real, clean signal (EmailOptOutCRM,
+        # AddedToNewsletter).
         "patterns": [r"newsletter", r"opt_?out", r"opt_?in", r"unsubscribe"],
         "risk": "low",
         "frameworks": ["gdpr", "ccpa"],
@@ -290,10 +288,10 @@ SENSITIVITY_CATEGORIES = {
         "patterns": [r"ip_?address", r"device_?id", r"user_?agent", r"login_?timestamp", r"access_?log"],
         "risk": "low",
         "frameworks": ["gdpr", "ccpa"],
-        # A diferencia de casi todo lo demás en esta lista, los datos de
-        # acceso técnico suelen conservarse incluso cuando la persona se
-        # opone al resto del tratamiento (soporte de TI, seguridad) -- la
-        # recomendación lo refleja en vez de sugerir restricción/supresión.
+        # Unlike almost everything else in this list, technical access data
+        # is usually retained even when the person objects to the rest of the
+        # processing (IT support, security) -- the recommendation reflects that
+        # instead of suggesting restriction/erasure.
         "recommendation": {
             "es": "Necesario para soporte técnico/seguridad -- retención habitual y aceptada incluso cuando la persona se opone al resto del procesamiento de sus datos.",
             "en": "Needed for technical support/security -- routine, accepted retention even when the person objects to the rest of their data processing.",
@@ -312,10 +310,10 @@ SENSITIVITY_CATEGORIES = {
 # get_category_meta), it just never gets an automatic match_percentage.
 CONTENT_PATTERN_CATEGORIES = {"email", "phone", "national_id", "financial"}
 
-# Roadmap Fase 6 (2026-08-31, follow-up to the privacy locator): which
+# Which
 # legal framework(s) make each category above sensitive -- lets the
 # Privacidad panel/MCP browse "what data do we have under GDPR" as its own
-# menu, instead of only the flat 22-category list Fase 5 shipped. A
+# menu, instead of only the flat 22-category list it originally shipped with. A
 # category can (and often does) belong to more than one framework at once
 # (e.g. "biometric" is both a GDPR Art. 9 special category AND CCPA's own
 # statutory category 5) -- SENSITIVITY_CATEGORIES' own "frameworks" list
@@ -371,7 +369,7 @@ _COMPILED = {
 }
 
 
-# Roadmap Fase 2 (2026-08-31, Purview-parity push): lets an admin add their
+# Lets an admin add their
 # own name-pattern categories on top of the 9 built-in ones above, without
 # touching code -- entries come from admin_settings.json's
 # custom_sensitivity_categories (see constants.py's DEFAULT_ADMIN_SETTINGS),
@@ -502,7 +500,7 @@ def category_recommendation(key, lang="es", custom_categories=None):
 
 
 def category_frameworks(key, custom_categories=None):
-    """Roadmap Fase 6 (2026-08-31): which PRIVACY_FRAMEWORKS key(s) this
+    """Which PRIVACY_FRAMEWORKS key(s) this
     category belongs to -- [] for an unknown key or a custom category that
     never declared any (see _custom_category_registry's own comment)."""
     meta = SENSITIVITY_CATEGORIES.get(key)

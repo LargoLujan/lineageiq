@@ -1,5 +1,5 @@
 """Unit tests for the delegated-session auth path added to
-backend/scripts/lineage_web/fabric_pipeline.py (2026-07-24): a signed-in
+backend/scripts/lineage_web/fabric_pipeline.py: a signed-in
 user's own device-code session can now drive the Fabric Job Scheduler
 calls (trigger/poll/cancel), reusing auth.py's existing MSAL token cache
 mechanism -- no Entra app registration needed, unlike the pre-existing
@@ -42,7 +42,7 @@ def _isolate_admin_settings(monkeypatch):
     # mocked _pipeline_settings() -- without this, a test that doesn't
     # separately monkeypatch it touches the real config/admin_settings.json
     # on disk, creating it (and config/lakehouse_target.json) as a side
-    # effect of running the suite (2026-08-18 code review finding).
+    # effect of running the suite.
     monkeypatch.setattr(fabric_pipeline, "_load_admin_settings", lambda: {"tenant_id": "tenant-x"})
 
 
@@ -192,9 +192,9 @@ def test_cancel_job_passes_session_to_get_token(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# test_connection (2026-08-18 fix: used to hard-require SP fields, which
+# test_connection (used to hard-require SP fields, which
 # always failed the admin panel's own recommended no-SP configuration.
-# 2026-08-18, same day, code review follow-up: rewritten to NOT go through
+# It was also rewritten to NOT go through
 # _get_token/_token_cache at all -- that module-level cache is shared with
 # real scan runs, and a "test" button reusing/poisoning it from possibly-
 # unsaved form values was a real bug. It now calls
@@ -231,7 +231,7 @@ def test_connection_succeeds_via_service_principal_when_configured(monkeypatch):
 
 
 def test_connection_never_touches_the_shared_token_cache(monkeypatch):
-    # The whole point of the 2026-08-18 rewrite: a successful test must not
+    # The whole point of that rewrite: a successful test must not
     # leave anything in _token_cache for a real run to pick up later.
     monkeypatch.setattr(fabric_pipeline, "_acquire_delegated_fabric_token", lambda session, settings: "")
     monkeypatch.setattr(fabric_pipeline, "_acquire_sp_fabric_token", lambda settings, pipeline: "sp-token")
@@ -245,7 +245,7 @@ def test_connection_returns_clear_error_with_no_session_and_no_sp(monkeypatch):
     # Real _acquire_delegated_fabric_token (not mocked): no session given
     # at all, so it returns "" without even trying -- and no SP fields.
     # This is exactly the case that used to be misreported as an SP-only
-    # failure before the 2026-08-18 fix.
+    # failure before that fix.
     result = fabric_pipeline.test_connection(PIPELINE_NO_SP, session=None)
     assert result["ok"] is False
     assert "session" in result["message"].lower() or "service principal" in result["message"].lower()
@@ -264,7 +264,7 @@ def test_connection_surfaces_fabric_api_error(monkeypatch):
 
 
 def test_connection_reports_a_plain_exception_from_sp_token_acquisition_instead_of_crashing(monkeypatch):
-    # 2026-08-18 code review finding: MSAL's ConfidentialClientApplication
+    # MSAL's ConfidentialClientApplication
     # performs authority/OIDC discovery in its constructor and can raise a
     # plain ValueError (e.g. a bad tenant id) instead of a
     # FabricPipelineError -- this must still return a JSON verdict, not

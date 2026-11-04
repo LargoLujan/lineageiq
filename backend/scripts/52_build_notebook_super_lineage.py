@@ -21,17 +21,17 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
-# Ejemplo ilustrativo: mapa de grupo logico -> tabla de configuracion que
-# devuelve un helper get_assignment_config() en los notebooks escaneados.
-# Rellena con los nombres de tabla de tu propio entorno.
+# Illustrative example: map of logical group -> configuration table that
+# a get_assignment_config() helper returns in the scanned notebooks.
+# Fill in the table names of your own environment.
 ASSIGNMENT_CONFIG_TABLES = {
     "regional": "RegionAssignment",
     "definitive": "DefinitiveSectorAssignment",
 }
 FABRIC_PATH_ALIAS_ROWS: dict[str, dict[str, str]] = {}
-# Ejemplo ilustrativo: adapta esta lista a los sistemas de negocio que
-# aparecen en los nombres de workspace/item de tu propio tenant, para
-# normalizarlos a su forma "bonita".
+# Illustrative example: adapt this list to the business systems that
+# appear in the workspace/item names of your own tenant, to normalize
+# them to their "pretty" form.
 FABRIC_NAME_WORDS = {
     "ADVENTUREWORKS": "AdventureWorks",
     "BRONZE": "Bronze",
@@ -4196,10 +4196,10 @@ def parse_notebook_code(
                 if unresolved and not row.unresolved_variables:
                     row.unresolved_variables = unresolved
                 dict_sources[(dict_name, dict_key)].append(row)
-                # Ejemplo ilustrativo: prefijos que marcan una clave como
-                # alias de otro sistema origen (p.ej.
-                # "crm_leads_table_name" es un alias de "leads_table_name").
-                # Adapta la lista a los prefijos de tu propio entorno.
+                # Illustrative example: prefixes that mark a key as
+                # an alias of another source system (e.g.
+                # "crm_leads_table_name" is an alias of "leads_table_name").
+                # Adapt the list to the prefixes of your own environment.
                 alias_keys = []
                 for prefix in ["crm_", "vendor_", "legacy_", "dept_"]:
                     if dict_key.startswith(prefix):
@@ -4967,7 +4967,7 @@ def parse_notebook_code(
 
 def build_definition_map(manifest_rows: list[dict[str, str]], e1_rows: list[dict[str, str]]) -> dict[str, list[str]]:
     """Resolve each notebook item's local definition file path(s), preferring
-    Phase 51's download manifest and falling back to the E1 manual-review
+    the Phase 51 download manifest and falling back to the E1 manual-review
     queue's own recorded paths for anything the manifest missed. This is
     what lets main() turn "which notebooks exist" (index/items.csv) into
     "which local file do I actually parse for each one"."""

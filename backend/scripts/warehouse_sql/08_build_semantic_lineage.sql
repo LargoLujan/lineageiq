@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/08_build_semantic_lineage.ps1
--- (Phase 2 migration continuation, 2026-07-21). Covers only the 4 CSV data
+-- (SQL migration). Covers only the 4 CSV data
 -- outputs (semantic_model_datamart_dependencies, semantic_model_report_
 -- dependencies, semantic_datamart_summary, semantic_model_lineage_summary).
 --

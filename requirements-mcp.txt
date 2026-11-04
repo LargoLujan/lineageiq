@@ -1,5 +1,5 @@
-# Dependencies for backend/scripts/mcp_server.py (Fase F.0, expanded Tanda 6
-# F.1) and backend/scripts/mcp_server_remote.py (Tanda 6, F.2) -- expose
+# Dependencies for backend/scripts/mcp_server.py and
+# backend/scripts/mcp_server_remote.py -- expose
 # this project's lineage catalog to AI agents over the Model Context
 # Protocol. mcp_server.py is local: reads index/*.csv and
 # frontend/semantic-lineage/data/*.json directly, and its write tools call

@@ -1,4 +1,4 @@
-/* Graph Map Mode (Fase G) -- a self-contained, dark "data mesh" canvas view
+/* Graph Map Mode -- a self-contained, dark "data mesh" canvas view
    that takes over the main content area (diagram + detail + workspace
    index) while active. Deliberately scoped to this view only: the rest of
    the app stays on its existing light theme (see styles.css :root), this
@@ -49,7 +49,7 @@
   --graph-map-accent-rgb: 37, 99, 235;
 }
 
-/* G.9 fix: a bare `.class { display: flex }` rule beats the browser's
+/* Fix: a bare `.class { display: flex }` rule beats the browser's
    default `[hidden] { display: none }` UA rule (author stylesheets always
    win over UA ones, regardless of source order), so any element that is
    both one of these classes AND toggled via the `hidden` attribute stayed
@@ -62,7 +62,7 @@
   display: none;
 }
 
-/* H.3: a true full-screen popup (position: fixed, its own backdrop, above
+/* A true full-screen popup (position: fixed, its own backdrop, above
    everything including the app's own topbar/header) instead of an inline
    section swapped into the page's normal flow -- the inline version left
    the app's persistent header sitting above it and squeezed the map into
@@ -92,7 +92,7 @@
   z-index: 900;
 }
 
-/* Circular reveal from the click that opened Mapa3D (2026-08-18, see
+/* Circular reveal from the click that opened Mapa3D (see
    open() in graph-map.js) -- --reveal-x/--reveal-y are set inline per
    open; a plain scale transform would look wrong here since this view
    fills nearly the whole screen, so it clip-path-reveals from that point
@@ -263,7 +263,7 @@
   font-size: 10px;
 }
 
-/* H.2: swatches approximate each type's real Cytoscape node shape (see
+/* Swatches approximate each type's real Cytoscape node shape (see
    NODE_TYPE_META/SOURCE_TYPE_META in graph-map.js) via clip-path/border-
    radius, so the legend visually matches what's actually on the canvas
    instead of a plain color dot that told the user nothing about shape. */
@@ -384,7 +384,7 @@
   padding-left: 14px;
 }
 
-/* H.2: lightweight hover tooltip -- a quick "what is this" summary
+/* Lightweight hover tooltip -- a quick "what is this" summary
    without opening the full click-to-select detail panel. Positioned by
    JS next to the cursor on 'mousemove' over a node. */
 .graph-map-tooltip {
@@ -451,7 +451,7 @@
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
-  /* Tanda 8: found via automated click testing that .graph-map-detail's
+  /* Found via automated click testing that .graph-map-detail's
      `position: absolute` (below) had no positioned ancestor closer than
      .graph-map-view (position: fixed), so it stretched from the VIEW's own
      top -- covering the topbar's rightmost buttons in a real, if narrow,
@@ -542,7 +542,7 @@
   position: relative;
 }
 
-/* ForceGraph3D (Tanda 8) takes exclusive ownership of the element it's
+/* ForceGraph3D takes exclusive ownership of the element it's
    mounted on -- it clears any existing children on init, which used to
    wipe out the legend/tooltip/focused-banner overlays when they were
    nested directly inside .graph-map-canvas (verified live: 3 children
@@ -558,7 +558,7 @@
   top: 0;
 }
 
-/* ForceGraph3D (Tanda 8) injects its own WebGL <canvas> into this div and
+/* ForceGraph3D injects its own WebGL <canvas> into this div and
    sizes it via JS from the div's own measured rect on open/resize -- needs
    an explicit block-level ancestor with real height, which
    .graph-map-canvas (flex: 1 1 auto inside a flex column) provides. */

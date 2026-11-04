@@ -1,6 +1,6 @@
 """Generic utilities with no dependency on this server's own shared state.
 
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion,
+Split out of lineage_web_server.py -- pure code motion,
 no logic changed from the original.
 """
 import hashlib
@@ -26,7 +26,7 @@ def _hash_api_key(raw_key):
     secrets.token_urlsafe values, not user-chosen passwords, so there's no
     low-entropy-guessing risk a slow/salted KDF would need to defend
     against -- the only thing this hash needs to do is keep the raw key
-    itself out of admin_settings.json (2026-08-17 security audit)."""
+    itself out of admin_settings.json."""
     return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
 

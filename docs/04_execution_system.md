@@ -16,6 +16,22 @@ The project must move in this order:
 8. Review executions and durations.
 9. Propose optimized orchestration.
 
+## Scripts By Phase
+
+The numbered scripts in `backend/scripts/` implement these phases. `backend/scripts/99_refresh_lineage_project.ps1` runs them in dependency order (see the README, "Discovery Scripts").
+
+| Phase | Script |
+| --- | --- |
+| 0.5 Tooling preflight | `00_preflight_tools.ps1` |
+| A Layer discovery, B Workspace discovery | `01_discover_workspaces.ps1`, `02_normalize_workspaces.ps1` |
+| C Item discovery | `03_discover_items.ps1` |
+| D Item analysis | `04_analyze_items.ps1` |
+| E Graph and diagram | `05_build_graph.ps1` |
+| F Execution timing | `06_discover_executions.ps1` |
+| G Optimization | `07_optimize_orchestration.ps1` |
+
+Later numbered scripts add object-level lineage, the explorer payloads and the other outputs; `backend/scripts/README.md` lists them all. LineageIQ maps lineage at object level, not column level.
+
 ## Operating Principles
 
 - Do not jump directly into optimization.
@@ -23,8 +39,7 @@ The project must move in this order:
 - Do not use technical IDs as the visible identity.
 - Keep names real and readable.
 - Record every uncertainty in `index/unresolved.md`.
-- Record every user conversation summary in `docs/conversations/`.
-- Update `docs/00_work_log.md` after each meaningful project step.
+- Keep each step read-only against Fabric unless a change has been proposed and approved.
 
 ## Phase A: Layer Discovery
 
@@ -183,15 +198,10 @@ Output:
 - `analysis/orchestration_recommendations.csv`
 - Human step-by-step change plan.
 
-## Required End Of Each Session
+## End Of Each Working Session
 
-Update:
-- `docs/00_work_log.md`
-- `docs/conversations/YYYY-MM-DD.md`
-- Any affected index or graph files
-
-End with:
+Refresh any affected index or graph files, then note:
 - Evidence used.
 - Open gaps.
 - Risks.
-- Next human step.
+- Next step.

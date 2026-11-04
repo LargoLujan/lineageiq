@@ -73,10 +73,10 @@ function Get-FieldValue {
     return ""
 }
 
-# NOTA: el infijo de ejemplo "Env_" (p.ej. "_Env_Dev") representa una
-# convencion de nombres de workspace tipica (algo como
-# "_<Organizacion>_<Entorno>"). Adapta ese infijo (o quitalo) a la
-# convencion de nombres de workspace de tu propio tenant.
+# NOTE: the example infix "Env_" (e.g. "_Env_Dev") stands for a typical
+# workspace naming convention (something like
+# "_<Organization>_<Environment>"). Adapt that infix (or drop it) to the
+# workspace naming convention of your own tenant.
 function Get-EnvironmentFromName {
     param([string]$Name)
 

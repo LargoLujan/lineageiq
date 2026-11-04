@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/42_build_d4_closure_control.ps1
--- (Phase 1 migration, 2026-07-21). Reads dbo.bronze_d4_exact_object_type_source_queue
+-- (SQL migration). Reads dbo.bronze_d4_exact_object_type_source_queue
 -- and dbo.bronze_d4_exact_object_type_impact_queue.
 --
 -- Single-level like D1: one control row per ambiguous source object, with
