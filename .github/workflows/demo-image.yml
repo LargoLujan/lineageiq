@@ -1,0 +1,123 @@
+name: Demo image
+
+# Builds Dockerfile.demo, smoke-tests it and, outside pull requests, publishes
+# it to GitHub Container Registry as ghcr.io/largolujan/lineageiq.
+#   - pull request: build + smoke test only, nothing is pushed
+#   - release published (tag vX.Y.Z): X.Y.Z, X.Y and latest
+#   - manual run: latest and sha-<short>
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - Dockerfile.demo
+      - .dockerignore
+      - requirements-mcp.txt
+      - backend/scripts/**
+      - frontend/semantic-lineage/**
+      - .github/workflows/demo-image.yml
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: demo-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/largolujan/lineageiq
+
+jobs:
+  image:
+    name: Build, test and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
+            type=sha,prefix=sha-,enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=ref,event=pr
+
+      - name: Build for the smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.demo
+          load: true
+          tags: lineageiq-demo:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        run: |
+          set -e
+          docker run -d --name demo -p 8765:8765 lineageiq-demo:test
+          for i in $(seq 1 30); do
+            curl -fsS -o /dev/null http://127.0.0.1:8765/ && break
+            sleep 2
+          done
+          curl -fsS -o /dev/null http://127.0.0.1:8765/
+          # /api/auth/me answers 401 without a session but must flag demo mode
+          curl -sS http://127.0.0.1:8765/api/auth/me | grep -q '"demo_mode": *true'
+          # The synthetic tenant must be baked in
+          curl -fsS -o /dev/null http://127.0.0.1:8765/data/lineage-explorer.json
+          curl -fsS -o /dev/null http://127.0.0.1:8765/data/object-impact.json
+          echo "Web UI and demo data OK."
+
+      - name: Smoke test (MCP over stdio)
+        run: |
+          set -e
+          # Keep stdin open for a few seconds so the server answers before EOF.
+          {
+            printf '%s\n' \
+              '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+              '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+              '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+              '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_items","arguments":{"query":"Sales"}}}'
+            sleep 15
+          } | timeout 90 docker run -i --rm lineageiq-demo:test python backend/scripts/mcp_server.py > mcp.out 2> mcp.err || true
+          if grep -q '"search_items"' mcp.out && grep -q 'Contoso-Sales_Prod' mcp.out; then
+            echo "MCP OK: $(grep -o '"name": *"[a-z_]*"' mcp.out | wc -l) tool names listed."
+          else
+            echo "::error::MCP smoke test failed"
+            echo "--- stdout"; head -c 3000 mcp.out || true
+            echo "--- stderr"; tail -n 60 mcp.err || true
+            exit 1
+          fi
+
+      - name: Container logs
+        if: always()
+        run: docker logs demo || true
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.demo
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
