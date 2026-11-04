@@ -15,6 +15,12 @@
 ![Playwright](https://img.shields.io/badge/Playwright-tests-2EAD33?logo=playwright&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
+<br>
+
+<img src="docs/media/lineageiq-demo.gif" alt="LineageIQ demo: catalogue, lineage tree, reverse impact, planning map, DAG view and 3D graph map" width="900">
+
+<sub>Running on the built-in synthetic demo tenant (fictional Contoso data).</sub>
+
 </div>
 
 Microsoft Fabric shows lineage at item level, and Microsoft Purview documents only item-level lineage for Fabric items other than Power BI, so questions such as "which notebooks write this table" or "what breaks if this view changes" are hard to answer. LineageIQ discovers every workspace and item it can read, extracts dependencies from notebook code, pipeline definitions and semantic model TMDL down to the source-object level (tables, views, stored procedures, files), and serves the result as an interactive graph, a governance panel, a REST API and Model Context Protocol (MCP) tools. Discovery is strictly read-only. The project is a work in progress (`package.json` version 0.1.0); it ships with a synthetic demo tenant so you can run it without any Fabric access.
