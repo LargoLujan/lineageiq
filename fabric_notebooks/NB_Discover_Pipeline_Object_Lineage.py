@@ -1,48 +1,48 @@
 # NB_Discover_Pipeline_Object_Lineage
 #
-# Fuente para un notebook Python de Fabric -- cuarto paso del pipeline de
-# descubrimiento nativo (ver docs/105_fabric_native_discovery_setup.md).
-# Cada bloque "# %%" es una celda -- pégalas en orden.
+# Source for a Fabric Python notebook -- fourth step of the native
+# discovery pipeline (see docs/105_fabric_native_discovery_setup.md).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Réplica fiel de scripts/19_extract_pipeline_object_lineage.ps1: para cada
-# DataPipeline, descarga su getDefinition, camina el grafo de actividades
-# (Copy/lookups/stored-procedure activities, etc.), atribuye a la pipeline
-# los objetos que cada actividad lee/escribe (dataset tables, ubicaciones
-# de archivo, queries SQL embebidas, nombres de procedimiento almacenado),
-# detecta qué actividades invocan OTRO item de Fabric (TridentNotebook ->
-# notebookId, InvokeCopyJob -> copyJobId, InvokePipeline -> pipelineId), y
-# propaga (hasta 8 pasadas, igual que el original) los objetos ya conocidos
-# de esos items invocados hacia la propia pipeline -- así una pipeline que
-# solo "orquesta" (llama a un notebook, llama a otra pipeline) hereda el
-# linaje real de lo que de verdad toca, no queda vacía.
+# Faithful replica of scripts/19_extract_pipeline_object_lineage.ps1: for each
+# DataPipeline, it downloads its getDefinition, walks the activity graph
+# (Copy/lookups/stored-procedure activities, etc.), attributes to the pipeline
+# the objects that each activity reads/writes (dataset tables, file
+# locations, embedded SQL queries, stored procedure names),
+# detects which activities invoke ANOTHER Fabric item (TridentNotebook ->
+# notebookId, InvokeCopyJob -> copyJobId, InvokePipeline -> pipelineId), and
+# propagates (up to 8 passes, same as the original) the already known objects
+# of those invoked items to the pipeline itself -- so a pipeline that
+# only "orchestrates" (calls a notebook, calls another pipeline) inherits the
+# real lineage of what it actually touches, instead of staying empty.
 #
-# Escribe en dbo.bronze_pipeline_object_lineage_candidates (20 columnas) y
-# dbo.bronze_pipeline_activity_lineage (11 columnas) -- mismas tablas que
-# scripts/67_upload_bronze_to_warehouse.ps1 ya sube desde local.
+# Writes to dbo.bronze_pipeline_object_lineage_candidates (20 columns) and
+# dbo.bronze_pipeline_activity_lineage (11 columns) -- the same tables that
+# scripts/67_upload_bronze_to_warehouse.ps1 already uploads from local.
 #
-# Nota de fidelidad: el original SIEMPRE marca confidence="likely" al
-# copiar una fila a la salida final vía Copy-InheritedRow, incluso para
-# las filas "directas" que se calcularon como "confirmed" un paso antes
-# (Add-DatasetCandidates/Add-SqlCandidates) -- no es un error de este
-# port, es el comportamiento real del script original, replicado tal cual.
+# Fidelity note: the original ALWAYS marks confidence="likely" when
+# copying a row to the final output via Copy-InheritedRow, even for
+# the "direct" rows that were computed as "confirmed" one step earlier
+# (Add-DatasetCandidates/Add-SqlCandidates) -- it is not a bug of this
+# port, it is the real behavior of the original script, replicated as is.
 #
-# Depende de que dbo.bronze_item_object_lineage_candidates ya exista
-# (escrito por NB_Discover_Object_Lineage) para la herencia de objetos de
-# items invocados -- si esa tabla no existe todavía, la herencia
-# simplemente no encuentra nada que heredar (no falla).
+# Depends on dbo.bronze_item_object_lineage_candidates already existing
+# (written by NB_Discover_Object_Lineage) for the inheritance of objects from
+# invoked items -- if that table does not exist yet, the inheritance
+# simply finds nothing to inherit (it does not fail).
 #
-# Deliberadamente NO incluida la herencia desde notebook_super_lineage_
-# objects.csv (analysis/*, viene de scripts/52_build_notebook_super_
-# lineage.py, un parser de código de notebook bastante más profundo que
-# el genérico de NB_Discover_Object_Lineage/18) -- ese notebook de origen
-# no está portado todavía, así que una pipeline que invoca un Notebook
-# solo hereda lo que 18/NB_Discover_Object_Lineage ya le vio a ese
-# notebook (patrones genéricos), no el análisis AST más profundo de 52.
+# Deliberately NOT included is the inheritance from notebook_super_lineage_
+# objects.csv (analysis/*, comes from scripts/52_build_notebook_super_
+# lineage.py, a notebook code parser much deeper than
+# the generic one in NB_Discover_Object_Lineage/18) -- that source notebook
+# is not ported yet, so a pipeline that invokes a Notebook
+# only inherits what 18/NB_Discover_Object_Lineage already saw in that
+# notebook (generic patterns), not the deeper AST analysis of 52.
 #
-# Self-contained a propósito, mismo criterio que los notebooks anteriores.
+# Self-contained on purpose, same criterion as the previous notebooks.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -67,17 +67,17 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-# Ya no se lee de Key Vault (bloqueado) NI de un parámetro del pipeline
-# (probado 2026-08-12: filtró el valor en texto plano al fallar la
-# conversión de tipo -- nunca más por ahí). Fichero privado en el área
-# Files del Lakehouse del workspace, leído con notebookutils.fs.head() --
-# gobernado por el rol de Fabric del SP sobre este workspace, no por RBAC
-# de Azure sobre un recurso aparte.
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# No longer read from Key Vault (blocked) NOR from a pipeline parameter
+# (tested 2026-08-12: it leaked the value in plain text when the
+# type conversion failed -- never again that way). Private file in the
+# Files area of the workspace Lakehouse, read with notebookutils.fs.head() --
+# governed by the SP's Fabric role on this workspace, not by Azure RBAC
+# on a separate resource.
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 REQUEST_DELAY_SECONDS = 0.25
 RETRY_COUNT = 5
@@ -97,14 +97,14 @@ ACTIVITY_COLUMNS = [
 ]
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación y Warehouse (mismo patrón que los notebooks anteriores)
+# ## Authentication and Warehouse (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -179,7 +179,7 @@ def normalize_key(value):
 
 
 # %% [markdown]
-# ## Fabric REST: getDefinition con sondeo LRO (igual que los notebooks anteriores)
+# ## Fabric REST: getDefinition with LRO polling (same as the previous notebooks)
 
 # %%
 def fabric_request(method, path, headers, retry_count=RETRY_COUNT):
@@ -257,16 +257,16 @@ def decode_definition_parts(definition_payload):
 
 
 # %% [markdown]
-# ## Split-ObjectIdentifier (variante de 19: sin manejo de Files/Tables/Lakehouse/Warehouse como "file")
+# ## Split-ObjectIdentifier (variant of script 19: without handling Files/Tables/Lakehouse/Warehouse as "file")
 
 # %%
-# Mismo fix que NB_Discover_Object_Lineage -- URLs externas (formularios
-# SaaS, CRM, sitios de SharePoint...) colapsaban en un unico
-# nodo generico "File" en el grafo porque source_database quedaba vacio.
-# Este notebook no tenia filtro de URLs de ruido, asi que endpoints de
-# autenticacion/infra genericos (login.microsoftonline.com,
-# graph.microsoft.com...) tambien contaminaban el grafo -- anadido aqui
-# igual que alla, para que ambos notebooks se comporten igual.
+# Same fix as NB_Discover_Object_Lineage -- external URLs (SaaS
+# forms, CRM, SharePoint sites...) collapsed into a single generic
+# "File" node in the graph because source_database was left empty.
+# This notebook had no noise URL filter, so generic
+# authentication/infra endpoints (login.microsoftonline.com,
+# graph.microsoft.com...) also polluted the graph -- added here
+# the same as there, so that both notebooks behave the same.
 _NOISE_URLS = re.compile(
     r"(?i:^https?://(?:developer\.microsoft\.com|[^/]+\.vault\.azure\.net|[^/]*pkgs\.dev\.azure\.com|"
     r"analysis\.windows\.net|api\.fabric\.microsoft\.com|storage\.azure\.com|"
@@ -315,7 +315,7 @@ def split_object_identifier(identifier):
 
 
 # %% [markdown]
-# ## Recorrido genérico de JSON: Get-NodeListByProperty / Get-StringValuesByProperty
+# ## Generic JSON traversal: Get-NodeListByProperty / Get-StringValuesByProperty
 
 # %%
 def get_node_list_by_property(node, property_name):
@@ -360,7 +360,7 @@ def get_string_values_by_property(node, property_names):
 
 
 # %% [markdown]
-# ## Registro de candidatos (Add-CandidateRow)
+# ## Candidate registration (Add-CandidateRow)
 
 # %%
 _GUID_ONLY = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
@@ -538,7 +538,7 @@ def add_direct_activity_candidates(rows, seen, pipeline_item, activity, definiti
 
 
 # %% [markdown]
-# ## Invocación de items (Get-InvokedItem) y parámetros de actividad (Get-ActivityParameters)
+# ## Item invocation (Get-InvokedItem) and activity parameters (Get-ActivityParameters)
 
 # %%
 def get_invoked_item(activity, item_by_workspace_and_id):
@@ -571,7 +571,7 @@ def get_activity_parameters(activity):
 
 
 # %% [markdown]
-# ## Herencia de candidatos (Copy-InheritedRow -- confidence SIEMPRE "likely", fidelidad con el original)
+# ## Candidate inheritance (Copy-InheritedRow -- confidence ALWAYS "likely", fidelity with the original)
 
 # %%
 def copy_inherited_row(rows, seen, pipeline_item, source_row, invocation):
@@ -588,7 +588,7 @@ def copy_inherited_row(rows, seen, pipeline_item, source_row, invocation):
 
 
 # %% [markdown]
-# ## Cargar workspaces + items + candidatos ya conocidos (dbo.bronze_*)
+# ## Load already known workspaces + items + candidates (dbo.bronze_*)
 
 # %%
 connection = connect_warehouse()
@@ -635,7 +635,7 @@ if filter_set:
 print(f"Target pipelines: {len(pipeline_items)} ({'filtered: ' + WorkspaceNameFilter if filter_set else 'full tenant'})")
 
 # %% [markdown]
-# ## Ejecutar: getDefinition + caminar actividades, por pipeline
+# ## Run: getDefinition + walk activities, per pipeline
 
 # %%
 fabric_token = acquire_token("https://api.fabric.microsoft.com/.default")
@@ -707,7 +707,7 @@ for pipeline in pipeline_items:
 print(f"Definitions succeeded: {success_count} / {len(pipeline_items)}. Activity rows: {len(activity_rows)}.")
 
 # %% [markdown]
-# ## Fusionar filas directas + propagación por invocación (hasta 8 pasadas, igual que el original)
+# ## Merge direct rows + propagation by invocation (up to 8 passes, same as the original)
 
 # %%
 output_rows = []
@@ -737,17 +737,17 @@ for _pass_number in range(8):
 print(f"Direct/inherited object candidates: {len(output_rows)} across {len({r['item_qualified_name'] for r in output_rows})} pipelines.")
 
 # %% [markdown]
-# ## Escribir en el Warehouse, conservando lo que pertenece a workspaces
-# fuera de WorkspaceNameFilter (en ambas tablas)
+# ## Write to the Warehouse, keeping what belongs to workspaces
+# outside WorkspaceNameFilter (in both tables)
 
 # %%
-# Reconectar con un token de base de datos fresco -- la conexion de arriba
-# lleva abierta desde antes del bucle por pipeline (todo el tenant, con
-# getDefinition + reintentos), el mismo patron que ya causo un fallo real
-# de conexion ("TCP Provider: Error code 0x20") en NB_Discover_
-# Dependencies.py -- mismo fix aplicado aqui preventivamente. Las
-# funciones de abajo referencian `connection`/`cursor` por closure, asi
-# que basta con reasignarlas antes de llamarlas.
+# Reconnect with a fresh database token -- the connection above
+# has been open since before the per-pipeline loop (the whole tenant, with
+# getDefinition + retries), the same pattern that already caused a real
+# connection failure ("TCP Provider: Error code 0x20") in NB_Discover_
+# Dependencies.py -- same fix applied here preventively. The
+# functions below reference `connection`/`cursor` by closure, so
+# it is enough to reassign them before calling them.
 connection.close()
 connection = connect_warehouse()
 cursor = connection.cursor()

@@ -1,10 +1,10 @@
-"""Unit tests for backend/scripts/lineage_web/purview_insights.py (Tanda A,
-2026-07-09) -- access audit, capacity insight, changes digest. All three
+"""Unit tests for backend/scripts/lineage_web/purview_insights.py
+-- access audit, capacity insight, changes digest. All three
 are pure aggregation over CSV rows, so _read_csv_rows is monkeypatched to
 return synthetic data rather than touching real files, matching how
 test_lineage_web_server.py tests similar CSV-driven logic.
 
-2026-08-14: _get_access_audit/_get_capacity_insight/_get_changes_digest
+_get_access_audit/_get_capacity_insight/_get_changes_digest
 now read via _warehouse_or_local() (imported from catalog.py) instead of
 calling this module's own _read_csv_rows directly, so the local-fallback
 behavior these tests exercise has to be faked at that seam instead --
@@ -89,8 +89,7 @@ def test_access_audit_ranks_tenant_wide_admins_by_workspace_count(monkeypatch):
 def test_access_audit_reports_the_true_admin_count_even_when_the_list_is_capped(monkeypatch):
     # tenant_wide_admins itself is capped to the top 25 -- total_count
     # must reflect the real number so the admin panel can show "+N more"
-    # instead of silently dropping them (2026-08-18 admin-panel audit
-    # finding).
+    # instead of silently dropping them.
     rows = [
         {"workspace_name": f"WS{i}", "principal_name": f"Admin{i}", "principal_type": "User", "role": "Admin", "status": "discovered"}
         for i in range(30)
@@ -181,7 +180,7 @@ def test_sensitivity_overview_aggregates_by_category(monkeypatch, tmp_path):
     assert phone_bucket["object_count"] == 1
 
 
-# --- _get_sensitivity_overview's live-Warehouse path (2026-08-30) --
+# --- _get_sensitivity_overview's live-Warehouse path --
 # dbo.bronze_object_column_catalog classified by column name, joined
 # against dbo.bronze_sql_endpoint_object_catalog for workspace_name/
 # source_server/source_database, same alias join catalog.py's own
@@ -238,7 +237,7 @@ def test_sensitivity_overview_uses_warehouse_when_enabled(monkeypatch):
     assert person_bucket["samples"][0]["workspace_name"] == "WS1"
 
 
-# --- Roadmap Fase 2 (2026-08-31): admin-defined custom sensitivity
+# --- Admin-defined custom sensitivity
 # categories, threaded through via settings["custom_sensitivity_categories"]
 # -- see sensitivity_classifier.py's own tests for the classifier-level
 # behavior (shadowing, invalid regex, etc.); these confirm the threading
@@ -340,7 +339,7 @@ def test_sensitivity_overview_leaves_ambiguous_alias_unresolved_even_with_matchi
     assert email_bucket["samples"][0]["workspace_name"] == ""
 
 
-# --- _get_privacy_coverage_map (Roadmap Fase 5, 2026-08-31) -- the same
+# --- _get_privacy_coverage_map -- the same
 # classification, pivoted per-object instead of per-category, so a table
 # with several sensitive columns of different categories appears exactly
 # once, not once per category. ---
@@ -432,7 +431,7 @@ def test_privacy_coverage_map_applies_custom_categories(monkeypatch):
 
 
 def test_privacy_coverage_map_use_cache_true_returns_stale_result_within_ttl(monkeypatch):
-    """2026-09-01 502 hardening: use_cache=True must serve the cached result
+    """502 hardening: use_cache=True must serve the cached result
     (not recompute) for a repeat call within the TTL, even if the underlying
     Warehouse rows change between calls -- this is what actually protects a
     slow classification pass from being redone on every "Todas las tablas"
@@ -482,7 +481,7 @@ def test_privacy_coverage_map_use_cache_false_always_recomputes(monkeypatch):
     assert calls["count"] == 2
 
 
-# --- _get_privacy_framework_map (Roadmap Fase 6, 2026-08-31) -- same
+# --- _get_privacy_framework_map -- same
 # classification grouped by legal framework (GDPR/FERPA/CCPA) first, then
 # category, plus admin-logged external systems folded in per category. ---
 
@@ -645,9 +644,8 @@ def test_sensitivity_overview_falls_back_to_local_json_on_warehouse_error(monkey
     assert result["found"] is False
 
 
-# --- _get_content_sensitivity_overview (2026-08-18, roadmap Fase 2 follow-
-# through: the content-verified counterpart to _get_sensitivity_overview
-# above) -- no local-CSV fallback, so these mock warehouse.query_bronze_
+# --- _get_content_sensitivity_overview (the content-verified
+# counterpart to _get_sensitivity_overview above) -- no local-CSV fallback, so these mock warehouse.query_bronze_
 # table directly, same convention as test_catalog_column_sensitivity.py. ---
 
 def _content_row(workspace_name, lakehouse_name, table_name, column_name, category, match_percentage):
@@ -674,7 +672,7 @@ def test_content_sensitivity_overview_degrades_gracefully_on_warehouse_error(mon
 
 
 def test_content_sensitivity_overview_keeps_zero_percent_matches(monkeypatch):
-    # 2026-08-25 redesign: every row here already passed the notebook's own
+    # Every row here already passed the notebook's own
     # name-based pre-filter (Paso 0), so a 0% content match is still real
     # signal worth showing (with its stored examples), not noise to drop --
     # unlike the pre-redesign behavior this test used to assert.
@@ -783,8 +781,8 @@ def test_changes_digest_reports_the_true_total_when_the_limit_truncates(monkeypa
     assert result["total_count"] == 5
 
 
-# --- _get_changes_digest's scan_started_at param (2026-08-18, admin-panel
-# completeness pass: a historical view, not just always "the latest scan") ---
+# --- _get_changes_digest's scan_started_at param (a historical view, not
+# just always "the latest scan") ---
 
 def _history_rows_across_two_scans():
     return [

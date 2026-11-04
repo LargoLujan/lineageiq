@@ -1,42 +1,42 @@
 # NB_Extract_SQL_Endpoint_Catalog
 #
-# Fuente para un notebook Python de Fabric -- Fase A del "escaneo profundo"
-# (ver docs/105_fabric_native_discovery_setup.md para el patron general).
-# Cada bloque "# %%" es una celda -- pegalas en orden.
+# Source for a Fabric Python notebook -- part of the "deep scan"
+# (see docs/105_fabric_native_discovery_setup.md for the general pattern).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Replica fiel de scripts/34_extract_sql_endpoint_object_catalog.ps1: se
-# conecta al SQL analytics endpoint de cada Lakehouse/Warehouse (auth AAD,
-# Fabric-a-Fabric, sin gateway) y consulta sys.objects/sys.schemas para
-# catalogar sus tablas/vistas/procedimientos REALES -- esto es lo que
-# confirma si un candidato de linaje es de verdad una tabla, una vista o
-# un SP, en vez de quedarse en un nombre adivinado por regex.
+# Faithful replica of scripts/34_extract_sql_endpoint_object_catalog.ps1: it
+# connects to the SQL analytics endpoint of each Lakehouse/Warehouse (AAD auth,
+# Fabric-to-Fabric, no gateway) and queries sys.objects/sys.schemas to
+# catalog their REAL tables/views/procedures -- this is what
+# confirms whether a lineage candidate really is a table, a view or
+# an SP, instead of staying with a name guessed by regex.
 #
-# 2026-08-19: mejora deliberada sobre el script local original. La version
-# local resuelve servidor/base de datos parseando el STRING de
-# to_qualified_name en dependencies.csv ("External Connection / SQL /
-# <label>"), que solo funciona si <label> ya tiene forma "servidor;bd" --
-# en la practica casi nunca, porque connection_qualified_name() prefiere
-# el DISPLAY NAME de la conexion sobre su path real (ver NB_Discover_
-# Dependencies.py). En vez de repetir esa fragilidad, este notebook lee
-# directo de dbo.bronze_fabric_connections (NB_Discover_Fabric_Connections,
-# el otro notebook nuevo de esta Fase A) -- ese catalogo ya resuelve
-# connectionDetails.path a servidor;bd real para cada conexion del tenant,
-# asi que solo hace falta cruzar por nombre de base de datos, sin parsear
-# ninguna etiqueta. Debe correr DESPUES de NB_Discover_Fabric_Connections
-# en el pipeline.
+# Deliberate improvement over the original local script. The local version
+# resolves server/database by parsing the STRING of
+# to_qualified_name in dependencies.csv ("External Connection / SQL /
+# <label>"), which only works if <label> already has the "server;db" form --
+# in practice almost never, because connection_qualified_name() prefers
+# the connection's DISPLAY NAME over its real path (see NB_Discover_
+# Dependencies.py). Instead of repeating that fragility, this notebook reads
+# directly from dbo.bronze_fabric_connections (NB_Discover_Fabric_Connections,
+# the other new notebook of this deep scan) -- that catalog already resolves
+# connectionDetails.path to the real server;db for each tenant connection,
+# so it is only necessary to match by database name, without parsing
+# any label. It must run AFTER NB_Discover_Fabric_Connections
+# in the pipeline.
 #
-# Escribe dbo.bronze_sql_endpoint_object_catalog y dbo.bronze_sql_endpoint_
-# object_catalog_status -- mismas columnas que scripts/34_extract_sql_
-# endpoint_object_catalog.ps1 ya escribe en analysis/sql_endpoint_object_
+# Writes dbo.bronze_sql_endpoint_object_catalog and dbo.bronze_sql_endpoint_
+# object_catalog_status -- the same columns that scripts/34_extract_sql_
+# endpoint_object_catalog.ps1 already writes to analysis/sql_endpoint_object_
 # catalog.csv / _status.csv.
 #
-# Self-contained a proposito (no usa %run) -- mismo criterio que el resto
-# de notebooks "Discover"/"Extract" de este proyecto.
+# Self-contained on purpose (it does not use %run) -- same criterion as the rest
+# of the "Discover"/"Extract" notebooks of this project.
 
 # %% [markdown]
-# ## Configuracion
-# Mismos valores que en NB_Discover_Workspaces_Items -- copia aqui los que
-# ya rellenaste alli.
+# ## Configuration
+# Same values as in NB_Discover_Workspaces_Items -- copy here the ones you
+# already filled in there.
 
 # %%
 try:
@@ -62,37 +62,37 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 CATALOG_CONNECT_TIMEOUT_SECONDS = 12
 CATALOG_COMMAND_TIMEOUT_SECONDS = 90
-DB_TOKEN_REFRESH_SECONDS = 1200  # refresco proactivo cada 20min, mismo margen que Fase 1b de NB_Discover_Workspaces_Items
+DB_TOKEN_REFRESH_SECONDS = 1200  # proactive refresh every 20 min, same margin as Step 1b of NB_Discover_Workspaces_Items
 
-# 2026-08-20: aplicado por precaucion, en paralelo al fix real de
-# NB_Extract_Object_Column_Catalog.py, que SI se llego a colgar horas en
-# una corrida a escala de tenant pese a estos mismos
-# timeouts -- indicio de que el driver ODBC no los respeta del todo para
-# ciertos fallos de red en el runtime Linux/Spark de Fabric. Este notebook
-# no fallo esa misma noche, pero comparte el mismo patron de conexion por
-# objetivo, asi que lleva el mismo watchdog de reloj real.
+# Applied as a precaution, in parallel to the real fix in
+# NB_Extract_Object_Column_Catalog.py, which DID hang for hours in
+# a tenant-scale run despite these same
+# timeouts -- a sign that the ODBC driver does not fully honor them
+# for certain network failures in Fabric's Linux/Spark runtime. This notebook
+# did not fail that same night, but it shares the same per-target connection
+# pattern, so it carries the same wall-clock watchdog.
 CATALOG_TARGET_WALL_CLOCK_TIMEOUT_SECONDS = 45
 
 # %% [markdown]
-# ## Parametros
-# Marca esta celda como celda de parametros en Fabric. El pipeline la
-# sobreescribe con el mismo WorkspaceNameFilter que recibe
-# NB_Discover_Workspaces_Items. Vacio = tenant completo.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric. The pipeline
+# overrides it with the same WorkspaceNameFilter that
+# NB_Discover_Workspaces_Items receives. Empty = whole tenant.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticacion: token propio de cuenta de servicio (MSAL)
+# ## Authentication: own service account token (MSAL)
 
 # %%
 def get_client_secret():
@@ -121,15 +121,15 @@ def acquire_token(scope):
 
 
 def acquire_fabric_api_token():
-    """2026-08-19: una actividad Notebook sin SPN/Workspace Identity
-    explicito corre bajo la identidad del DUENO DEL PIPELINE (documentacion
-    oficial de Microsoft, "Run Notebooks in Pipelines with Service
-    Principal or Workspace Identity"). Si el dueno del pipeline
-    PL_Discover_Workspaces_Items (su creatorPrincipal) tiene acceso a mas
-    workspaces que el SP, eso es lo que permite resolver el hostname SQL
-    real de un SQLEndpoint/Warehouse en un workspace donde el SP no es
-    miembro. Respaldo al login MSAL del SP si notebookutils no
-    esta disponible (ej. ejecucion standalone fuera de un pipeline)."""
+    """A Notebook activity without an explicit SPN/Workspace Identity
+    runs under the identity of the PIPELINE OWNER (official
+    Microsoft documentation, "Run Notebooks in Pipelines with Service
+    Principal or Workspace Identity"). If the owner of the pipeline
+    PL_Discover_Workspaces_Items (its creatorPrincipal) has access to more
+    workspaces than the SP, that is what makes it possible to resolve the real SQL
+    hostname of a SQLEndpoint/Warehouse in a workspace where the SP is not a
+    member. Fallback to the SP's MSAL login if notebookutils is not
+    available (e.g. standalone execution outside a pipeline)."""
     try:
         return notebookutils.credentials.getToken("pbi")
     except Exception as exc:  # noqa: BLE001 - degrade to the SP's own MSAL login rather than fail the whole notebook
@@ -137,8 +137,8 @@ def acquire_fabric_api_token():
         return acquire_token("https://api.fabric.microsoft.com/.default")
 
 # %% [markdown]
-# ## Warehouse (pyodbc, mismo patron que NB_Discover_Workspaces_Items) +
-# conexion generica a cualquier SQL endpoint del tenant
+# ## Warehouse (pyodbc, same pattern as NB_Discover_Workspaces_Items) +
+# generic connection to any SQL endpoint in the tenant
 
 # %%
 def token_struct(token):
@@ -171,23 +171,23 @@ def connect_warehouse():
 
 
 class _DbTokenProvider:
-    """Mismo patron de refresco proactivo que _HeaderProvider en
-    NB_Discover_Workspaces_Items, pero para el token crudo que pyodbc
-    necesita (attrs_before), no una cabecera HTTP.
+    """Same proactive refresh pattern as _HeaderProvider in
+    NB_Discover_Workspaces_Items, but for the raw token that pyodbc
+    needs (attrs_before), not an HTTP header.
 
-    2026-08-19: a proposito NO usa acquire_fabric_api_token()/notebookutils
-    aqui -- probado en vivo (fuera de Fabric, mismo mecanismo attrs_before)
-    que un token de audiencia api.fabric.microsoft.com falla la
-    autenticacion SQL (18456) incluso siendo un token de identidad de
-    usuario real con acceso de sobra al workspace: SQL Server exige que el
-    campo `aud` del token sea exactamente database.windows.net, y
-    notebookutils.credentials.getToken() no ofrece esa audiencia (solo
-    storage/pbi/keyvault/kusto). Por eso la consulta SQL en si sigue
-    limitada al acceso propio del SP (los workspaces donde ya es
-    Contributor) aunque resolve_item_hostnames() de mas arriba ya vea el
-    hostname real de muchos mas workspaces gracias a la identidad heredada
-    del dueño del pipeline -- resolver el hostname y poder consultarlo son
-    dos permisos distintos."""
+    On purpose it does NOT use acquire_fabric_api_token()/notebookutils
+    here -- tested live (outside Fabric, same attrs_before mechanism)
+    that a token with audience api.fabric.microsoft.com fails SQL
+    authentication (18456) even when it is a real user identity token
+    with plenty of access to the workspace: SQL Server requires the
+    token's `aud` field to be exactly database.windows.net, and
+    notebookutils.credentials.getToken() does not offer that audience (only
+    storage/pbi/keyvault/kusto). That is why the SQL query itself remains
+    limited to the SP's own access (the workspaces where it is already
+    Contributor) even though resolve_item_hostnames() further up already sees the
+    real hostname of many more workspaces thanks to the identity inherited
+    from the pipeline owner -- resolving the hostname and being able to query it are
+    two different permissions."""
 
     def __init__(self):
         self.token = None
@@ -228,16 +228,16 @@ def replace_table(connection, table_name, columns, rows):
     cursor.execute(f"CREATE TABLE dbo.{table_name} ({column_defs});")
     connection.commit()
     if rows:
-        # 2026-08-21: mismo fix ya validado en NB_Extract_Object_Column_Catalog
-        # (2026-08-20) y NB_Discover_Executions (2026-08-21) -- row-by-row
-        # executemany (incluso con fast_executemany=True) no consigue el
-        # aceleron de bulk-copy contra Fabric Warehouse (motor analitico
-        # distribuido, no transaccional): cada set de parametros paga overhead
-        # real de round-trip/compilacion por sentencia. Confirmado en vivo:
-        # NB_Discover_Executions paso de 98 min a 87s reescribiendo la misma
-        # tabla solo con este cambio. batch_size calculado dinamicamente para
-        # quedar bajo el limite ~2100 parametros de SQL Server sea cual sea el
-        # numero de columnas de esta tabla en concreto.
+        # Same fix already validated in NB_Extract_Object_Column_Catalog
+        # and NB_Discover_Executions -- row-by-row
+        # executemany (even with fast_executemany=True) does not get the
+        # bulk-copy speedup against Fabric Warehouse (distributed analytical
+        # engine, not transactional): each parameter set pays
+        # real round-trip/compilation overhead per statement. Confirmed live:
+        # NB_Discover_Executions went from 98 min to 87s rewriting the same
+        # table with only this change. batch_size is computed dynamically to
+        # stay under the ~2100 parameter limit of SQL Server whatever the
+        # number of columns of this particular table.
         batch_size = max(1, 2000 // max(len(columns), 1))
         placeholders_one_row = "(" + ", ".join("?" for _ in columns) + ")"
         column_list = ", ".join(f"[{c}]" for c in columns)
@@ -246,15 +246,15 @@ def replace_table(connection, table_name, columns, rows):
             values_sql = ", ".join(placeholders_one_row for _ in batch)
             insert_sql = f"INSERT INTO dbo.{table_name} ({column_list}) VALUES {values_sql}"
             params = [truncate_value(row.get(c, "")) for row in batch for c in columns]
-            # 2026-08-21: sin esto, un valor largo (>~2000 caracteres) en
-            # cualquier columna del lote hace que pyodbc caiga al binding
-            # legado DAE/text, que la colacion UTF-8 de Fabric Warehouse
-            # (Latin1_General_100_BIN2_UTF8) rechaza con el error SQL Server
-            # 4189 -- confirmado en vivo (NB_Discover_Pipeline_Object_Lineage,
-            # 2026-08-21, escaneo tenant-wide). Mismo bug ya conocido de
-            # NB_Download_Notebook_Definitions, aplicado aqui a TODOS los
-            # parametros del lote porque no sabemos de antemano cual columna
-            # tendra el valor largo.
+            # Without this, a long value (>~2000 characters) in
+            # any column of the batch makes pyodbc fall back to the
+            # legacy DAE/text binding, which the UTF-8 collation of Fabric Warehouse
+            # (Latin1_General_100_BIN2_UTF8) rejects with SQL Server error
+            # 4189 -- confirmed live (NB_Discover_Pipeline_Object_Lineage,
+            # tenant-wide scan). Same bug already known from
+            # NB_Download_Notebook_Definitions, applied here to ALL the
+            # parameters of the batch because we do not know in advance which column
+            # will have the long value.
             cursor.setinputsizes([(pyodbc.SQL_WVARCHAR, 0, 0)] * len(params))
             cursor.execute(insert_sql, params)
         connection.commit()
@@ -280,31 +280,31 @@ def normalize_server_host(value):
     return clean.strip()
 
 # %% [markdown]
-# ## Resolver hostname real por item (API de detalle, identidad heredada)
+# ## Resolve the real hostname per item (detail API, inherited identity)
 #
-# 2026-08-19: el hostname SQL real de un item NO esta en el item SQLEndpoint
-# en si (workspaces/{ws}/sqlEndpoints/{id} solo da id/nombre/descripcion) --
-# para un Lakehouse hay que leer el detalle del LAKEHOUSE hermano
-# (properties.sqlEndpointProperties.id/.connectionString, emparejado por
-# id con el item SQLEndpoint) y para un Warehouse, su propio detalle
-# (properties.connectionString). Ambos caminos necesitan acceso real de
-# workspace -- por eso usan acquire_fabric_api_token(), que hereda la
-# identidad del dueño del pipeline en vez de la del SP. Si ese usuario ve
-# muchos mas workspaces que el SP, esto amplia mucho cuantos hostnames se
-# resuelven -- aunque, como explica connect_sql_endpoint mas abajo, resolver el
-# hostname no garantiza poder CONSULTARLO via SQL (audiencias de token
-# distintas, ver docstring de query_catalog).
+# The real SQL hostname of an item is NOT in the SQLEndpoint item
+# itself (workspaces/{ws}/sqlEndpoints/{id} only gives id/name/description) --
+# for a Lakehouse you have to read the detail of the sibling LAKEHOUSE
+# (properties.sqlEndpointProperties.id/.connectionString, matched by
+# id with the SQLEndpoint item) and for a Warehouse, its own detail
+# (properties.connectionString). Both paths need real workspace
+# access -- which is why they use acquire_fabric_api_token(), which inherits the
+# identity of the pipeline owner instead of the SP's. If that user sees
+# many more workspaces than the SP, this greatly widens how many hostnames get
+# resolved -- although, as connect_sql_endpoint explains further down, resolving the
+# hostname does not guarantee being able to QUERY it via SQL (different token
+# audiences, see the query_catalog docstring).
 #
-# 2026-08-19 optimizacion: que Lakehouses existen por workspace ya lo sabe
-# dbo.bronze_items (item_type='Lakehouse', lo escribe NB_Discover_Workspaces_
-# Items, que corre antes en el pipeline) -- no hace falta pedirselo de nuevo
-# a la API con GET workspaces/{id}/items?type=Lakehouse dentro del bucle
-# (~1 llamada extra por workspace, en un tenant grande). Lo unico que se
-# necesitaba de esa respuesta era el `id` de cada Lakehouse, y ese es
-# exactamente technical_id en bronze_items (mismo GUID de item que ya usan
-# warehouse_ids/sql_endpoint_ids un poco mas abajo). El detalle individual
-# GET workspaces/{id}/lakehouses/{lakehouse_id} SI sigue siendo necesario
-# -- ese trae properties.sqlEndpointProperties, que no esta en bronze_items.
+# Optimization: which Lakehouses exist per workspace is already known by
+# dbo.bronze_items (item_type='Lakehouse', written by NB_Discover_Workspaces_
+# Items, which runs earlier in the pipeline) -- there is no need to ask the
+# API for it again with GET workspaces/{id}/items?type=Lakehouse inside the loop
+# (~1 extra call per workspace, in a large tenant). The only thing
+# needed from that response was the `id` of each Lakehouse, and that is
+# exactly technical_id in bronze_items (same item GUID that
+# warehouse_ids/sql_endpoint_ids already use a little further down). The individual detail
+# GET workspaces/{id}/lakehouses/{lakehouse_id} IS still needed
+# -- it brings properties.sqlEndpointProperties, which is not in bronze_items.
 
 # %%
 def fabric_get_detail(path, headers):
@@ -362,7 +362,7 @@ def resolve_item_hostnames(fabric_headers, sql_endpoint_items, workspace_id_by_n
     return hostname_by_item_id
 
 # %% [markdown]
-# ## Descubrir objetivos (servidor;bd por cada item SQLEndpoint/Warehouse)
+# ## Discover targets (server;db for each SQLEndpoint/Warehouse item)
 
 # %%
 CATALOG_QUERY_SQL = """
@@ -387,14 +387,14 @@ where
 order by s.name, o.name
 """
 
-# 2026-08-24: three more read-only system-view queries against the same
+# Three more read-only system-view queries against the same
 # already-open SQL endpoint connection, for the admin panel's Data
-# Sensitivity detail modal (DDM/RLS/CLS column, previously always "Sin
-# detectar" -- no discovery existed for any of the three). All three views
+# Sensitivity detail modal (DDM/RLS/CLS column, previously always shown as
+# "not detected" -- no discovery existed for any of the three). All three views
 # are documented as available against a Fabric Warehouse/SQL analytics
-# endpoint with standard SQL Server T-SQL syntax (see docs/109_column_
-# security_discovery.md): Dynamic Data Masking, Row-Level Security, and
-# column-level GRANT/DENY permissions respectively. Each is wrapped in its
+# endpoint with standard SQL Server T-SQL syntax: Dynamic Data Masking,
+# Row-Level Security, and column-level GRANT/DENY permissions respectively.
+# Each is wrapped in its
 # own try/except at the call site (query_security_metadata) -- a caller
 # without permission to read one of these views (or a target where the
 # feature genuinely isn't used) must not abort the whole catalog query for
@@ -478,12 +478,12 @@ def discover_targets(connection, filter_set, fabric_headers):
         environment_by_workspace[row[0]] = row[1]
         workspace_id_by_name[row[0]] = row[2]
 
-    # 2026-08-19: se pide tambien item_type='Lakehouse' aqui (ademas de
-    # SQLEndpoint/Warehouse/SQLDatabase) para que resolve_item_hostnames()
-    # pueda emparejar cada SQLEndpoint con su Lakehouse hermano sin tener
-    # que pedirle esa lista a la API (GET workspaces/{id}/items?type=
-    # Lakehouse) dentro del bucle -- ver comentario detallado en esa
-    # funcion.
+    # item_type='Lakehouse' is also requested here (in addition to
+    # SQLEndpoint/Warehouse/SQLDatabase) so that resolve_item_hostnames()
+    # can match each SQLEndpoint with its sibling Lakehouse without having
+    # to ask the API for that list (GET workspaces/{id}/items?type=
+    # Lakehouse) inside the loop -- see the detailed comment in that
+    # function.
     cursor.execute(
         "SELECT workspace_name, item_type, item_name, qualified_name, technical_id "
         "FROM dbo.bronze_items WHERE item_type IN ('SQLEndpoint', 'Warehouse', 'SQLDatabase', 'Lakehouse')"
@@ -587,7 +587,7 @@ def _run_optional_query(cursor, connection, sql, query_label):
 def query_catalog(server, database, token_provider, trust_server_certificate=False):
     connection = connect_sql_endpoint(server, database, token_provider, trust_server_certificate)
     try:
-        # 2026-08-19 fix: pyodbc's query-execution timeout lives on the
+        # Fix: pyodbc's query-execution timeout lives on the
         # Connection object, not the Cursor -- `cursor.timeout = ...` raises
         # AttributeError (confirmed live: every single target failed with
         # this exact error before the fix, masking whatever the real

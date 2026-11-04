@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/38_build_deep_object_
--- lineage_enrichment.ps1 (Phase 2 migration continuation, 2026-07-21).
+-- lineage_enrichment.ps1 (SQL migration).
 -- Reads dbo.bronze_items, dbo.silver_object_read_write_classification
 -- (23), dbo.bronze_object_level_lineage_coverage, dbo.silver_manual_
 -- lineage_review_queue (14), dbo.bronze_source_object_type_metadata_
@@ -10,7 +10,7 @@
 -- superseded lineage-explorer.json, which itself is script 35's
 -- excluded output) are app-layer/archive-only and out of scope, same
 -- exclusion rationale as script 35 and the second half of script 08.
--- Validated 2026-07-21: 0 new bugs. Item enrichment (every row), gaps
+-- Validated: 0 new bugs. Item enrichment (every row), gaps
 -- (every row), and summary (all 13 fields) matched exactly. Source objects
 -- (every row, 0 missing/extra) carried only two already-documented
 -- residual classes from earlier in this migration: (1) affected_

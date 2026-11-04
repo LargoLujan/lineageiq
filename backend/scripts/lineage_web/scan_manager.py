@@ -1,6 +1,6 @@
 """Scan trigger: workspace/full-tenant scan lifecycle, diffing, history, notifications.
 
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion,
+Split out of lineage_web_server.py -- pure code motion,
 no logic changed from the original.
 """
 import html
@@ -429,7 +429,7 @@ def _wait_for_process(proc, workspace, started_at_iso, started_monotonic, before
     )
     if status == "succeeded":
         _maybe_trigger_warehouse_upload()
-        # As of 2026-07-24, scan_single_workspace.ps1's own local rebuild
+        # scan_single_workspace.ps1's own local rebuild
         # steps (11/17/21/build_graph_map_index.ps1, right after the Fabric
         # discovery steps) DO refresh all 5 of the big JSON files this
         # publishes -- same as a full scan, just scoped to whatever CSV rows
@@ -500,7 +500,7 @@ def _release_claimed_slot_after_spawn_failure(scope_label, exc):
 
 def _start_scan(workspace_name, session=None, api_key_name=None):
     # A signed-in user brings their own delegated token (set as an env var
-    # below). A valid API key (Tanda 5, E.1 -- a Fabric pipeline or other
+    # below). A valid API key (a Fabric pipeline or other
     # automation caller) has already proven a real secret credential, which
     # is a fundamentally different trust level than a truly anonymous,
     # credential-less request -- so it goes straight to the shared `az` CLI
@@ -522,8 +522,7 @@ def _start_scan(workspace_name, session=None, api_key_name=None):
         # _start_scan_via_fabric_pipeline below) -- checking it unconditionally
         # here used to fail every API-key/MCP-triggered scan with
         # az_session_invalid on a deploy that has no az/pwsh installed at all
-        # (e.g. the Render image), even though pipeline mode never needed it
-        # (2026-08-26 security/correctness audit finding).
+        # (e.g. the Render image), even though pipeline mode never needed it.
         if not fabric_pipeline.is_fabric_pipeline_mode():
             ok, message = _check_az_session()
             if not ok:
@@ -688,8 +687,8 @@ def _snapshot_items_for_scope_warehouse(scope_names):
 def _diff_items(before, after, sample_limit=40):
     """Compares two _snapshot_items_for_scope() results and buckets the
     difference by item_type, the same breakdown requested for the scan log
-    ("todos los elementos modificados en ese escaneo contabilizados por
-    tipo"). Only a bounded sample of each bucket's qualified names is kept
+    ("every item modified in that scan, counted by
+    type"). Only a bounded sample of each bucket's qualified names is kept
     here (the rest is still counted) -- the full snapshot dicts themselves
     are not retained anywhere past this call, only this summary."""
     from collections import defaultdict
@@ -749,8 +748,7 @@ def _dependency_workspace_name(qualified_name):
 
 def _snapshot_dependencies_for_scope_warehouse(scope_names):
     """Same contract as _snapshot_items_for_scope_warehouse, one level
-    down the graph (roadmap Nivel 1, 2026-08-17: "historial point-in-time
-    de dependencias") -- a "dependency" here is one EDGE (from_qualified_
+    down the graph (a point-in-time dependency history) -- a "dependency" here is one EDGE (from_qualified_
     name -> to_qualified_name, for a given relationship_type), not a node,
     so the dict key is a 3-tuple instead of a single qualified_name.
     bronze_dependencies has no workspace_name column of its own (an edge
@@ -838,7 +836,7 @@ def _persist_diff(diff, scope_label, started_at_iso):
 
 def _migrate_item_history_schema_if_needed():
     """One-time upgrade for an item_history.csv written before
-    triggered_by_email existed (2026-08-24) -- same reasoning/shape as
+    triggered_by_email existed -- same reasoning/shape as
     _migrate_history_schema_if_needed below, for the OTHER history file:
     rewrites the header and pads every existing row with an empty value
     for the new column, so old and new rows share one consistent column
@@ -877,7 +875,7 @@ def _append_item_history_rows(diff, scope_label, started_at_iso):
     event_date = (started_at_iso or _now_iso())[:10]
     # Same read _append_history_row does a few lines below its own call
     # site -- "who started the scan this diff came from", None/anonymous
-    # for a session-less trigger (2026-08-24, so Cambios can show it too).
+    # for a session-less trigger (so the Changes tab can show it too).
     triggered_by_email = _scan_state.get("started_by_email") or ""
     csv_rows = [
         [
@@ -937,7 +935,7 @@ def _append_item_history_rows_warehouse(diff, scope_label, started_at_iso):
         for row in rows
     ]
     try:
-        # 2026-08-24: triggered_by_email is new -- ALTER the column in for a
+        # triggered_by_email is new -- ALTER the column in for a
         # table that already existed before it did, a no-op otherwise (see
         # ensure_bronze_column's own docstring).
         warehouse.ensure_bronze_column("bronze_item_history", "triggered_by_email", "VARCHAR(320)")
@@ -957,7 +955,7 @@ _DEPENDENCY_HISTORY_TABLE_DDL = (
 def _append_dependency_history_rows_warehouse(diff, scope_label, started_at_iso):
     """Same trigger/shape as _append_item_history_rows_warehouse, one
     level down the graph -- writes to dbo.bronze_dependency_history
-    instead of dbo.bronze_item_history (roadmap Nivel 1, 2026-08-17).
+    instead of dbo.bronze_item_history.
     Best-effort, same reasoning: a Warehouse write failure here must
     never fail the scan itself."""
     changes = (
@@ -1070,8 +1068,7 @@ def _send_email(settings, to_email, subject, html_body, text_body):
     # See admin_settings._reserved_secret_env_var_name's own docstring --
     # without this, smtp_password_ref pointed at the SP secret's env var
     # would make this "send a test email" path exfiltrate it to whatever
-    # smtp_host the same admin typed into the same form (2026-08-26
-    # security audit).
+    # smtp_host the same admin typed into the same form.
     reserved = _reserved_secret_env_var_name(settings)
     if password_ref and reserved and password_ref == reserved:
         return False, f"'{password_ref}' is reserved for the Warehouse service-principal secret and can't be used as an SMTP password reference."
@@ -1099,8 +1096,8 @@ def _send_email(settings, to_email, subject, html_body, text_body):
 
 def _build_teams_message(scope_label, started_at_iso, ended_at_iso, status, diff, triggered_by_email, failed_step, error_detail, language):
     """Same underlying facts as _build_notification_email, packaged as a
-    Teams Adaptive Card instead of an email MIME message (roadmap Nivel 1,
-    2026-08-17: 'notificaciones a Teams' -- reuses NOTIFICATION_TEXT/the
+    Teams Adaptive Card instead of an email MIME message (a "Teams notifications"
+    option -- reuses NOTIFICATION_TEXT/the
     diff shape rather than inventing a second copy of the same strings).
     The envelope ({"type": "message", "attachments": [...]}) is accepted
     by both a legacy Office 365 Connector webhook and the newer Power
@@ -1151,7 +1148,7 @@ _TEAMS_WEBHOOK_HOST_SUFFIXES = (".webhook.office.com", ".logic.azure.com", ".pow
 
 def _is_valid_teams_webhook_url(url):
     """Restricts outbound Teams-notification requests to Microsoft's own
-    webhook domains (2026-08-26 security audit): teams_webhook_url is
+    webhook domains: teams_webhook_url is
     admin-configurable free text with no other constraint, so without this
     an admin could point "send a test notification" at ANY URL --
     including an internal/private address -- making this server an SSRF
@@ -1321,7 +1318,7 @@ def _wait_for_full_scan_process(proc, started_at_iso, started_monotonic, before_
         # This and _wait_for_process (single-workspace scans) are the only
         # two paths that rebuild the big JSON files (99_refresh_lineage_
         # project.ps1 / scan_single_workspace.ps1 both run 11/17/21/build_
-        # graph_map_index.ps1 as local rebuild steps, as of 2026-07-24). A
+        # graph_map_index.ps1 as local rebuild steps). A
         # Fabric-pipeline-triggered scan (_wait_for_fabric_pipeline_job)
         # only populates Warehouse bronze tables, never these local JSON
         # files, so it never calls this -- see _maybe_trigger_onelake_
@@ -1391,7 +1388,7 @@ def _start_full_scan(session=None, api_key_name=None):
     elif api_key_name:
         # See the matching comment in _start_scan: pipeline mode never
         # touches the shared `az` CLI session, so this must not require it
-        # either (2026-08-26 audit finding).
+        # either.
         if not fabric_pipeline.is_fabric_pipeline_mode():
             ok, message = _check_az_session()
             if not ok:
@@ -1518,7 +1515,7 @@ def _wait_for_executions_scan_process(proc, started_at_iso, started_monotonic):
 
 
 def _start_executions_scan(session=None, api_key_name=None):
-    """Production-only execution/schedule refresh (Phase 6 alone, via
+    """Production-only execution/schedule refresh (pipeline phase 6 alone, via
     71_scan_production_executions.ps1) -- the narrow, faster counterpart to
     a full scan when only duration/schedule/run-history data is needed.
     Unlike _start_scan/_start_full_scan, the workspace scope here is not
@@ -1673,8 +1670,8 @@ def _start_warehouse_upload(session=None, api_key_name=None, system_triggered=Fa
     # every upload (even a fully working session-token or service-principal
     # one) behind whatever `az` happens to be doing on the server, and
     # produced a misleading "Azure CLI session is missing or expired" error
-    # for a problem that had nothing to do with Azure CLI (real report,
-    # 2026-07-21). A real missing-token failure still surfaces -- just from
+    # for a problem that had nothing to do with Azure CLI (real report).
+    # A real missing-token failure still surfaces -- just from
     # the script's own error, in its log, like any other real upload failure.
     pwsh_path = _resolve_pwsh_command()
     if not pwsh_path:
@@ -1881,7 +1878,7 @@ def _maybe_trigger_onelake_publish():
     """Same shape/reasoning as _maybe_trigger_warehouse_upload. Called from
     both _wait_for_process (single-workspace scans) and _wait_for_full_
     scan_process (full scans) -- both local pipelines rebuild all 5 big
-    JSON files as of 2026-07-24 (see each call site's own comment). Never
+    JSON files (see each call site's own comment). Never
     called from _wait_for_fabric_pipeline_job: that path only populates
     Warehouse bronze tables, never these local JSON files. If the admin
     has both configured a OneLake destination AND turned on onelake_data.
@@ -2065,7 +2062,7 @@ def _wait_for_fabric_pipeline_job(job_instance_id, scope_label, started_at_iso, 
     even if the user signs out midway. None falls back to the configured
     service principal, unchanged from before this existed.
 
-    Item snapshot/diff (2026-08-14): before_snapshot is taken by the
+    Item snapshot/diff: before_snapshot is taken by the
     caller (_start_scan_via_fabric_pipeline / _start_full_scan_via_fabric_
     pipeline) right before triggering the pipeline, via
     _snapshot_items_for_scope_warehouse -- items.csv on THIS machine isn't
@@ -2075,7 +2072,7 @@ def _wait_for_fabric_pipeline_job(job_instance_id, scope_label, started_at_iso, 
     so a caller that predates this (or a Warehouse read that failed at
     trigger time) just skips history tracking instead of erroring.
 
-    Dependency snapshot/diff (2026-08-17, roadmap Nivel 1): same idea, one
+    Dependency snapshot/diff: same idea, one
     level down the graph -- before_dependency_snapshot/_snapshot_
     dependencies_for_scope_warehouse/_diff_dependencies/_append_
     dependency_history_rows_warehouse mirror the item-level ones above

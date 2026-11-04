@@ -1,39 +1,39 @@
 # NB_Extract_Object_Column_Catalog
 #
-# Fuente para un notebook Python de Fabric -- Fase B del "escaneo profundo"
-# (ver docs/105_fabric_native_discovery_setup.md para el patron general).
-# Cada bloque "# %%" es una celda -- pegalas en orden.
+# Source for a Fabric Python notebook -- part of the "deep scan"
+# (see docs/105_fabric_native_discovery_setup.md for the general pattern).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Replica fiel de scripts/63_extract_object_column_catalog.ps1: para cada
-# base de datos SQL/Fabric que este proyecto ya referencia (via candidatos
-# de item/pipeline/modelo-semantico o el catalogo confirmado de SQL
-# endpoints), conecta y lee sys.columns -- el nivel mas profundo de detalle
-# que el panel de impacto puede mostrar por objeto (nombre/tipo/nullable de
-# cada columna de cada tabla/vista).
+# Faithful replica of scripts/63_extract_object_column_catalog.ps1: for each
+# SQL/Fabric database that this project already references (via item/pipeline/
+# semantic-model candidates or the confirmed catalog of SQL
+# endpoints), it connects and reads sys.columns -- the deepest level of detail
+# that the impact panel can show per object (name/type/nullable of
+# each column of each table/view).
 #
-# Depende de que hayan corrido antes en el pipeline: NB_Discover_Object_
+# Depends on these having run before in the pipeline: NB_Discover_Object_
 # Lineage, NB_Discover_Pipeline_Object_Lineage, NB_Discover_Semantic_Model_
-# Lineage, NB_Extract_SQL_Endpoint_Catalog (Fase A) -- lee sus 4 tablas
-# bronze para construir la lista de objetivos servidor;bd, igual que el
-# script local lee sus 4 CSV equivalentes.
+# Lineage, NB_Extract_SQL_Endpoint_Catalog -- it reads their 4 bronze
+# tables to build the list of server;db targets, just as the
+# local script reads its 4 equivalent CSVs.
 #
-# Escribe dbo.bronze_object_column_catalog y dbo.bronze_object_column_
-# catalog_status -- mismas columnas que scripts/63_extract_object_column_
-# catalog.ps1 ya escribe en analysis/object_column_catalog.csv / _status.csv.
+# Writes dbo.bronze_object_column_catalog and dbo.bronze_object_column_
+# catalog_status -- the same columns that scripts/63_extract_object_column_
+# catalog.ps1 already writes to analysis/object_column_catalog.csv / _status.csv.
 #
-# No incluido (a proposito, igual que el script local): el fallback a
-# sql_server_deep_catalog_columns.csv (script 48, servidores externos con
-# login SQL en vez de AAD) -- ese script no esta portado todavia y depende
-# de conectividad de red que ya se confirmo que no existe hoy (ver
+# Not included (on purpose, same as the local script): the fallback to
+# sql_server_deep_catalog_columns.csv (script 48, external servers with
+# SQL login instead of AAD) -- that script is not ported yet and depends
+# on network connectivity that was already confirmed not to exist today (see
 # docs/105).
 #
-# Self-contained a proposito (no usa %run) -- mismo criterio que el resto
-# de notebooks "Extract"/"Discover" de este proyecto.
+# Self-contained on purpose (it does not use %run) -- same criterion as the rest
+# of the "Extract"/"Discover" notebooks of this project.
 
 # %% [markdown]
-# ## Configuracion
-# Mismos valores que en NB_Discover_Workspaces_Items -- copia aqui los que
-# ya rellenaste alli.
+# ## Configuration
+# Same values as in NB_Discover_Workspaces_Items -- copy here the ones you
+# already filled in there.
 
 # %%
 try:
@@ -55,32 +55,32 @@ import time
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 CATALOG_CONNECT_TIMEOUT_SECONDS = 12
 CATALOG_COMMAND_TIMEOUT_SECONDS = 90
 DB_TOKEN_REFRESH_SECONDS = 1200
 
 # %% [markdown]
-# ## Parametros
-# Marca esta celda como celda de parametros en Fabric. El pipeline la
-# sobreescribe con el mismo WorkspaceNameFilter que recibe
-# NB_Discover_Workspaces_Items. Vacio = tenant completo.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric. The pipeline
+# overrides it with the same WorkspaceNameFilter that
+# NB_Discover_Workspaces_Items receives. Empty = whole tenant.
 #
-# Nota (igual que el script local): el filtro aqui es por servidor;bd, no
-# por item -- un objetivo se incluye si CUALQUIERA de los workspaces que lo
-# referencian coincide con el filtro.
+# Note (same as the local script): the filter here is by server;db, not
+# by item -- a target is included if ANY of the workspaces that
+# reference it matches the filter.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticacion: token propio de cuenta de servicio (MSAL)
+# ## Authentication: own service account token (MSAL)
 
 # %%
 def get_client_secret():
@@ -108,8 +108,8 @@ def acquire_token(scope):
     return result["access_token"]
 
 # %% [markdown]
-# ## Warehouse (pyodbc, mismo patron que NB_Discover_Workspaces_Items) +
-# conexion generica a cualquier SQL endpoint del tenant
+# ## Warehouse (pyodbc, same pattern as NB_Discover_Workspaces_Items) +
+# generic connection to any SQL endpoint in the tenant
 
 # %%
 def token_struct(token):
@@ -208,8 +208,8 @@ def normalize_server_host(value):
     return clean.strip()
 
 # %% [markdown]
-# ## Descubrir objetivos (union de servidor;bd de las 4 tablas bronze que
-# ya referencian una base de datos SQL/Fabric)
+# ## Discover targets (union of server;db from the 4 bronze tables that
+# already reference a SQL/Fabric database)
 
 # %%
 COLUMN_QUERY_SQL = """
@@ -257,7 +257,7 @@ def discover_targets(connection, filter_set):
     cursor = connection.cursor()
     target_map = {}
 
-    # 2026-08-19 fix: confirmed live (Fase B pilot) that
+    # Fix: confirmed live (pilot run) that
     # bronze_item_object_lineage_candidates/bronze_pipeline_object_lineage_
     # candidates can carry source_type='Fabric' rows that are NOT a SQL
     # database at all -- e.g. a Reflex action referencing another Fabric

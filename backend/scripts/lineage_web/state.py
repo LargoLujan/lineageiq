@@ -2,8 +2,8 @@
 Every submodule that touches one of these imports it directly from here
 (`from .state import _sessions`) -- Python binds that to the SAME dict
 object, not a copy, so mutations stay visible across every importer just
-like when they all lived in one file. Verified before this split (D.3,
-2026-07-08) that none of these names is ever reassigned anywhere in the
+like when they all lived in one file. Verified before this split
+that none of these names is ever reassigned anywhere in the
 original file, only mutated in place -- reassigning any of them in a
 submodule would break the sharing, so don't.
 """
@@ -19,7 +19,7 @@ _scan_state = {
     "workspace": None,
     "pid": None,
     # Same value as started_at, under a name that's stable API contract for
-    # /api/status callers (Tanda 5, E.1) even if the internal state
+    # /api/status callers even if the internal state
     # representation changes later -- a Fabric pipeline's Until activity
     # compares this against the id it got back from the trigger call to
     # confirm it's still polling the scan it started, not a different one.
@@ -55,8 +55,8 @@ _scan_state = {
     # for this kind of run). None for every local, subprocess-based scan.
     "fabric_job_instance_id": None,
 }
-# FIFO list of requests that arrived while a scan was already running (Tanda
-# 10) -- protected by the SAME _scan_lock as _scan_state above, not a
+# FIFO list of requests that arrived while a scan was already running
+# -- protected by the SAME _scan_lock as _scan_state above, not a
 # separate lock, since every transition that matters (claim the running
 # slot, enqueue instead, pop the next entry once a scan ends) has to be
 # atomic across both together. Each entry:
@@ -69,7 +69,7 @@ _scan_state = {
 _scan_queue = []
 _session_lock = threading.Lock()
 _sessions = {}  # session_id -> {"user_email", "user_name", "msal_cache" (serialized), "created_at"}
-# Bounded history of ended sessions (2026-08-18, admin panel Sessions tab --
+# Bounded history of ended sessions (admin panel Sessions tab --
 # same SAME lock as _sessions above, not a separate one, since every ended-
 # session code path already holds _session_lock at the point it needs to
 # append here too). Never includes access_token/msal_cache, same as the
@@ -84,7 +84,7 @@ _metrics_lock = threading.Lock()
 _metrics_started_at = _now_iso()  # process start -- never reassigned, see the module docstring above
 _request_counts = {}  # (method, path, status_code) -> count -- see observability.py
 # In-memory only, deliberately NOT persisted to admin_settings.json
-# (2026-08-18 admin-panel completeness pass) -- so an admin can see which
+#  -- so an admin can see which
 # API keys are actually still in use, without the write-storm/lock-file
 # risk a real per-request disk write would add (auth._valid_api_key
 # updates this on every successful match). Resets on restart, same
@@ -92,7 +92,7 @@ _request_counts = {}  # (method, path, status_code) -> count -- see observabilit
 _api_key_last_used_lock = threading.Lock()
 _api_key_last_used = {}  # key_hash -> ISO timestamp
 
-# Entra profile photo (2026-08-18), keyed by lowercased user_email. In-memory
+# Entra profile photo, keyed by lowercased user_email. In-memory
 # only, capped by _PHOTO_CACHE_TTL_SECONDS in graph_profile.py rather than
 # persisted -- avatars rarely change and every render checking Graph would be
 # wasteful, but a hard restart (or the TTL) is enough to pick up a new one.
@@ -102,7 +102,7 @@ _api_key_last_used = {}  # key_hash -> ISO timestamp
 _profile_photo_lock = threading.Lock()
 _profile_photo_cache = {}  # user_email -> {"content_type", "data", "fetched_at"}
 
-# Tenant display name (2026-08-18): the SAME for every signed-in user in
+# Tenant display name: the SAME for every signed-in user in
 # the tenant, so it's cached globally (one entry, keyed "value") rather
 # than per-user like the photo above -- see graph_profile.py's
 # _fetch_tenant_name for what populates this.
@@ -110,7 +110,7 @@ _tenant_name_lock = threading.Lock()
 _tenant_name_cache = {}  # {"name": str|None, "fetched_at": float} once populated
 
 # Directory profile (displayName/jobTitle/department) for OTHER users, by
-# lowercased email (2026-08-24, admin panel's "Usuarios por workspace") --
+# lowercased email (admin panel's "Usuarios por workspace") --
 # separate from _profile_photo_cache above (that one is only ever the
 # signed-in user's OWN photo). A cached entry with profile=None means
 # "looked up, Graph didn't have it or the call failed" so a bad email
@@ -119,7 +119,7 @@ _tenant_name_cache = {}  # {"name": str|None, "fetched_at": float} once populate
 _user_profile_lock = threading.Lock()
 _user_profile_cache = {}  # email -> {"profile": dict|None, "fetched_at": float}
 
-# Multi-tenant installer wizard (Fase 5, 2026-08-24) -- ONE install can run
+# Multi-tenant installer wizard -- ONE install can run
 # at a time per server process, same reasoning as _scan_state above (a
 # second concurrent install would race on the same isolated `fab` HOME
 # directory). See installer.py's run_install for what populates this;

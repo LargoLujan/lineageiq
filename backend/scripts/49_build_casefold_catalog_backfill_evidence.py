@@ -19,7 +19,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # D.0: anchor default paths to the repo, not $PWD
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # Anchor default paths to the repo, not $PWD
 
 EVIDENCE_COLUMNS = [
     "source_type",

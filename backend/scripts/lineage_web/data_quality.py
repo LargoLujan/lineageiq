@@ -1,6 +1,5 @@
-"""Purview-inspired data-quality rule engine (Roadmap Fase 1, 2026-08-31,
-part of the Purview-parity push -- see docs/conversations for the
-capability comparison this came out of).
+"""Purview-inspired data-quality rule engine (part of the Purview-parity
+feature set).
 
 Evaluates admin-defined rules against dbo.bronze_column_profile -- the
 exact table NB_Discover_Column_Profile.py already writes for the Column

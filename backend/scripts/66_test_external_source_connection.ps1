@@ -39,7 +39,7 @@ param(
 
 # Read-only connectivity check for one row of config/admin_settings.json's
 # external_sources list (see the admin panel's "Probar conexion" button and
-# docs/102_admin_panel_and_user_auth.md, Phase 3). Covers the ~15 most
+# docs/102_admin_panel_and_user_auth.md). Covers the ~15 most
 # common relational/analytical engines an external source might be, in two
 # tiers of honesty rather than pretending every engine is equally supported:
 #
@@ -80,8 +80,7 @@ function Get-EscapedOdbcValue {
     # Uid/Pwd) with no escaping at all -- these all come from an already-
     # authenticated admin's own saved config (POST /api/admin/external-
     # sources/test), so this is defense-in-depth rather than closing a
-    # remotely-exploitable hole (2026-08-17 security audit), but cheap
-    # enough that there's no reason not to.
+    # remotely-exploitable hole, but cheap enough that there's no reason not to.
     param([string]$Value)
     return "{" + $Value.Replace("}", "}}") + "}"
 }

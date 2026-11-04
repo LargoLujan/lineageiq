@@ -1,5 +1,5 @@
-"""Unit tests for catalog.py's _get_column_sensitivity (roadmap Fase 2,
-2026-08-17): content-based sensitivity signals for Fabric-native
+"""Unit tests for catalog.py's _get_column_sensitivity:
+content-based sensitivity signals for Fabric-native
 Lakehouse tables, read from dbo.bronze_column_sensitivity_content. No
 local CSV fallback exists for this table (only ever produced by the
 Fabric-native NB_Discover_Column_Sensitivity.py notebook), so every test

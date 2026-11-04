@@ -1,15 +1,15 @@
 """HTTP handler: static files + /api/*.
 
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion,
-no logic changed from the original. Extended since (Tanda 5, E.0-E.3):
+Split out of lineage_web_server.py -- pure code motion,
+no logic changed from the original. Extended since:
 static API keys, the catalog/query routes, and per-IP rate limiting +
 request metrics.
 
 Reading the actual lineage data -- GET /api/workspaces, /api/items,
 /api/item-lineage, /api/objects, /api/notebook-code, and any static file
 under /data/ (the large JSON payloads the frontend loads) -- requires a
-signed-in session OR a valid API key (2026-07-22), OR LINEAGE_DEMO_MODE=1
-in the environment (2026-08-27, see _read_access_allowed) -- opt-in only,
+signed-in session OR a valid API key, OR LINEAGE_DEMO_MODE=1
+in the environment (see _read_access_allowed) -- opt-in only,
 meant for a synthetic demo tenant (backend/scripts/generate_demo_data.py),
 never for a deployment pointed at real Fabric data (/api/auth/me reports
 it as demo_mode so the web UI can skip its sign-in gate). No further permission
@@ -122,8 +122,8 @@ def _mask_api_keys(settings):
     creation response that returns it (POST /api/admin/api-keys) -- GET/
     POST /api/admin/settings used to echo the whole settings object
     verbatim, api_keys included, defeating the point of the dedicated
-    masked GET /api/admin/api-keys endpoint below (2026-08-17 security
-    audit: any signed-in admin could read every API key in full from the
+    masked GET /api/admin/api-keys endpoint below (security
+    hardening: any signed-in admin could read every API key in full from the
     network tab or `adminSettingsCache` in devtools)."""
     masked = dict(settings)
     masked["api_keys"] = [
@@ -132,7 +132,7 @@ def _mask_api_keys(settings):
             "created_at": entry.get("created_at", ""),
             "key_preview": entry.get("key_preview", ""),
             # None of these five are secret -- safe to return in full,
-            # unlike key_hash (2026-08-18, admin-panel completeness pass).
+            # unlike key_hash.
             "description": entry.get("description", ""),
             "created_by": entry.get("created_by", ""),
             "expires_at": entry.get("expires_at", ""),
@@ -144,7 +144,7 @@ def _mask_api_keys(settings):
         }
         for entry in settings.get("api_keys") or []
     ]
-    # Small audit trail (2026-08-18) -- see POST /api/admin/api-keys/revoke.
+    # Small audit trail -- see POST /api/admin/api-keys/revoke.
     # Nothing here was ever secret (never held key_hash), so no masking
     # needed, just pass it through.
     masked["revoked_api_keys"] = settings.get("revoked_api_keys") or []
@@ -188,7 +188,7 @@ def _parse_sensitivity_sample_limit(query, default=15, maximum=5000):
 
 
 def _parse_analytics_days(query, default=30, maximum=365):
-    # Backs the Analíticas tab's 7/30/90-day filter (2026-08-25) -- both
+    # Backs the Analíticas tab's 7/30/90-day filter -- both
     # analytics.get_usage_analytics and get_mcp_usage_analytics already
     # took a `days` kwarg, just never had a caller pass anything but the
     # default until this query param existed.
@@ -213,8 +213,8 @@ class LineageWebHandler(BaseHTTPRequestHandler):
     # Without this, a connection that never finishes sending its request
     # line/headers/body (deliberately slow, or just dead) holds its thread
     # forever -- ThreadingHTTPServer hands each connection its own thread
-    # with no cap, so enough of these exhaust the process (2026-08-17
-    # security audit). socketserver.StreamRequestHandler.setup() applies
+    # with no cap, so enough of these exhaust the process.
+    # socketserver.StreamRequestHandler.setup() applies
     # this automatically via socket.settimeout(); the stdlib's own
     # handle_one_request() already catches the resulting socket.timeout
     # and closes the connection cleanly, so no other change is needed here.
@@ -233,7 +233,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
 
     def _send_security_headers(self):
         """Defense-in-depth headers this hand-rolled server never sent
-        before (2026-08-17 security audit) -- with no framework underneath
+        before -- with no framework underneath
         and every bit of HTML built via app.js's own escapeHtml() discipline,
         these are the only backstop if a future escaping bug ever slips
         through. script-src has no 'unsafe-inline': both inline <script>
@@ -283,7 +283,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         # its edge), but that also silently broke the project's own
         # explicitly-supported direct-HTTP-on-LAN use case: the cookie was
         # set with Secure, then never sent back by the browser over that
-        # plain-HTTP connection (2026-08-26 security audit). Reflects
+        # plain-HTTP connection. Reflects
         # _request_scheme() instead -- see its own docstring for why
         # trusting X-Forwarded-Proto from any peer is safe specifically for
         # this purpose.
@@ -317,7 +317,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         return SESSION_COOKIE_NAME in cookie
 
     def _validate_csrf_origin(self):
-        """Origin-based CSRF defense (2026-08-26 security audit) for any
+        """Origin-based CSRF defense for any
         POST that relies on the session cookie. SameSite=Lax already blocks
         the classic cross-site form-POST case (Lax cookies aren't attached
         to cross-site subrequests, only top-level navigations with a "safe"
@@ -347,7 +347,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
     # visitor, always loopback since cloudflared runs on this same
     # machine) -- Cloudflare forwards the real visitor IP in this header,
     # so rate limiting keys on it when present. Only trusted when the
-    # DIRECT peer actually is loopback, though (2026-08-17 security audit):
+    # DIRECT peer actually is loopback, though:
     # trusting these headers unconditionally let anyone send a made-up
     # Cf-Connecting-Ip/X-Forwarded-For and pick whatever "IP" they wanted,
     # defeating rate limiting entirely -- both for a normal client talking
@@ -407,7 +407,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         raw_key = self.headers.get("X-Api-Key")
         if not raw_key:
             return None, None
-        # 2026-08-18: a single _valid_api_key call resolves (name, scope)
+        # A single _valid_api_key call resolves (name, scope)
         # from the SAME matched entry, in one settings read -- see its own
         # docstring for why a separate by-name scope lookup (the original
         # version of this fix) was wrong: it could resolve to a different
@@ -430,7 +430,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
     def _api_key_name(self):
         """Machine-to-machine auth for automation callers (Fabric pipeline
         Web activities) that can't do an interactive device-code sign-in --
-        see Tanda 5, E.0. Returns the matching key's name, or None if the
+        see _valid_api_key_name. Returns the matching key's name, or None if the
         header is absent/invalid."""
         raw_key = self.headers.get("X-Api-Key")
         if not raw_key:
@@ -440,7 +440,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
 
     def _read_access_allowed(self):
         """Gate for every read-only catalog/graph route and /data/* static
-        file (2026-08-27): a signed-in session, a valid API key, or --
+        file: a signed-in session, a valid API key, or --
         opt-in only, LINEAGE_DEMO_MODE=1 in the environment -- unauthenticated.
         Demo mode exists so `docker-compose up` plus `python backend/scripts/
         generate_demo_data.py` (synthetic "Contoso" tenant, see that script's
@@ -680,7 +680,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         # a caller declaring more than MAX_REQUEST_BODY_BYTES gets rejected
         # WITHOUT reading it, so an attacker can't force this process to
         # materialize an arbitrarily large payload in memory just to have
-        # it discarded (2026-08-17 security audit). The connection is
+        # it discarded. The connection is
         # closed rather than kept alive in that case, since the unread
         # body bytes can't safely be left on the socket either (same
         # corruption risk described above).
@@ -808,7 +808,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/related-elements":
-            # Roadmap Fase 2 (2026-08-18): the 6 catalog reads that used to
+            # The 6 catalog reads that used to
             # be local-only (mcp_server.py's stdio tools), same auth level
             # as the sibling catalog routes above -- see catalog.py's own
             # comment on this batch.
@@ -889,7 +889,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             # Log lines can contain internal paths/error detail from a
             # workspace the caller may have no real Fabric access to --
             # only expose them to a signed-in session or a valid API key
-            # (Tanda 5, E.1 -- an automation caller polling this exact
+            # (an automation caller polling this exact
             # endpoint needs the log tail to make retry/alert decisions),
             # not to anyone who can merely reach the tunnel URL. The step
             # name/progress percentage (below) stays visible to everyone:
@@ -904,7 +904,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
                 # started_by_email is a real staff email, last_error is
                 # internal failure detail -- same "not to anyone who can
                 # merely reach the tunnel URL" bar as log_tail above
-                # (2026-08-17 security audit: both used to be public
+                # (security hardening: both used to be public
                 # regardless of session).
                 payload["started_by_email"] = None
                 payload["last_error"] = None
@@ -912,7 +912,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
                 progress = _read_progress()
                 if progress and progress.get("workspace") == payload.get("workspace"):
                     payload["progress"] = progress
-            # Pending requests (Tanda 10) -- same gating as started_by_email
+            # Pending requests -- same gating as started_by_email
             # above for requested_by_email; never session_id/api_key_name
             # regardless of caller (see _queue_snapshot's own docstring).
             queue = _queue_snapshot()
@@ -927,8 +927,8 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             runs = _read_history(workspace_filter=workspace_filter)
             # triggered_by_email is a real staff email, error/failed_step is
             # internal failure detail -- gated behind the same bar as
-            # log_tail/started_by_email in /api/status (2026-08-17 security
-            # audit). The headline counts + per-type breakdown on every row
+            # log_tail/started_by_email in /api/status.
+            # The headline counts + per-type breakdown on every row
             # stay public either way, same as /api/history/diff's own note.
             if not self._read_access_allowed():
                 runs = [{**row, "triggered_by_email": "", "error": "", "failed_step": ""} for row in runs]
@@ -1001,8 +1001,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
                 # HttpOnly cookie only. Echoing it in the JSON body too (as
                 # this used to do, since `result` already carried it for the
                 # set_cookie= call below) let any JS on the page read it
-                # straight off the fetch() response, defeating HttpOnly
-                # (2026-08-26 security audit finding).
+                # straight off the fetch() response, defeating HttpOnly.
                 body = {key: value for key, value in result.items() if key != "session_id"}
                 self._send_json(200, body, set_cookie=result["session_id"])
                 return
@@ -1067,7 +1066,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/admin/data-quality-overview":
             # Same admin_or_api_key trust bar as the governance/sensitivity
             # routes above -- same reasoning: mcp_server_remote.py/
-            # mcp_http_server.py need to reach this too (Roadmap Fase 1).
+            # mcp_http_server.py need to reach this too.
             settings = self._require_admin_or_api_key()
             if settings is None:
                 return
@@ -1075,7 +1074,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/privacy-coverage-map":
-            # Roadmap Fase 5 (privacy/data-subject-rights locator): same
+            # Same
             # admin_or_api_key trust bar as the governance/sensitivity
             # routes above.
             settings = self._require_admin_or_api_key()
@@ -1096,7 +1095,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/privacy-framework-map":
-            # Roadmap Fase 6 (follow-up to Fase 5): same data grouped by
+            # Same data grouped by
             # legal framework (GDPR/FERPA/CCPA) first, plus admin-logged
             # external systems -- same admin_or_api_key trust bar as the
             # routes above. Same defensive try/except as privacy-coverage-
@@ -1145,7 +1144,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             settings = self._require_admin()
             if settings is None:
                 return
-            # sample_limit=0 (2026-08-18): the notifications badge/panel only
+            # sample_limit=0: the notifications badge/panel only
             # need the flagged-column COUNT, not real sample rows -- same
             # underlying bronze_column_sensitivity_content read as the
             # Sensitivity tab's own overview, just without the per-category
@@ -1184,7 +1183,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/user-profiles":
-            # 2026-08-24: batch-resolve displayName/jobTitle/department for
+            # Batch-resolve displayName/jobTitle/department for
             # a list of KNOWN emails (?emails=a@x.com,b@x.com) -- used by
             # the "Usuarios por workspace" section to show "puesto" for
             # people who already have a role assignment, as opposed to
@@ -1204,7 +1203,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
                 return
             result = _get_capacity_insight()
             # Upgrade raw capacity_id labels to real display names via a
-            # live Fabric API call (2026-08-18) -- bronze_workspaces never
+            # live Fabric API call -- bronze_workspaces never
             # carries a capacity name (see _capacity_label's own docstring
             # in purview_insights.py), so this is the only place one can
             # come from. Also folds in capacities that exist in the tenant
@@ -1247,7 +1246,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
                         })
                     result["capacities"].sort(key=lambda entry: entry["item_count"], reverse=True)
                     result["capacities_resolved_live"] = True
-            # Best-effort real CU column (2026-08-24): only attempted when
+            # Best-effort real CU column: only attempted when
             # the admin has actually configured capacity_metrics -- see
             # capacity_metrics.cu_seconds_by_capacity's own docstring for
             # why this is a separate, cheaper query than the full Capacidad
@@ -1286,9 +1285,9 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/admin/changes-digest":
             if self._require_admin() is None:
                 return
-            # ?scan= (2026-08-18) picks one of the response's own
+            # ?scan= picks one of the response's own
             # available_scans values instead of always the latest scan.
-            # ?from=/?to= (2026-08-24, YYYY-MM-DD, either or both) switches
+            # ?from=/?to= (YYYY-MM-DD, either or both) switches
             # to range mode, aggregating every scan in between instead of
             # one -- see _get_changes_digest's own docstring.
             scan_started_at = (query.get("scan") or [None])[0]
@@ -1305,7 +1304,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/content-sensitivity-overview":
-            # Roadmap Fase 2 (2026-08-18): the content-VERIFIED counterpart
+            # The content-VERIFIED counterpart
             # to sensitivity-overview above -- see purview_insights.
             # _get_content_sensitivity_overview's own docstring for why
             # this is a separate route (different underlying table,
@@ -1331,8 +1330,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             # Session-gated same as /data/* -- this is real production
             # data (null %, distinct counts, safe min/max), not curated
             # metadata. Same "not found means not profiled yet" contract
-            # as _get_column_profile itself (roadmap Fase 2, 2026-08-17,
-            # scope: only Fabric-native Lakehouse tables the service
+            # as _get_column_profile itself (scope: only Fabric-native Lakehouse tables the service
             # principal already had a data role in -- see docs/105).
             if not self._read_access_allowed():
                 self._send_json(401, {"error": "not_signed_in"})
@@ -1349,8 +1347,8 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/data-quality":
             # Same auth level and query contract as /api/column-profile --
             # see that endpoint's own comment. Evaluates whatever rules an
-            # admin has already defined against this table (Roadmap Fase 1,
-            # see data_quality.py's own docstring) -- {found: False} just
+            # admin has already defined against this table (see
+            # data_quality.py's own docstring) -- {found: False} just
             # means "no rule targets this table yet", not an error.
             if not self._read_access_allowed():
                 self._send_json(401, {"error": "not_signed_in"})
@@ -1396,8 +1394,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             # strings, SMTP password_ref, API keys), the business glossary
             # itself is meant for every signed-in user to browse, the same
             # way the existing tool-concept glossary already is. Also
-            # accepts an API key (2026-08-18, roadmap "MCP remoto para
-            # toda la empresa") -- same read-only catalog data an
+            # accepts an API key (for the remote MCP server) -- same read-only catalog data an
             # authenticated agent needs, same trust bar as /api/items etc.
             if not self._read_access_allowed():
                 self._send_json(401, {"error": "not_signed_in"})
@@ -1407,7 +1404,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/data-products":
-            # Roadmap Fase 3: same session_or_api_key trust bar as
+            # Same session_or_api_key trust bar as
             # /api/certifications/tags/business-glossary above -- the
             # admin-curated data-product list (name, owner, description,
             # linked qualified_names), Purview-Unified-Catalog-style.
@@ -1422,7 +1419,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             # Same session_or_api_key trust bar as /api/business-glossary --
             # the admin-curated "certified/official source" list, for any
             # signed-in user (or agent) to browse, not just the admin panel
-            # that curates it (2026-08-18: surfaces in the primary detail
+            # that curates it (it surfaces in the primary detail
             # panel too, not just Graph Map Mode -- see app.js).
             if not self._read_access_allowed():
                 self._send_json(401, {"error": "not_signed_in"})
@@ -1471,7 +1468,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             if error:
                 self._send_json(502, {"error": "fabric_api_error", "message": error})
                 return
-            # ?min_role=contributor (2026-08-24, the admin panel's
+            # ?min_role=contributor (the admin panel's
             # individual-workspace-scan picker): narrows down to workspaces
             # where the signed-in user is Admin/Member/Contributor, not
             # merely a Viewer -- see fabric_api._filter_workspaces_by_min_
@@ -1524,7 +1521,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path.startswith("/api/workspaces/") and parsed.path.endswith("/pipelines"):
-            # 2026-08-18, admin-panel completeness pass: same live picker
+            # Same live picker
             # the Lakehouse tab already has, for the Fabric-pipeline tab.
             session = self._current_session()
             if not session:
@@ -1544,7 +1541,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/mcp_server_remote.py":
-            # 2026-08-24: downloadable straight from this running server so
+            # Downloadable straight from this running server so
             # setting up the remote MCP agent needs no local repo checkout
             # ("todo remoto" -- local Fabric/repo access isn't a commercial
             # option) -- just this one file plus `pip install mcp`. Gated
@@ -1587,7 +1584,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         # Streamable HTTP's optional explicit session-termination call
-        # (2026-08-24) -- the only DELETE this server handles at all, so
+        #  -- the only DELETE this server handles at all, so
         # anything else 404s via the same _serve_static fallback GET/HEAD
         # already use (do_DELETE didn't exist before /mcp needed it).
         parsed = urlparse(self.path)
@@ -1788,7 +1785,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             if any(entry.get("name") == name for entry in settings.get("api_keys") or []):
                 self._send_json(409, {"error": "duplicate_name", "message": f"An API key named '{name}' already exists. Revoke it first or pick a different name."})
                 return
-            # 2026-08-18, admin-panel completeness pass: description/scope/
+            # description/scope/
             # expires_at, plus created_by captured server-side (the admin
             # creating it is already known from their own session, no need
             # to ask). scope defaults to "read_only" -- new keys have to be
@@ -1803,8 +1800,8 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             if expires_at:
                 # Fail closed at the boundary: an unparseable value stored
                 # as-is would silently mean "never expires" while the admin
-                # panel still displays it as if it were a real date (2026-
-                # 08-18 code review finding) -- reject it here instead.
+                # panel still displays it as if it were a real date -- reject it here
+                # instead.
                 try:
                     datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
                 except ValueError:
@@ -1814,8 +1811,8 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             raw_key = _generate_api_key()
             # Only the hash + a short preview are persisted -- the raw
             # value below is the one and only copy that ever exists
-            # outside this function's local variable (2026-08-17 security
-            # audit; previously stored in admin_settings.json verbatim).
+            # outside this function's local variable (previously stored in
+            # admin_settings.json verbatim).
             settings.setdefault("api_keys", []).append({
                 "name": name,
                 "key_hash": _hash_api_key(raw_key),
@@ -1847,8 +1844,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             settings["api_keys"] = [entry for entry in settings.get("api_keys") or [] if entry.get("name") != name]
             revoked = len(revoked_entries)
             if revoked:
-                # Small audit trail (2026-08-18, admin-panel completeness
-                # pass) instead of a silent hard-delete -- who revoked
+                # Small audit trail instead of a silent hard-delete -- who revoked
                 # which key and when. Never key_hash; nothing here was
                 # ever a secret. Bounded to the most recent 100 entries so
                 # this can't grow unbounded in admin_settings.json.
@@ -1938,7 +1934,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/sensitivity/scan-selected":
-            # Fase 6 (2026-08-24): targeted content-sensitivity scan --
+            # Targeted content-sensitivity scan --
             # triggers the SAME pipeline "escaneo completo" already uses
             # (there is no way to run a single Fabric notebook activity in
             # isolation without the admin having manually added a second
@@ -2056,7 +2052,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/fabric-connections/test":
-            # Tests THROUGH the assigned gateway (2026-08-18) -- unlike
+            # Tests THROUGH the assigned gateway -- unlike
             # every other "Probar conexión" button here, which always
             # connects directly from wherever this server runs and so can
             # never succeed for an on-premises external source, this asks
@@ -2085,7 +2081,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             if error:
                 self._send_json(200, {"ok": False, "message": error})
                 return
-            # Persisted onto the source (2026-08-18) so the notifications
+            # Persisted onto the source so the notifications
             # summary can flag a since-broken connection without re-testing
             # live on every page load -- this call alone can take up to a
             # minute, far too slow to run on every /api/admin/notifications-
@@ -2103,7 +2099,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/onelake/test":
-            # 2026-08-18, admin-panel completeness pass: the OneLake tab
+            # The OneLake tab
             # was the one Setup tab with a credential/connection but no
             # safe test action -- see onelake_data.test_connection's own
             # docstring.
@@ -2144,7 +2140,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             except (json.JSONDecodeError, UnicodeDecodeError):
                 body = {}
             language = "en" if body.get("language") == "en" else "es"
-            # 2026-08-18: test the form's current (possibly unsaved) SMTP
+            # Test the form's current (possibly unsaved) SMTP
             # values, not only what's already saved -- same "test what
             # you're about to save" contract as the Lakehouse/pipeline/
             # OneLake test buttons. Only overrides fields the caller
@@ -2196,7 +2192,7 @@ class LineageWebHandler(BaseHTTPRequestHandler):
                     self._send_json(403, {"error": "not_permitted", "message": "This account is not allowed to trigger a full scan."})
                     return
             # A valid API key is created by an admin specifically to let an
-            # automation caller trigger scans (Tanda 5, E.0/E.1) -- there is
+            # automation caller trigger scans -- there is
             # no per-key email to check against full_scan_emails, so
             # possessing a valid key is itself the authorization, same as
             # an admin already implicitly grants by creating one.

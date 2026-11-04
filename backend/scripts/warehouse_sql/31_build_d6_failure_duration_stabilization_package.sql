@@ -1,6 +1,5 @@
 -- Warehouse-native translation of backend/scripts/31_build_d6_failure_
--- duration_stabilization_package.ps1 (Phase 2 migration continuation,
--- 2026-07-21). Reads dbo.silver_orchestration_v2_plan (24, v2_status=
+-- duration_stabilization_package.ps1 (SQL migration). Reads dbo.silver_orchestration_v2_plan (24, v2_status=
 -- 'hold_failure_stabilization' OR original_risk_flags LIKE
 -- '%duration_defaulted%'), dbo.silver_likely_conflict_cleanup_queue (25,
 -- phase D6), dbo.bronze_failure_hotspots, dbo.bronze_execution_
@@ -14,7 +13,7 @@
 -- failure queue). d6_execution_id has no such anchor in the original and
 -- is an opaque per-row identifier like other D-package row ids in this
 -- migration; validation matches those rows by content.
--- Two real bugs found and fixed during validation (2026-07-21):
+-- Two real bugs found and fixed during validation:
 -- (1) T-SQL ROUND() rounds halves away from zero, unlike PowerShell's
 --     [math]::Round() which defaults to banker's rounding (ToEven); since
 --     default-by-role durations are often exact multiples of 300s, this

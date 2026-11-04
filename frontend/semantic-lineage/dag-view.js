@@ -1,4 +1,4 @@
-// Roadmap Fase 4 (2026-08-31, Purview-parity push): a 2D DAG lineage
+// A 2D DAG lineage
 // diagram -- Purview's own lineage view is always anchored to ONE asset
 // with upstream/downstream hops, not a whole-catalog explorer (that's
 // already Graph Map Mode's job, in 3D). This is deliberately its own
@@ -22,7 +22,7 @@
 // a backend field just for this.
 //
 // Layout: dagre.min.js (frontend/semantic-lineage/vendor/dagre.min.js,
-// MIT), vendored since 2026-07-03 for Planning Mode's card placement but
+// MIT), originally vendored for Planning Mode's card placement but
 // never actually invoked there -- that view ended up using its own
 // hand-rolled column/wave layout instead (see app.js's buildPlanningGraph
 // area), leaving dagre loaded on every page for nothing. This is the

@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/39_build_d1_closure_control.ps1
--- (Phase 1 of the local-computation -> Warehouse-SQL migration, 2026-07-21).
+-- (first step of the local-computation -> Warehouse-SQL migration).
 --
 -- Reads only bronze tables (dbo.bronze_d1_missing_object_lineage_queue,
 -- dbo.bronze_object_read_write_classification, dbo.bronze_pipeline_activity_lineage)
@@ -10,7 +10,7 @@
 --
 -- No recursive CTE needed here (unlike the graph/wave scripts) -- this is a
 -- straight lookup+classify pass, well within what Fabric Warehouse supports
--- (verified live 2026-07-21: CREATE PROCEDURE, plain CTEs, window functions
+-- (verified live: CREATE PROCEDURE, plain CTEs, window functions
 -- all work; recursive CTEs do not).
 CREATE OR ALTER PROCEDURE dbo.sp_build_d1_closure_control
 AS

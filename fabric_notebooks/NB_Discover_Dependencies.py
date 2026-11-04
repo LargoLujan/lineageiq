@@ -1,45 +1,45 @@
 # NB_Discover_Dependencies
 #
-# Fuente para un notebook Python de Fabric -- segundo paso del pipeline de
-# descubrimiento nativo, después de NB_Discover_Workspaces_Items (ver
-# docs/105_fabric_native_discovery_setup.md para el paso a paso completo:
-# Key Vault, cuenta de servicio, Data Pipeline con las dos actividades
-# encadenadas). Cada bloque "# %%" es una celda -- pégalas en orden.
+# Source for a Fabric Python notebook -- second step of the native
+# discovery pipeline, after NB_Discover_Workspaces_Items (see
+# docs/105_fabric_native_discovery_setup.md for the complete walkthrough:
+# Key Vault, service account, Data Pipeline with the two chained
+# activities). Each "# %%" block is a cell -- paste them in order.
 #
-# Réplica fiel de scripts/04_analyze_items.ps1 (Fase 4), la ÚNICA fase que
-# escribe index/dependencies.csv hoy (confirmado 2026-07-24 revisando los
-# ~30 scripts que hacen match con "dependencies.csv": todos los demás solo
-# LEEN ese archivo para construir artefactos derivados -- grafo,
-# orquestación, JSON del explorador, tablas bronze). Extrae, por cada item:
-#   - Conexiones externas confirmadas (API de conexiones).
-#   - Coincidencias de GUID dentro de las partes decodificadas de
+# Faithful replica of scripts/04_analyze_items.ps1, the ONLY script that
+# writes index/dependencies.csv today (confirmed 2026-07-24 by reviewing the
+# ~30 scripts that match "dependencies.csv": all the others only
+# READ that file to build derived artifacts -- graph,
+# orchestration, explorer JSON, bronze tables). For each item it extracts:
+#   - Confirmed external connections (connections API).
+#   - GUID matches inside the decoded parts of
 #     getDefinition (pipelines, CopyJobs, Dataflows, Eventstreams, Reflex,
-#     GraphQL, KQL, funciones de usuario, librerías de variables, Report/
-#     PaginatedReport) -- confirmado, no heurística.
-#   - Emparejamiento Lakehouse<->SQL endpoint vía la propia API de detalle
-#     del Lakehouse (sqlEndpointProperties.id), y atajos de OneLake.
-#   - Dos heurísticas por nombre (report/modelo semántico, SQL endpoint/
-#     lakehouse) cuando no hay coincidencia exacta por GUID.
+#     GraphQL, KQL, user functions, variable libraries, Report/
+#     PaginatedReport) -- confirmed, not heuristic.
+#   - Lakehouse<->SQL endpoint pairing via the Lakehouse's own detail API
+#     (sqlEndpointProperties.id), and OneLake shortcuts.
+#   - Two name-based heuristics (report/semantic model, SQL endpoint/
+#     lakehouse) when there is no exact GUID match.
 #
-# Deliberadamente NO incluido (mismo alcance que 04, que tampoco lo hace):
-# linaje derivado de parsear el CÓDIGO de un notebook o el TMDL de un
-# modelo semántico -- eso vive en scripts 09/16/18/19/51-54, una pieza
-# bastante más grande, no portada todavía. Node.js: si algún día se porta,
-# es un tercer notebook aparte, no una extensión de este.
+# Deliberately NOT included (same scope as 04, which does not do it either):
+# lineage derived from parsing a notebook's CODE or a semantic
+# model's TMDL -- that lives in scripts 09/16/18/19/51-54, a much
+# bigger piece, not ported yet. If it is ever ported,
+# it should be a separate third notebook, not an extension of this one.
 #
-# Self-contained a propósito (no usa %run sobre NB_Discover_Workspaces_
-# Items): ese notebook termina con su propia celda "Ejecutar" que ya
-# escribe en el Warehouse -- traerla via %run la re-ejecutaría entera cada
-# vez. Duplica un puñado de helpers pequeños (token/conexión) en vez de
-# depender de eso, mismo criterio que ya usa este proyecto en local (ver
-# el comentario de Get-ServicePrincipalAccessToken en
-# scripts/67_upload_bronze_to_warehouse.ps1: copias pequeñas por script,
-# no un import compartido).
+# Self-contained on purpose (it does not use %run on NB_Discover_Workspaces_
+# Items): that notebook ends with its own "Run" cell that already
+# writes to the Warehouse -- pulling it in via %run would re-run it entirely
+# every time. It duplicates a handful of small helpers (token/connection) instead of
+# depending on that, same criterion this project already uses locally (see
+# the Get-ServicePrincipalAccessToken comment in
+# scripts/67_upload_bronze_to_warehouse.ps1: small per-script copies,
+# not a shared import).
 
 # %% [markdown]
-# ## Configuración
-# Mismos valores que en NB_Discover_Workspaces_Items -- copia aquí los que
-# ya rellenaste allí.
+# ## Configuration
+# Same values as in NB_Discover_Workspaces_Items -- copy here the ones you
+# already filled in there.
 
 # %%
 try:
@@ -64,26 +64,26 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-# Ya no se lee de Key Vault (bloqueado) NI de un parámetro del pipeline
-# (probado 2026-08-12: filtró el valor en texto plano al fallar la
-# conversión de tipo -- nunca más por ahí). Fichero privado en el área
-# Files del Lakehouse del workspace, leído con notebookutils.fs.head() --
-# gobernado por el rol de Fabric del SP sobre este workspace, no por RBAC
-# de Azure sobre un recurso aparte.
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# No longer read from Key Vault (blocked) NOR from a pipeline parameter
+# (tested 2026-08-12: it leaked the value in plain text when the
+# type conversion failed -- never again that way). Private file in the
+# Files area of the workspace Lakehouse, read with notebookutils.fs.head() --
+# governed by the SP's Fabric role on this workspace, not by Azure RBAC
+# on a separate resource.
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 REQUEST_DELAY_SECONDS = 0.25
 RETRY_COUNT = 5
 MAX_OPERATION_POLLS = 20
 MAX_OPERATION_DELAY_SECONDS = 15
 
-# Mismo alcance máximo por defecto que 04_analyze_items.ps1 (política de
-# profundidad máxima, cadencia semanal, no interactiva). Notebook y
-# SemanticModel NO están aquí a propósito -- ver cabecera del archivo.
+# Same default maximum scope as 04_analyze_items.ps1 (maximum depth
+# policy, weekly cadence, non-interactive). Notebook and
+# SemanticModel are NOT here on purpose -- see the file header.
 DEFINITION_ITEM_TYPES = {
     "DataPipeline", "CopyJob", "Dataflow", "Eventstream", "Reflex",
     "GraphQLApi", "KQLQueryset", "KQLDashboard", "UserDataFunction",
@@ -98,16 +98,16 @@ SOURCE_SYSTEM = "Fabric REST API (notebook service principal)"
 GUID_PATTERN = re.compile(r"(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b")
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric. El pipeline la
-# sobreescribe con el mismo WorkspaceNameFilter que recibe
-# NB_Discover_Workspaces_Items.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric. The pipeline
+# overrides it with the same WorkspaceNameFilter that
+# NB_Discover_Workspaces_Items receives.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación y Warehouse (mismo patrón que NB_Discover_Workspaces_Items)
+# ## Authentication and Warehouse (same pattern as NB_Discover_Workspaces_Items)
 
 # %%
 def get_client_secret():
@@ -178,9 +178,9 @@ def limit_text(text, max_length=500):
 
 
 # %% [markdown]
-# ## Helpers Fabric REST: paginación, reintento en 429, y el sondeo LRO de
-# getDefinition (equivalente a Invoke-FabricWebRequest/Get-ItemDefinition
-# en scripts/04_analyze_items.ps1).
+# ## Fabric REST helpers: pagination, retry on 429, and the LRO polling of
+# getDefinition (equivalent to Invoke-FabricWebRequest/Get-ItemDefinition
+# in scripts/04_analyze_items.ps1).
 
 # %%
 def fabric_request(method, path, headers, retry_count=RETRY_COUNT):
@@ -398,8 +398,8 @@ def connection_qualified_name(connection):
 
 
 # %% [markdown]
-# ## Registro de dependencias (dedup + acumulación, igual que
-# Register-Dependency en 04_analyze_items.ps1)
+# ## Dependency registration (dedup + accumulation, same as
+# Register-Dependency in 04_analyze_items.ps1)
 
 # %%
 dependency_rows = []
@@ -426,7 +426,7 @@ def register_dependency(from_qn, to_qn, relationship_type, evidence, confidence,
 
 
 # %% [markdown]
-# ## Cargar workspaces + items ya descubiertos (dbo.bronze_workspaces / dbo.bronze_items)
+# ## Load already discovered workspaces + items (dbo.bronze_workspaces / dbo.bronze_items)
 
 # %%
 connection = connect_warehouse()
@@ -458,7 +458,7 @@ workspace_names_to_process = sorted(
 print(f"Workspaces to process: {len(workspace_names_to_process)} of {len(items_by_workspace)}")
 
 # %% [markdown]
-# ## Fase 1 -- Conexiones + getDefinition, por item
+# ## Step 1 -- Connections + getDefinition, per item
 
 # %%
 fabric_token = acquire_token("https://api.fabric.microsoft.com/.default")
@@ -530,7 +530,7 @@ for workspace_name in workspace_names_to_process:
 print(f"Connections read: {connection_success_count} items. Definitions read: {definition_success_count} items.")
 
 # %% [markdown]
-# ## Fase 2 -- Emparejamiento Lakehouse/SQL endpoint, atajos OneLake, heurísticas por nombre
+# ## Step 2 -- Lakehouse/SQL endpoint pairing, OneLake shortcuts, name-based heuristics
 
 # %%
 for workspace_name in workspace_names_to_process:
@@ -587,7 +587,7 @@ for workspace_name in workspace_names_to_process:
             register_dependency(
                 report["qualified_name"], model["qualified_name"], "uses_model",
                 "Report and semantic model share the same real name in the same workspace.",
-                "likely", "Name-based Fabric pairing heuristic; confirm in Phase 5 if no definition edge exists.",
+                "likely", "Name-based Fabric pairing heuristic; confirm manually if no definition edge exists.",
             )
             register_dependency(
                 model["qualified_name"], report["qualified_name"], "serves_report",
@@ -600,7 +600,7 @@ for workspace_name in workspace_names_to_process:
     # deliberately excluded there) but Fabric always creates it alongside a
     # same-name Notebook in the same workspace, and that notebook already
     # gets full object-lineage extraction. Point the experiment at it so
-    # Inspección has somewhere real to go instead of a dead end.
+    # the Inspection view has somewhere real to go instead of a dead end.
     notebooks_by_name = {}
     for notebook in (i for i in workspace_items if i["item_type"] == "Notebook"):
         notebooks_by_name.setdefault(notebook["item_name"].lower(), []).append(notebook)
@@ -630,19 +630,19 @@ likely_count = sum(1 for r in dependency_rows if r["confidence"] == "likely")
 print(f"Dependencies computed: {len(dependency_rows)} ({confirmed_count} confirmed, {likely_count} likely)")
 
 # %% [markdown]
-# ## Escribir en el Warehouse (dbo.bronze_dependencies), conservando lo que
-# pertenece a workspaces fuera de WorkspaceNameFilter
+# ## Write to the Warehouse (dbo.bronze_dependencies), keeping what
+# belongs to workspaces outside WorkspaceNameFilter
 
 # %%
-# Reconectar con un token de base de datos fresco -- la conexion de la
-# celda "Cargar workspaces + items" lleva abierta desde antes de las Fases
-# 1 y 2 (miles de items, cientos/miles de llamadas a la API de Fabric con
-# reintentos), potencialmente horas -- exactamente el mismo problema que
-# ya causo un fallo real (2026-08-17, sabado programado 21:00 UTC:
-# NB_Discover_Dependencies murio con "TCP Provider: Error code 0x20" al
-# reutilizar esta misma conexion para escribir) y que NB_Discover_
-# Workspaces_Items.py ya resuelve reconectando antes de su propia
-# escritura final -- mismo fix, aplicado aqui.
+# Reconnect with a fresh database token -- the connection of the
+# "Load workspaces + items" cell has been open since before steps
+# 1 and 2 (thousands of items, hundreds/thousands of Fabric API calls with
+# retries), potentially hours -- exactly the same problem that
+# already caused a real failure (2026-08-17, scheduled Saturday 21:00 UTC run:
+# NB_Discover_Dependencies died with "TCP Provider: Error code 0x20" when
+# reusing this same connection to write) and that NB_Discover_
+# Workspaces_Items.py already solves by reconnecting before its own
+# final write -- same fix, applied here.
 connection.close()
 connection = connect_warehouse()
 cursor = connection.cursor()
@@ -691,9 +691,9 @@ if final_rows:
 print(f"dbo.bronze_dependencies: {len(final_rows)} row(s) written ({len(retained_rows)} retained, {len(dependency_rows)} freshly computed).")
 
 # %% [markdown]
-# ## Escribir en el Warehouse (dbo.bronze_variable_library_catalog) --
-# mismo patron de filtro-preservacion que bronze_dependencies arriba, pero
-# cada fila ya trae su propio workspace_name (no hace falta owning_workspace).
+# ## Write to the Warehouse (dbo.bronze_variable_library_catalog) --
+# same filter-preservation pattern as bronze_dependencies above, but
+# each row already carries its own workspace_name (owning_workspace is not needed).
 
 # %%
 retained_variable_rows = []

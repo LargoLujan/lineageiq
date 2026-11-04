@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/14_build_manual_lineage_
--- review_queue.ps1 (Phase 2 migration continuation, 2026-07-21). Reads
+-- review_queue.ps1 (SQL migration). Reads
 -- dbo.bronze_items/dependencies/semantic_model_view_candidates/item_
 -- object_lineage_candidates/pipeline_object_lineage_candidates/manual_
 -- lineage_object_evidence/execution_duration_by_item, plus 07's already-

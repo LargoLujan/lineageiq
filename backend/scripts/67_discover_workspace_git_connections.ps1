@@ -11,7 +11,7 @@ param(
 # Phase 67 - Workspace Git connection discovery.
 # Discovers each workspace's Azure DevOps/GitHub Git connection (see the
 # admin panel's workspace detail: "connected repo" + the workspace index's
-# sync icon, docs/102_admin_panel_and_user_auth.md Fase 8). Read-only:
+# sync icon, docs/102_admin_panel_and_user_auth.md). Read-only:
 # GET /v1/workspaces/{id}/git/connection never modifies anything in Fabric.
 #
 # gitSyncDetails.lastSyncTime is when FABRIC itself last pulled from the

@@ -1,7 +1,7 @@
 const state = {
   data: null,
   impact: null,
-  lang: 'es',
+  lang: 'en',
   theme: 'auto',
   mode: 'all',
   viewMode: 'lineage',
@@ -2144,10 +2144,10 @@ function pipelineStagePassesEnvironmentFilter(stage) {
   return Boolean(stage && stage.workspace && workspacePassesEnvironmentFilter(stage.workspace));
 }
 
-// Filtro por dominio nativo de Fabric (roadmap Nivel 2, 2026-08-17) --
-// domain_name ya se descubre y se muestra en el panel de detalle desde
-// hace tiempo, pero nunca se había usado para filtrar el índice de
-// workspaces; esto reutiliza ese mismo dato, sin tocar el backend.
+// Filter by native Fabric domain --
+// domain_name has long been discovered and shown in the detail panel, but
+// it had never been used to filter the workspace index; this reuses that
+// same data, without touching the backend.
 function availableWorkspaceDomains() {
   if (!state.data || !Array.isArray(state.data.workspaces)) return [];
   const names = new Set();
@@ -2163,8 +2163,8 @@ function workspacePassesDomainFilter(workspace) {
   return text(workspace && workspace.domain_name).trim() === state.selectedWorkspaceDomain;
 }
 
-// Oculto por completo si el tenant no usa dominios de Fabric o solo tiene
-// uno -- un filtro de una sola opción no filtra nada, es ruido en el panel.
+// Hidden entirely if the tenant does not use Fabric domains or has only
+// one -- a single-option filter filters nothing, it is just noise in the panel.
 function populateWorkspaceDomainFilter() {
   if (!els.workspaceDomainFilterRow || !els.workspaceDomainFilter) return;
   const domains = availableWorkspaceDomains();
@@ -2723,10 +2723,10 @@ function canonicalObjectDisplayName(object = {}, source = {}) {
   return rawLabel || rawName;
 }
 
-// Igual que canonicalObjectDisplayName pero sin el prefijo "store.schema." --
-// para listas donde el origen y el schema ya se muestran aparte (tarjeta de
-// origen y/o columnas propias), repetirlos dentro del propio nombre sólo
-// ocupa espacio sin aportar nada nuevo.
+// Same as canonicalObjectDisplayName but without the "store.schema." prefix --
+// for lists where the origin and the schema are already shown separately (origin
+// card and/or their own columns), repeating them inside the name itself only
+// takes up space without adding anything new.
 function objectBareName(object = {}) {
   const dynamicVariable = unresolvedVariableName(object);
   if (dynamicVariable) {
@@ -3077,9 +3077,9 @@ function impactObjectFilterLabel(object) {
   }) || object.object_key || t('unknown');
 }
 
-// Igual que impactObjectFilterLabel pero sin el prefijo "base.schema." -- la
-// tabla de Impacto (impactObjectTable) ya muestra origen y schema como sus
-// propias columnas, así que repetirlos dentro del nombre sólo quita sitio.
+// Same as impactObjectFilterLabel but without the "base.schema." prefix -- the
+// Impact table (impactObjectTable) already shows origin and schema as its own
+// columns, so repeating them inside the name only takes up space.
 function impactObjectBareName(object) {
   return objectBareName({
     object_display_name: object.object_display_name,
@@ -3214,12 +3214,12 @@ function applyLayoutState() {
   els.impactButton.setAttribute('aria-pressed', state.viewMode === 'impact' ? 'true' : 'false');
   els.scheduleButton.setAttribute('aria-pressed', state.viewMode === 'planning' ? 'true' : 'false');
   if (els.sceneToggleButton) els.sceneToggleButton.classList.toggle('active', state.sceneEnabled);
-  // Un único botón "abrir mapa" en la barra de herramientas, cuyo destino
-  // cambia con el modo activo: Planificación abre su propio popup de mapa;
-  // Inspección maximiza su propio árbol +/- a pantalla completa (ver
-  // toggleInspectionMap) -- NO el Graph Map de tenant completo, que ya
-  // tiene su propio botón aparte arriba; Impacto no lo necesita (ya tiene
-  // su propia tabla de objetos afectados).
+  // A single "open map" button in the toolbar, whose target
+  // changes with the active mode: Planning opens its own map popup;
+  // Inspection maximizes its own +/- tree to full screen (see
+  // toggleInspectionMap) -- NOT the full-tenant Graph Map, which already
+  // has its own separate button above; Impact does not need it (it already has
+  // its own table of affected objects).
   const planningMapButton = document.getElementById('planningMapButton');
   if (planningMapButton) {
     planningMapButton.hidden = state.viewMode === 'impact';
@@ -3249,7 +3249,7 @@ function selectNode(node, remember = true) {
   trackUsageEvent('item_view', (node.data && node.data.qualified_name) || node.qualified_name || node.id || '', (node.data && node.data.item_type) || node.mode || '');
 }
 
-// Lineage-usage analytics (2026-08-24 Fase 6): fire-and-forget, never
+// Lineage-usage analytics: fire-and-forget, never
 // awaited and never lets a failure surface to the user -- this is
 // instrumentation, not a feature the app depends on. selectNode() is the
 // single place every node selection (search, graph click, tree
@@ -3274,14 +3274,14 @@ function trackUsageEvent(eventType, qualifiedName, itemType) {
   }
 }
 
-// Mapa de Inspección (2026-07-20): a diferencia de Planificación (una vista
-// aparte, con su propio popup y motor de render que hay que mantener
-// sincronizado con el lienzo normal), Inspección no necesita una segunda
-// copia -- su árbol +/- YA es lo que se quiere ver maximizado. "Abrir el
-// mapa" aquí sólo significa: el mismo #graphSurface (cabecera, filtro,
-// árbol, leyenda) a pantalla completa vía position:fixed. Nada se
-// reconstruye ni se desconecta, así que cada funcionalidad (filtro, zoom,
-// expandir/colapsar nodos) sigue funcionando exactamente igual dentro.
+// Inspection map: unlike Planning (a separate view,
+// with its own popup and a render engine that has to be kept
+// in sync with the normal canvas), Inspection does not need a second
+// copy -- its +/- tree is ALREADY what should be maximized. "Open the
+// map" here only means: the same #graphSurface (header, filter,
+// tree, legend) at full screen via position:fixed. Nothing is
+// rebuilt or disconnected, so every feature (filter, zoom,
+// expanding/collapsing nodes) keeps working exactly the same inside.
 function inspectionMapIsOpen() {
   return Boolean(els.graphSurface && els.graphSurface.classList.contains('maximized'));
 }
@@ -3445,7 +3445,7 @@ function resetAll() {
   clearDiagramObjectSelection('all');
   state.planningSourceSearch = '';
   state.planningSelectedSources = new Set();
-  // Folded in 2026-07-19 when planningResetLayoutButton (a second,
+  // Folded in when planningResetLayoutButton (a second,
   // Planning-only "restaurar orden" icon living right next to zoom
   // controls) was removed as a separate visible button -- one reset
   // control now clears dragged card positions too, instead of that
@@ -3566,7 +3566,7 @@ function setMode(mode) {
   animateModeSwitch();
 }
 
-// "Clipboard tab" switch feedback (2026-08-18): even when two modes render
+// "Clipboard tab" switch feedback: even when two modes render
 // near-identical content, a visible transition confirms the tab actually
 // changed. render() above already rebuilt both the tree/graph area and the
 // mode buttons synchronously, so this just replays a one-shot CSS animation
@@ -3578,7 +3578,7 @@ function setMode(mode) {
 // for any reason) -- #graphSurface is the main pan/zoom/click surface for
 // the whole dependency tree, so a clip-path stuck mid-animation here would
 // leave most of the screen unable to receive pointer events at all (a
-// live report, 2026-08-18: "no me deja moverme, como bloqueado" -- this
+// live report: "I can't move anything, it's like it's blocked" -- this
 // class of bug is exactly what a bare CSS animation with no guaranteed
 // cleanup risks, see the identical fix on Graph Map Mode's own reveal).
 function clearModeSwitchClip() {
@@ -3765,14 +3765,14 @@ function workspaceCardBadgesRowHtml(badgesHtml) {
   return badgesHtml ? `<span class="workspace-card-badges">${badgesHtml}</span>` : '';
 }
 
-// Desplegable de búsqueda tipo "filtro de columna de Excel" (2026-07-20):
-// con muchos workspaces/deployment pipelines, encontrar uno concreto a base
-// de scroll en la lista de tarjetas de abajo es lento. Esto no sustituye
-// esa lista (sigue mostrando todo, sin filtrar) -- es un atajo aparte:
-// escribes, aparecen coincidencias, marcas la casilla, y eso dispara
-// exactamente la misma selección que pulsar la tarjeta a mano
-// (applyIndexEntrySelection), así que ambas vistas quedan siempre en
-// sincronía sin un segundo modelo de selección que mantener.
+// Search dropdown in the style of an "Excel column filter":
+// with many workspaces/deployment pipelines, finding a specific one by
+// scrolling the card list below is slow. This does not replace
+// that list (it keeps showing everything, unfiltered) -- it is a separate shortcut:
+// you type, matches appear, you tick the checkbox, and that triggers
+// exactly the same selection as clicking the card by hand
+// (applyIndexEntrySelection), so both views always stay in
+// sync without a second selection model to maintain.
 function workspaceSearchPanelOpen() {
   return Boolean(els.workspaceSearchPanel && !els.workspaceSearchPanel.hidden);
 }
@@ -3887,13 +3887,13 @@ function renderWorkspaceList() {
   renderWorkspaceSearchResults();
 }
 
-// Un renglón por tipo de icono realmente presente en la selección actual
-// (no una lista genérica fija) -- p.ej. si sólo hay notebooks seleccionados,
-// sólo aparece "Notebook", no también "Pipeline" o "Informe" porque el modo
-// los soporte en general. 'cross' (nodo de otro workspace) queda fuera:
-// sólo se sabe si aparece recorriendo el árbol ya expandido nodo a nodo,
-// no a partir de los items en bruto -- un coste que no compensa para una
-// leyenda.
+// One row per icon type actually present in the current selection
+// (not a fixed generic list) -- e.g. if only notebooks are selected,
+// only "Notebook" appears, not also "Pipeline" or "Report" just because the mode
+// supports them in general. 'cross' (a node from another workspace) is left out:
+// it can only be known by walking the already-expanded tree node by node,
+// not from the raw items -- a cost that is not worth it for a
+// legend.
 function legendEntriesForSelection() {
   const workspaces = supportsDiagramObjectFilters() ? selectedLineageWorkspaceList() : selectedWorkspaceList();
   const items = workspaces.flatMap(workspace => modeItems(workspace));
@@ -3916,8 +3916,7 @@ function legendEntriesForSelection() {
 }
 
 function renderLegend() {
-  // Now always visible (bottom-left of the diagram, not the header -- see
-  // 2026-07-19 toolbar cleanup), so it must not fight Planning's own
+  // Now always visible (bottom-left of the diagram, not the header), so it must not fight Planning's own
   // control-flow-color legend (a separate banner already explaining what
   // Planning's edges mean): showing a second, Inspección-flavored icon
   // legend (workspace/deployment/report...) that has nothing to do with
@@ -3926,8 +3925,8 @@ function renderLegend() {
     els.modeLegend.hidden = true;
     return;
   }
-  // Impacto ya tiene su propio índice/resumen de objetos afectados -- este
-  // segundo listado de iconos era redundante (2026-07-20).
+  // Impact already has its own index/summary of affected objects -- this
+  // second list of icons was redundant.
   if (state.viewMode === 'impact') {
     els.modeLegend.hidden = true;
     return;
@@ -4225,12 +4224,12 @@ function populateImpactFilters() {
   }
 }
 
-// Planificación no tiene "tipo de item"/objetos individuales como Inspección
-// o Impacto -- cada fila ya es un origen (base de datos/lakehouse) que
-// alimenta uno o más modelos, así que reutiliza sólo el desplegable de
-// Origen (sourceType) y añade su propio buscador+chips en
-// #planningFilterSources, en vez de forzar el resto de controles a encajar
-// en una forma que no les corresponde.
+// Planning has no "item type"/individual objects like Inspection
+// or Impact -- every row is already an origin (database/lakehouse) that
+// feeds one or more models, so it only reuses the Origin dropdown
+// (sourceType) and adds its own search box + chips in
+// #planningFilterSources, instead of forcing the other controls to fit
+// a shape that does not suit them.
 function populatePlanningFilters() {
   const confidenceFilterRow = els.confidenceFilter ? els.confidenceFilter.closest('label') : null;
   if (confidenceFilterRow) confidenceFilterRow.hidden = true;
@@ -4912,10 +4911,10 @@ function semanticObjectDetails(sourceNode, objects) {
   `;
   body.append(header);
 
-  // Un único listado ordenado por schema y luego por nombre (en vez de una
-  // sección <h4> por schema): así el schema puede ser una columna más junto
-  // al resto, con un solo encabezado fijo arriba en vez de repetirse por
-  // cada grupo.
+  // A single list sorted by schema and then by name (instead of an
+  // <h4> section per schema): this way the schema can be one more column next
+  // to the rest, with a single fixed header at the top instead of repeating
+  // for each group.
   const sortedObjects = objects
     .slice()
     .sort((a, b) =>
@@ -5132,7 +5131,7 @@ function renderFlowBoard() {
     : `${number(roots.length)} ${t('selected')}`;
   // The element/selection counts this used to show ("Todos · N Elementos
   // · 2/N seleccionados") duplicate what the workspace index (left
-  // sidebar) already displays per workspace -- removed 2026-07-19 to
+  // sidebar) already displays per workspace -- removed to
   // declutter the diagram header; els.graphSubtitle stays in the DOM
   // (Impact/Planning still set their own, non-redundant text into it).
   els.graphSubtitle.textContent = '';
@@ -5302,7 +5301,7 @@ function renderFlowBoard() {
   const boardWidth = Math.max(900, maxX + 48);
   const boardHeight = Math.max(500, cursorY + 28);
   // The per-pipeline stage filter pill bar (createDiagramStageSelector) was
-  // removed from the diagram 2026-07-19 -- redundant with the workspace
+  // removed from the diagram -- redundant with the workspace
   // index's own per-stage tiles in the left sidebar, which already select
   // the same thing. The function/toggleStageWorkspaceFilter/
   // state.selectedStageWorkspaces mechanism stays in the code, just never
@@ -5419,20 +5418,19 @@ function impactGroupPreview(title, items, iconClass, limit = 4, expandKey = '') 
 }
 
 
-// La lista de "objetos coincidentes" vivía aquí como tarjetas sueltas
-// (nombre completo, sin columnas) justo encima de la tabla real
-// (impactObjectTable, con Tipo/Nombre/Origen/Schema/impacto) más abajo en
-// renderImpactView -- dos representaciones de lo mismo, una peor que la
-// otra. Este panel ahora es sólo los controles (buscar + contador +
-// Limpiar); la tabla real que ya se renderiza justo debajo es el listado
-// (2026-07-20).
-// La selección explícita de objetos concretos (más allá de lo que ya
-// filtra el buscador) se había quitado el 2026-07-20 por creerla redundante
-// con la tabla de abajo -- pero sin ella no hay forma de FIJAR varios
-// objetos sueltos a la vez (cada búsqueda nueva sustituye a la anterior),
-// así que vuelve, ahora en filas con columnas (tipo/nombre/origen/schema,
-// sin las cuentas de impacto -- ésas ya están en la tabla grande) en vez de
-// las tarjetas de texto libre que tenía antes.
+// The list of "matching objects" used to live here as loose cards
+// (full name, no columns) right above the real table
+// (impactObjectTable, with Type/Name/Origin/Schema/impact) further down in
+// renderImpactView -- two representations of the same thing, one worse than
+// the other. This panel is now only the controls (search + counter +
+// Clear); the real table already rendered right below is the list.
+// Explicit selection of specific objects (beyond what the search box
+// already filters) had been removed because it seemed redundant
+// with the table below -- but without it there is no way to PIN several
+// individual objects at once (each new search replaces the previous one),
+// so it is back, now as rows with columns (type/name/origin/schema,
+// without the impact counts -- those are already in the big table) instead of
+// the free-text cards it had before.
 function objectPickRow(object, active = false) {
   const fullName = impactObjectFilterLabel(object);
   const button = document.createElement('button');
@@ -6048,7 +6046,7 @@ function planningFabricStoreIdentity(source) {
   // ExternalAPI/SharePoint/connector source often carries the notebook's
   // own workspace in its server field (parser context, not a location) --
   // treating "workspace + SampleLearningPlatform" as a lakehouse identity merged
-  // an external API into the Fabric store graph. Seen live 2026-07-17.
+  // an external API into the Fabric store graph. Seen live.
   if (planningNormalizedSourceType(source.source_type) !== 'fabric_internal') return '';
   if (source.fabric_store_workspace && source.database) {
     return `store|fabricitem|${normalize(source.fabric_store_workspace)}|${normalize(source.database)}`;
@@ -6328,7 +6326,7 @@ function planningCardSubtext(node) {
 // rendered width for some strings, and since CSS's own `max-width: 420px`
 // on .planning-card then clamped the card back down anyway, the subtext
 // span was left wider than its actual box, spilling text past the card
-// border (read live 2026-07-20). Not including it here means the subtext
+// border (read live). Not including it here means the subtext
 // simply wraps onto more lines within whatever width the label needs
 // instead -- taller cards sometimes, but never overflowing them.
 function planningCardWidth(node, subtext, badges) {
@@ -6728,7 +6726,7 @@ function buildPlanningGraph(selected) {
   }
 
   // Data dependencies are drawn THROUGH the data store, Data-Factory-style
-  // (user ask, 2026-07-16): external origin -> notebook/copyjob -> lakehouse
+  // (a user request): external origin -> notebook/copyjob -> lakehouse
   // -> semantic model, left to right, instead of invisible stores and a
   // direct writer->reader edge. Besides matching how a real pipeline canvas
   // reads, this turns each shared table's write*read cross-product (w*r
@@ -6782,7 +6780,7 @@ function buildPlanningGraph(selected) {
     // arrives, including transitively through a shared unknown-spelling
     // identity (an unknown that name-matches tables in two lakehouses used
     // to chain them together -- 243 identities collapsed into one
-    // mega-store, seen live 2026-07-17). Canonical roots always stay
+    // mega-store, seen live). Canonical roots always stay
     // roots, so this invariant holds across any union order.
     const canonicalA = isCanonicalStoreIdentity(rootA);
     const canonicalB = isCanonicalStoreIdentity(rootB);
@@ -6844,7 +6842,7 @@ function buildPlanningGraph(selected) {
       }
     }
     // A canonical Fabric store is drawn as the STORAGE it is, never as the
-    // connection that happens to reach it (user ask 2026-07-17: a
+    // connection that happens to reach it (a user request: a
     // "LH_..._Nube" cloud-connection name on the card reads as a
     // connection, which belongs in the model's detail panel, not the
     // diagram) -- the database field carries the real lakehouse/warehouse
@@ -6870,7 +6868,7 @@ function buildPlanningGraph(selected) {
   // A source whose only identity is a parser placeholder ("Origen
   // pendiente", "Destino pendiente", "Objetos ejecutados", "Archivos", an
   // abfss: fragment...) names NOTHING a person can act on -- as canvas
-  // cards they read as noise (user report 2026-07-17). Their object detail
+  // cards they read as noise (a user report). Their object detail
   // stays available in Inspeccion; planning simply does not draw a store
   // card for them.
   function planningStoreSourceIsPlaceholder(source) {
@@ -6970,8 +6968,8 @@ function buildPlanningGraph(selected) {
   // workspace's plan. A sibling reader is neither upstream nor downstream
   // of anything selected, so two one-directional walks exclude it.
   //
-  // The walks are also TABLE-AWARE at every store hop (user ask,
-  // 2026-07-17): a model takes only SOME of a lakehouse's tables, so of the
+  // The walks are also TABLE-AWARE at every store hop (a user request):
+  // a model takes only SOME of a lakehouse's tables, so of the
   // notebooks/copyjobs writing that lakehouse only the ones producing
   // tables the model actually reads are its upstream -- not every writer of
   // the store. Each store edge carries the dependency keys (tables) that
@@ -7085,7 +7083,7 @@ function buildPlanningGraph(selected) {
   const nodeById = new Map(nodes.map(node => [node.id, node]));
   // process starts at column 1 so column 0 stays purely "what the
   // notebooks read from" (origins) -- a notebook whose inputs are unknown
-  // would otherwise share the origins column (user layout ask 2026-07-17:
+  // would otherwise share the origins column (a user layout request:
   // origins | notebook steps (as many columns as their chains need) |
   // the lakehouse the data lands in | the models).
   const stageMinimum = { process: 1, model: 2 };
@@ -7533,7 +7531,7 @@ function renderPlanningEdges(board, edges) {
   // wrote on the PREVIOUS call. renderPlanningEdges reruns on every
   // pointer-move frame during a drag: each call's write became the next
   // call's floor, so the canvas grew a little every single frame with no
-  // upper bound -- read live 2026-07-19 as the vertical scrollbar visibly
+  // upper bound -- read live as the vertical scrollbar visibly
   // shrinking (the scrollable area silently ballooning) the moment a card
   // was dragged, never settling. Cards' own offsetLeft/offsetTop (via
   // getCardNaturalRect, already used above for edge routing) are plain
@@ -7569,7 +7567,7 @@ function renderPlanningEdges(board, edges) {
     (a.y2 - b.y2)
   );
 
-  // Curved connectors (user ask 2026-07-18: same look as the planning map
+  // Curved connectors (a user request: same look as the planning map
   // popup, brought back into the embedded canvas). One cubic bezier whose
   // control points extend outward along each port's own side, so the curve
   // still leaves/enters perpendicular to the card border for every port
@@ -7586,7 +7584,7 @@ function renderPlanningEdges(board, edges) {
 
   // Label point sampled near the START of the curve (t=0.18), not its
   // midpoint -- the user wants LEE/ESCRIBE readable right where the line
-  // leaves the source card, "centrado dentro de la línea" (2026-07-20).
+  // leaves the source card, "centrado dentro de la línea".
   // Still taken from the real bezier point (not the straight line between
   // anchors), so it stays glued to the actual drawn curve no matter which
   // side the ports exit/enter from.
@@ -7833,11 +7831,11 @@ function planningSourceChip(row, active = false) {
   return button;
 }
 
-// Fase de limpieza de UI (2026-07-19): este panel de orígenes vivía como un
-// bloque fijo dentro del propio lienzo de Planificación -- se traslada al
-// panel de Filtro compartido (renderPlanningFilterSources, ver populateFilters)
-// para que el botón de filtro sea el único sitio donde acotar qué se ve,
-// igual que en Inspección e Impacto.
+// UI cleanup: this origins panel used to live as a fixed
+// block inside the Planning canvas itself -- it was moved to the
+// shared Filter panel (renderPlanningFilterSources, see populateFilters)
+// so that the filter button is the only place to narrow what is shown,
+// just like in Inspection and Impact.
 function renderPlanningFilterSources(readiness) {
   if (!els.planningFilterSources) return;
   els.planningFilterSources.hidden = false;
@@ -8125,7 +8123,7 @@ function renderPlanningCanvas(graph, readiness, visibleRows, selected, scope) {
     // batch. Interleaving them (as this used to) forces one layout PER
     // CARD -- on a large combined selection (hundreds of nodes) that reflow
     // cost alone was enough to read as a frozen/glitching canvas, verified
-    // live 2026-07-18.
+    // live.
     for (const node of prioritizedNodes) {
       cardByNodeId.get(node.id).style.visibility = 'visible';
     }
@@ -8135,7 +8133,7 @@ function renderPlanningCanvas(graph, readiness, visibleRows, selected, scope) {
       sizeByNodeId.set(node.id, { width: rect.width, height: rect.height });
     }
 
-    // Invisible TOPOLOGICAL columns (user rule 2026-07-17: arrows must
+    // Invisible TOPOLOGICAL columns (a user rule: arrows must
     // always travel rightward, with as many intermediate columns as
     // dependent notebooks need). graph.columns already carries the wave
     // layering -- every edge points to a strictly higher wave, so a
@@ -8154,8 +8152,8 @@ function renderPlanningCanvas(graph, readiness, visibleRows, selected, scope) {
       .filter(column => column.nodes.length);
 
     const LANE_GAP = 150;
-    // Card height now comes solely from the label (planningCardWidth,
-    // 2026-07-20) -- long subtexts wrap onto more lines than before, so a
+    // Card height now comes solely from the label (planningCardWidth)
+    // -- long subtexts wrap onto more lines than before, so a
     // gap sized for the old, wider/shorter cards reads as too tight once a
     // neighbor grows tall. This stacking loop already measures each card's
     // real getBoundingClientRect().height and reserves exactly that much
@@ -8324,7 +8322,7 @@ function artifactRows(refresh) {
 function showReinvestigate() {
   // Clears the current node selection so anything that re-renders the
   // detail panel based on state.selectedNode (e.g. loadCertificationsAndTags'
-  // async refresh, see 2026-08-18 code review finding) doesn't clobber this
+  // async refresh) doesn't clobber this
   // panel with a stale previously-selected node once its own fetch resolves.
   state.selectedNode = null;
   state.showDetails = true;
@@ -9298,10 +9296,10 @@ async function downloadSelectedDiagramPng(node = state.selectedNode) {
   downloadBlob(blob, `${safeFilename(node.label || 'lineage-diagram')}-diagrama.png`);
 }
 
-// El PDF se quitó del todo (2026-07-20, "no sirve") -- sólo PNG/Excel.
-// En Inspección/Planificación esas dos opciones viven ahora en su mapa
-// (igual que Planificación ya hacía), no en este panel; este generador
-// sigue en pie sólo para el panel de detalle de Impacto, que no cambió.
+// The PDF export was removed entirely -- only PNG/Excel remain.
+// In Inspection/Planning those two options now live in their map
+// (as Planning already did), not in this panel; this generator
+// remains only for the Impact detail panel, which did not change.
 function detailExportHtml(options = {}) {
   const d = i18n[state.lang].detail;
   const impactExcel = Boolean(options.impactExcel);
@@ -9405,14 +9403,14 @@ function planningRows(data) {
   ];
 }
 
-// Sustituye a planningRows() + el array inline de planningEvidenceRows que
-// vivía en renderDetails(): mismos diez campos (última llegada, ruta
-// crítica, punto crítico de fallos...), pero como pares {label, value} en
-// crudo en vez de HTML de row() ya renderizado -- así el mismo dato sirve
-// tanto para decidir si el botón se muestra como para llenar la tabla del
-// popup (2026-07-20: ese bloque ocupaba demasiado sitio siempre abierto
-// dentro del panel de detalle; ahora es un botón que abre esto en un popup
-// aparte, con columnas Campo/Valor en vez de fila-a-fila apilado).
+// Replaces planningRows() + the inline planningEvidenceRows array that
+// lived in renderDetails(): the same ten fields (last arrival, critical
+// path, failure hotspot...), but as raw {label, value} pairs
+// instead of already-rendered row() HTML -- so the same data serves
+// both to decide whether the button is shown and to fill the popup table
+// (that block took up too much room when always open
+// inside the detail panel; it is now a button that opens this in a separate
+// popup, with Field/Value columns instead of stacked row-by-row).
 function planningEvidenceEntries(data) {
   const d = i18n[state.lang].detail;
   const yes = t('yes');
@@ -9650,8 +9648,7 @@ function renderImpactDetails(node) {
     // qualified_name entries are item-level ("Workspace / Type / Name"),
     // a different namespace than an impact object's object_key
     // ("source_type|server|db|schema|table") -- they can never match, so
-    // a lookup here would always silently be a no-op (2026-08-18 code
-    // review finding). renderDetails's item-kind nodes are where this
+    // a lookup here would always silently be a no-op. renderDetails's item-kind nodes are where this
     // actually applies.
   ].filter(Boolean);
   els.detailTitle.textContent = t('impactTitle');
@@ -9694,12 +9691,12 @@ function renderImpactDetails(node) {
   }
 }
 
-// --- Comentarios y favoritos por nodo (roadmap Nivel 1, 2026-08-17) -----
-// Async, cargado aparte del resto del panel de detalle (que ya está
-// disponible en `node.data` sin esperar red): mismo patrón lazy-load-
-// after-render que el panel admin usa para sus pestañas de solo lectura.
+// --- Per-node comments and favorites -----
+// Async, loaded separately from the rest of the detail panel (which is already
+// available in `node.data` without waiting for the network): same lazy-load-
+// after-render pattern the admin panel uses for its read-only tabs.
 let nodeCommentsCache = {}; // qualified_name -> array de comentarios
-let myFavoritesSet = null; // Set de qualified_name, null = todavía no cargado esta sesión
+let myFavoritesSet = null; // Set of qualified_name, null = not loaded yet this session
 
 function formatNodeCommentTimestamp(iso) {
   if (!iso) return '';
@@ -9751,7 +9748,7 @@ function renderNodeCommentsSection(qualifiedName) {
 }
 
 async function loadNodeCommentsSection(qualifiedName) {
-  if (!authState.signedIn) return; // el contenedor ni se pinta sin sesión -- ver renderDetails
+  if (!authState.signedIn) return; // the container is not even painted without a session -- see renderDetails
   const requests = [];
   if (nodeCommentsCache[qualifiedName] === undefined) {
     requests.push(
@@ -9770,8 +9767,8 @@ async function loadNodeCommentsSection(qualifiedName) {
     );
   }
   if (requests.length) await Promise.all(requests);
-  // El usuario puede haber seleccionado otro nodo mientras la petición
-  // estaba en vuelo -- solo repintar si seguimos mirando el mismo.
+  // The user may have selected another node while the request
+  // was in flight -- only repaint if we are still looking at the same one.
   if (state.selectedNode && (state.selectedNode.data || {}).qualified_name === qualifiedName) {
     renderNodeCommentsSection(qualifiedName);
   }
@@ -9810,7 +9807,7 @@ async function deleteNodeComment(commentId, qualifiedName) {
       body: JSON.stringify({ comment_id: commentId }),
     });
   } catch (error) {
-    // best-effort -- la recarga de abajo muestra el estado real igualmente
+    // best-effort -- the reload below shows the real state anyway
   }
   delete nodeCommentsCache[qualifiedName];
   await loadNodeCommentsSection(qualifiedName);
@@ -9835,12 +9832,11 @@ async function toggleNodeFavorite(qualifiedName, button) {
   }
 }
 
-// --- Perfil y sensibilidad de columnas (roadmap Fase 2, nativo de
-// Fabric, 2026-08-18) -- carga async igual que comentarios/favoritos: no
-// vive en el JSON estatico, solo cubre las tablas ya perfiladas (los
-// Lakehouses donde la SP ya tenia acceso de datos, ver docs/105). Un
-// resultado "found: false" es normal y esperado para la inmensa mayoria
-// de las tablas, no un error.
+// --- Column profile and sensitivity (Fabric-native) -- async loading,
+// same as comments/favorites: it does not live in the static JSON, it only
+// covers tables that have already been profiled (the Lakehouses where the SP
+// already had data access, see docs/105). A "found: false" result is normal and
+// expected for the vast majority of tables, not an error.
 let columnProfileCache = {}; // "workspace|lakehouse|table" -> {profile, sensitivity}
 
 const CONTENT_SENSITIVITY_LABELS = {
@@ -10386,7 +10382,7 @@ function buildNotebookSuperSources(item, rows) {
 }
 
 // Server-side (11_build_lineage_explorer_fast.py) stopped embedding a
-// separate "all" node list per workspace 2026-07-11 -- every item was being
+// separate "all" node list per workspace -- every item was being
 // built and serialized TWICE (once in its own type bucket, e.g. "report"/
 // "semantic", once again in "all"), a large contributor to an oversized
 // lineage-explorer.json after a tenant-wide scan that the browser could no
@@ -10421,7 +10417,7 @@ function reconstructWorkspaceAllLists(data) {
 
 // Server-side (11_build_lineage_explorer_fast.py) stopped embedding each
 // semantic model's full nested source-object/column catalog inside every
-// report/notebook/etc. that uses it 2026-07-11 -- a real semantic model
+// report/notebook/etc. that uses it -- a real semantic model
 // with a couple of sizeable SQL sources can carry 400KB+ of columns on its
 // own, and the same model easily gets referenced by a dozen+ reports, so
 // this was the single biggest contributor (~50%) to an oversized lineage-
@@ -10637,7 +10633,7 @@ function applyAuthVisibility() {
   }
 }
 
-// Entra profile photo (2026-08-18): shown next to the name in the toolbar
+// Entra profile photo: shown next to the name in the toolbar
 // badge + the dropdown header, Teams/tenant-site style. Initials render
 // immediately (computeInitials never needs a network round trip) so there's
 // no blank avatar flash while /api/me/photo -- proxied through our own
@@ -10720,7 +10716,7 @@ function lockableShellControls() {
   ].filter(Boolean);
 }
 
-// 2026-08-24: the app used to be fully gated behind sign-in at the DOM
+// The app used to be fully gated behind sign-in at the DOM
 // level -- nothing in .app-shell even existed on screen (appShell.hidden)
 // until a session was confirmed, which meant the ENTIRE page (topbar, mode
 // bar, scan panel, workspace list) popped into existence in one frame the
@@ -10943,7 +10939,7 @@ async function signOut() {
   window.location.reload();
 }
 
-// Profile dropdown (2026-08-18 redesign): consolidates what used to be
+// Profile dropdown: consolidates what used to be
 // separate toolbar icons (account info modal, language switch, theme
 // switch, help, admin settings) into one menu anchored under the avatar +
 // name badge -- Teams/most-web-apps style, per the user's own request.
@@ -10978,7 +10974,7 @@ function toggleProfileMenu(forceOpen) {
   els.userBadge.setAttribute('aria-expanded', String(open));
 }
 
-// Profile panel (2026-08-18): "Perfil" used to be a collapsible <details>
+// Profile panel: "Perfil" used to be a collapsible <details>
 // tucked inside the dropdown itself; it's now its own destination, same
 // pattern as Configuración/Ayuda (a real .modal-panel opened via
 // openModal(), which also gives it the grow-from-click animation for
@@ -11034,7 +11030,7 @@ function renderProfilePanel() {
       `).join('')}
     </div>` : '';
 
-  // Photo diagnostic (2026-08-18): the avatar falls back to initials
+  // Photo diagnostic: the avatar falls back to initials
   // silently everywhere else (correct -- it's a small badge, not the
   // place for an explanation), but here, where the user is specifically
   // looking at their profile, showing WHY there's no photo is more useful
@@ -11113,14 +11109,14 @@ function initAuthArea() {
   if (els.authGateCopyCodeButton) els.authGateCopyCodeButton.addEventListener('click', copyDeviceCode);
   if (els.adminButton) els.adminButton.addEventListener('click', () => { toggleProfileMenu(false); toggleAdminPanel(); });
   if (els.notificationsButton) els.notificationsButton.addEventListener('click', () => { toggleProfileMenu(false); toggleAlertsPanel(); });
-  // Gobernanza is its own isolated top-level panel (2026-08-26), not a
+  // Gobernanza is its own isolated top-level panel, not a
   // section nested inside Configuración -- same "peer to Grafo/Avisos"
   // toolbar placement as before, now opening its own surface directly.
   if (els.governanceButton) els.governanceButton.addEventListener('click', () => {
     toggleProfileMenu(false);
     toggleGovernancePanel(true);
   });
-  // Roadmap Fase 5 (2026-08-31): same "own top-level panel, peer to
+  // Same "own top-level panel, peer to
   // Grafo/Gobernanza" placement as Gobernanza just above.
   if (els.privacyButton) els.privacyButton.addEventListener('click', () => {
     toggleProfileMenu(false);
@@ -11154,18 +11150,18 @@ function initAuthArea() {
 
 let adminSettingsCache = null;
 let adminActiveTab = 'tenant';
-// Governance is its own isolated top-level panel (2026-08-26), not a
+// Governance is its own isolated top-level panel, not a
 // section nested inside Configuración/adminPanel -- separate active-tab
 // state so switching tabs in one panel never touches the other's.
 let governanceActiveTab = 'overview';
 // Plain client-side substring filters for the admin panel's longer lists
-// (2026-08-18 audit follow-through) -- no network cost (these lists are
+//  -- no network cost (these lists are
 // already loaded), so no debounce; the harder part is that a full
 // renderAdminPanel() rebuilds the DOM on every keystroke, which would
 // normally drop focus out of the filter input itself -- see
 // renderAdminPanelPreservingFocus below.
 let adminListFilters = { users: '', sessions: '', access: '', capacity: '', changes: '' };
-// Histórico de modificaciones table filters (2026-08-25 redesign) --
+// Histórico de modificaciones table filters --
 // separate from adminListFilters since these are dropdown/chip selections,
 // not free-text search (which reuses adminListFilters.changes instead).
 let adminChangesWorkspaceFilter = '';
@@ -11201,7 +11197,7 @@ let adminSessionHistoryCache = null;
 let adminAccessAuditCache = null;
 let adminGovernanceScanCache = null;
 let adminCapacityInsightCache = null;
-// 2026-08-24: live overview (capacity name/SKU/owners/real CU, top items by
+// Live overview (capacity name/SKU/owners/real CU, top items by
 // CU) from the Microsoft Fabric Capacity Metrics app's own semantic model
 // -- see backend/scripts/lineage_web/capacity_metrics.py's own docstring
 // for why this is the only source that has ever had real CU numbers.
@@ -11209,12 +11205,12 @@ let adminCapacityMetricsOverviewCache = null;
 let adminChangesDigestCache = null;
 let adminSensitivityOverviewCache = null;
 let adminContentSensitivityOverviewCache = null;
-// Roadmap Fase 1 (2026-08-31): tenant-wide pass/fail rollup of every
+// Tenant-wide pass/fail rollup of every
 // admin-defined data-quality rule, evaluated against dbo.bronze_column_
 // profile -- see backend/scripts/lineage_web/data_quality.py.
 let adminDataQualityOverviewCache = null;
 
-// Targeted content-sensitivity scan (2026-08-24 Fase 6): tables an admin
+// Targeted content-sensitivity scan: tables an admin
 // checked in the name-based sensitivity detail modal, kept in a
 // module-level Map (not modal-local state) so a selection survives
 // closing one category's modal and opening another -- an admin building
@@ -11237,10 +11233,10 @@ const workspaceRolesCache = new Map();
 let sensitivityDetailState = null;
 let workspaceAccessState = null;
 let adminApiKeysCache = null;
-let adminRevokedApiKeysCache = null; // audit trail, see auth.py's revoked_api_keys (2026-08-18)
+let adminRevokedApiKeysCache = null; // audit trail, see auth.py's revoked_api_keys
 let adminMetricsCache = null;
 let adminUsageAnalyticsCache = null;
-// 2026-08-25 Analíticas redesign: MCP call analytics (mcp_http_server.py
+// MCP call analytics (mcp_http_server.py
 // usage, see analytics.get_mcp_usage_analytics) and the shared 7/30/90-day
 // window both the lineage-usage and MCP sections filter by -- one shared
 // value, not two, since "how far back" is the same question for both.
@@ -11251,8 +11247,8 @@ let adminAnalyticsDays = 30;
 // moment the tab is left/re-rendered from a fresh load so it can't linger
 // in memory or get shown again on a later visit.
 let adminJustCreatedApiKey = null;
-let businessGlossaryCache = null; // Tanda C -- fetched lazily the first time the glossary panel opens, not admin-only (see loadBusinessGlossary)
-// Admin panel audit (2026-08-18): certifications/tags were curated in the
+let businessGlossaryCache = null; // Fetched lazily the first time the glossary panel opens, not admin-only (see loadBusinessGlossary)
+// Certifications/tags were curated in the
 // admin panel but only ever surfaced inside the optional Graph Map Mode
 // overlay -- a normal user in the default 2D explorer never saw them,
 // which reads as "this feature doesn't work" from the admin's side. Same
@@ -11263,7 +11259,7 @@ let businessGlossaryCache = null; // Tanda C -- fetched lazily the first time th
 // template rather than a separate on-demand panel.
 let certificationsByQualifiedName = null; // Map<qualified_name, {certified_by, certified_at, note}>
 let curatedTagsByQualifiedName = null; // Map<qualified_name, string[]>
-// Roadmap Fase 3 (2026-08-31): Map<qualified_name, {name, owner_email}[]> --
+// Map<qualified_name, {name, owner_email}[]> --
 // a qualified_name can belong to more than one data product, same as it can
 // carry more than one curated tag.
 let dataProductsByQualifiedName = null;
@@ -11339,7 +11335,7 @@ let adminLakehouseOptions = []; // [{lakehouse_name, lakehouse_id, sql_endpoint_
 // one to edit it is an explicit action, so a panel with a dozen external
 // sources doesn't turn into a wall of forms.
 let adminExpandedSourceIndexes = new Set();
-// Which nav groups are expanded (2026-08-14 redesign) -- 'setup' starts
+// Which nav groups are expanded -- 'setup' starts
 // open since 'tenant' (its first tab) is the default adminActiveTab; same
 // expand/collapse-by-Set + full re-render pattern as
 // adminExpandedSourceIndexes above. setAdminActiveTab() below always adds
@@ -11353,7 +11349,7 @@ function setAdminActiveTab(tabKey) {
   if (group) adminExpandedNavGroups.add(group.key);
 }
 
-// Grow-from-click open animation (2026-08-18): a capture-phase listener
+// Grow-from-click open animation: a capture-phase listener
 // records where the LAST click on the page landed; since every openModal()
 // call happens synchronously inside the click handler chain of whatever
 // button triggered it (admin gear, help "?", scan history, etc.), reading
@@ -11379,7 +11375,7 @@ function openModal(panelEl) {
   lastClickOrigin = null;
 }
 
-// True modal-over-modal stacking (2026-08-24), distinct from openModal()'s
+// True modal-over-modal stacking, distinct from openModal()'s
 // "mega menu" behavior above (one top-level surface at a time, replacing
 // whatever was open). Used for panels meant to layer ON TOP of a surface
 // that's already open -- e.g. the sensitivity detail modal opening over an
@@ -11465,7 +11461,7 @@ function closeAllModals() {
   // Closing via Escape/backdrop click skipped toggleAdminPanel(false)'s own
   // cleanup entirely -- a just-created raw API key could otherwise sit in
   // the (now merely hidden, not re-rendered) admin panel's DOM until the
-  // next time that tab happens to re-render (2026-08-17 security audit).
+  // next time that tab happens to re-render.
   // Clearing the node's own text is a second, independent belt-and-
   // suspenders step beyond nulling the JS state below: it takes effect
   // immediately, before whatever re-render eventually clears the state.
@@ -11479,7 +11475,7 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && els.modalBackdrop && !els.modalBackdrop.hidden) closeAllModals();
 });
 
-// Info-icon popover (2026-08-18 admin panel redesign): explanatory text
+// Info-icon popover: explanatory text
 // that used to sit directly under every field as a permanently-visible
 // gray paragraph (.admin-field-hint) now hides behind a small "i" button
 // next to the label, shown on click -- decluttering the panel without
@@ -11565,7 +11561,7 @@ function toggleAdminPanel(forceOpen) {
   els.adminButton.setAttribute('aria-expanded', String(open));
 }
 
-// Alerts / toolbar notifications (2026-08-18): surfaces two genuinely
+// Alerts / toolbar notifications: surfaces two genuinely
 // actionable things that would otherwise only be discovered by opening the
 // admin panel and happening to check the right tab -- external-source
 // connections that were assigned AND tested but came back unreachable, and
@@ -11576,9 +11572,9 @@ function toggleAdminPanel(forceOpen) {
 // share the word in Spanish.
 //
 // Deliberately does NOT surface "pending" external sources (no Fabric
-// Connection assigned yet) as an alert (fixed 2026-08-26, user reported it
-// as a false alarm -- "orígenes externos tiene configuración... eso es
-// mentira"). Assigning a Fabric Connection is optional and only enables the
+// Connection assigned yet) as an alert (a user reported it
+// as a false alarm -- "external sources has configuration... that's
+// false"). Assigning a Fabric Connection is optional and only enables the
 // "Probar conexión" button; it has zero effect on whether the source is
 // discovered during a scan, so flagging its absence here reads as a real
 // problem when it isn't one. That same data is already shown accurately,
@@ -11738,8 +11734,8 @@ async function saveAdminSettings() {
   }
 }
 
-// Grouped nav (2026-08-14 redesign): the panel grew to 16 tabs one at a
-// time (Tanda A/B/C etc), each just appended to one flat, wrapping row --
+// Grouped nav: the panel grew to 16 tabs one at a
+// time (Purview-style tabs, certifications, glossary, etc.), each just appended to one flat, wrapping row --
 // fine at 8 tabs, unreadable at 16. Grouping by "what kind of thing is
 // this" (setup vs who-can-access vs read-only insight vs curated content)
 // is the same taxonomy the tabs already implicitly fell into; this just
@@ -11793,7 +11789,7 @@ function adminTabGroups() {
   ];
 }
 
-// "Usuarios permitidos" (2026-08-24 Fase 3): one hand-maintained table
+// "Usuarios permitidos": one hand-maintained table
 // instead of two separate blind email lists -- email, full name, Entra job
 // title, and three permission checkboxes (admin panel / trigger full scan /
 // install-and-register workspaces, the last one not enforced anywhere yet,
@@ -11839,7 +11835,7 @@ function renderAdminUsersTab() {
   `;
 }
 
-// Tenant directory search (2026-08-18): the add-row input doubles as a
+// Tenant directory search: the add-row input doubles as a
 // typeahead over /api/admin/tenant-users -- picking a real person avoids
 // typos in a hand-typed email, but the plain input still works exactly as
 // before (Añadir button, Enter) if this tenant hasn't consented the Graph
@@ -11975,14 +11971,14 @@ const EXTERNAL_SOURCE_TYPES = [
 // $NotYetTestableEngines list exactly -- these 3 engines need their own
 // connector (not installed here), so "Probar conexión" always reports
 // "not yet supported" for them. Flagged in the type dropdown itself
-// (2026-08-18 admin-panel audit finding) instead of only after a wasted
+//  instead of only after a wasted
 // click on Test.
 const NOT_YET_TESTABLE_SOURCE_TYPES = new Set(['snowflake', 'google_bigquery', 'sqlite']);
 
-// "database" (host/port/user/contraseña o token) vs "files" (sin puerto ni
-// credenciales de base de datos -- otro modelo de conexión entero). Sólo
-// SharePoint por ahora tiene group:'files' explícito; el resto son bases
-// de datos por definición, así que ese es el valor por defecto.
+// "database" (host/port/user/password or token) vs "files" (no port or
+// database credentials -- an entirely different connection model). Only
+// SharePoint currently has an explicit group:'files'; the rest are databases
+// by definition, so that is the default value.
 function externalSourceTypeGroup(typeConfig) {
   return (typeConfig && typeConfig.group) || 'database';
 }
@@ -12015,7 +12011,7 @@ function externalSourceFieldLabel(key) {
   return state.lang === 'es' ? meta.es : meta.en;
 }
 
-// 2026-08-18, admin-panel completeness pass: none of the four admin-
+// None of the four admin-
 // curated lists (certifications/tags/glossary/external sources) rejected
 // an empty required field or a duplicate entry before saving -- an empty
 // row (e.g. added then never filled in) or a copy-pasted duplicate saved
@@ -12092,7 +12088,7 @@ function cleanExternalSourcesBeforeSave() {
   adminSettingsCache.external_sources = _dedupeKeepingLast(withNames, entry => entry.name.trim().toLowerCase());
 }
 
-// Fabric connection assignment (2026-08-18): an external source can never
+// Fabric connection assignment: an external source can never
 // actually be read during a scan without a real gateway-backed Fabric
 // Connection -- registering host/port/credentials here alone documents
 // intent, it doesn't make anything reachable. adminFabricConnectionsCache
@@ -12122,7 +12118,7 @@ function computePendingExternalSources() {
     .filter(({ source }) => !source.fabric_connection_id);
 }
 
-// Detected-but-not-configured external hosts (2026-08-24 Fase 4): distinct
+// Detected-but-not-configured external hosts: distinct
 // non-Fabric servers the LAST completed scan actually found referenced by
 // real dependencies (see backend external_sources._get_detected_external_
 // origins), so "Añadir origen" starts from "here's what to configure"
@@ -12234,10 +12230,10 @@ function _externalSourceIdentifierForDisplay(source) {
   return source.host || source.account || source.project_id || source.file_path || source.site_url || (state.lang === 'es' ? '(sin nombre)' : '(unnamed)');
 }
 
-// A ready-to-use env var name (2026-08-25) -- the field itself only ever
+// A ready-to-use env var name -- the field itself only ever
 // stores a NAME, never the secret, but asking a non-technical admin to
-// also invent that name from scratch was one confusion too many ("no sé
-// cómo va eso de la variable de la contraseña" report). Derived from
+// also invent that name from scratch was one confusion too many ("I don't
+// get how the password variable thing works" report). Derived from
 // whatever the admin already typed as the source's name/host, so it reads
 // as "this source's password", not a random token.
 function suggestEnvVarName(source, field) {
@@ -12246,7 +12242,7 @@ function suggestEnvVarName(source, field) {
   return `EXTSRC_${base}_${suffix}`;
 }
 
-// password_ref/service_account_key_ref (2026-08-25 rework): a plain text
+// password_ref/service_account_key_ref: a plain text
 // input with the same label as every other field read as "type the secret
 // here", which is exactly backwards -- this field is a POINTER (an env var
 // name), the secret itself only ever lives in the server's own .env, never
@@ -12343,9 +12339,9 @@ function renderExternalSourceRow(source, index) {
   </div>`;
 }
 
-// Green/red status dot for a source row (2026-08-24 Fase 4) -- replaces
+// Green/red status dot for a source row -- replaces
 // the old session-only text badge AND the separate "Conexión asignada
-// pero sin acceso" summary card the sensitivity audit found confusing:
+// pero sin acceso" summary card that proved confusing:
 // one glance here now answers "can this actually be reached", persisted
 // (source.last_test_ok/last_test_at, written by the backend on a
 // successful save-eligible test -- see external_sources._persist_
@@ -12361,10 +12357,10 @@ function externalSourceStatusDotHtml(source) {
   return `<span class="admin-source-status-dot ${source.last_test_ok ? 'is-ok' : 'is-fail'}" title="${escapeHtml(label + when)}"></span>`;
 }
 
-// Agrupados por tipo en desplegables (2026-07-20) -- con más de 20 tipos de
-// origen ya registrados, una lista plana se vuelve difícil de escanear. El
-// grupo (database/files, ver externalSourceTypeGroup) importa más aquí que
-// el tipo exacto: es la primera pregunta al buscar un origen concreto.
+// Grouped by type in dropdowns -- with more than 20 registered
+// origin types, a flat list becomes hard to scan. The
+// group (database/files, see externalSourceTypeGroup) matters more here than
+// the exact type: it is the first question when looking for a specific origin.
 function renderExternalSourceRows() {
   const sources = adminSettingsCache.external_sources || [];
   if (!sources.length) {
@@ -12438,7 +12434,7 @@ async function loadAdminSessions() {
   if (adminActiveTab === 'sessions') renderAdminPanel();
 }
 
-// Session history (2026-08-18): a bounded, process-lifetime log of ended
+// Session history: a bounded, process-lifetime log of ended
 // sessions (signed out / revoked / expired) -- loaded alongside the active
 // list so opening the history <details> never shows a loading flicker.
 const ADMIN_SESSION_END_REASON_LABELS = {
@@ -12484,9 +12480,9 @@ function renderAdminSessionHistoryRows() {
 }
 
 // Just enough to say "Chrome on Windows" / "Safari on iPhone" at a glance
-// (2026-08-24) -- the full string is still in the title tooltip for anyone
+//  -- the full string is still in the title tooltip for anyone
 // who wants the exact UA. Deliberately not a real UA-parsing library: this
-// is a "who signed in, roughly from what" hint for an admin audit log, not
+// is a "who signed in, roughly from what" hint for an admin session log, not
 // analytics.
 function summarizeUserAgent(userAgent) {
   const ua = userAgent || '';
@@ -12524,7 +12520,7 @@ async function revokeAdminSession(email) {
   loadAdminSessions();
 }
 
-// --- API keys (2026-08-14 redesign): the backend has always had full
+// --- API keys: the backend has always had full
 // create/list/revoke support (handler.py's /api/admin/api-keys*, used
 // today by pasting a raw key into a Fabric pipeline's Web activity header
 // by hand) but no admin-panel tab ever called it. Same lazy-load-on-
@@ -12542,7 +12538,7 @@ function apiKeyScopeLabel(scope) {
 // UTC here, matching auth.py's _api_key_expired exactly -- JS's Date
 // constructor instead defaults a naive string to LOCAL time, which would
 // silently disagree with the backend's own expiry check by the local UTC
-// offset (2026-08-18 code review finding).
+// offset.
 function _apiKeyExpiryAsUtcDate(iso) {
   if (!iso) return null;
   const hasTimezone = /Z$|[+-]\d{2}:\d{2}$/.test(iso);
@@ -12742,7 +12738,7 @@ async function revokeAdminApiKey(name) {
   loadAdminApiKeys();
 }
 
-// 2026-08-18, admin-panel completeness pass: nothing in this tab showed
+// Nothing in this tab showed
 // whether "Copiar datos ahora" (or the auto-upload-after-scan setting)
 // was actually succeeding -- an admin had to leave the panel and dig
 // through general scan history. Reuses the existing /api/history route
@@ -12782,7 +12778,7 @@ async function loadAdminLakehouseWorkspaces() {
   // -- unlike the other admin tabs (sessions/access/capacity/...), which
   // read their cache straight from the synchronous render template, this
   // select is only ever populated from here. Only skip the network
-  // request when already cached (2026-07-21: reopening the admin panel a
+  // request when already cached (reopening the admin panel a
   // second time left the dropdown stuck on the loading placeholder forever,
   // because the caller only invoked this function once per page session);
   // still always repopulate the DOM below.
@@ -12834,7 +12830,7 @@ async function loadAdminLakehouseOptions(workspaceId) {
       // Surfaced instead of silently showing an empty list -- an empty
       // dropdown and "the Fabric API call actually failed" used to look
       // identical, which is exactly what a real "I don't see my Warehouse"
-      // report (2026-07-20) turned out to be masking.
+      // report turned out to be masking.
       loadErrorMessage = payload.message || `HTTP ${response.status}`;
       adminLakehouseOptions = [];
     } else {
@@ -12866,7 +12862,7 @@ async function loadAdminLakehouseOptions(workspaceId) {
   }
 }
 
-// 2026-08-18, admin-panel completeness pass: same live-picker UX as the
+// Same live-picker UX as the
 // Lakehouse tab's own loadAdminLakehouseWorkspaces/loadAdminLakehouseOptions
 // pair above, for the Fabric-pipeline tab -- reuses the SAME cached
 // adminLakehouseWorkspaceOptions (one /api/workspaces/mine fetch serves
@@ -13260,7 +13256,7 @@ function renderAdminOneLakeDataTab() {
   `;
 }
 
-// "Dar de alta un workspace" popup (Fase 5, 2026-08-24) -- a lighter-
+// "Dar de alta un workspace" popup -- a lighter-
 // weight sibling of the full installer wizard below: creates a workspace
 // (and optionally one Lakehouse/Warehouse inside it) via the SAME `fab`
 // CLI mechanism, reusing the shared /api/admin/installer/status poll loop
@@ -13418,7 +13414,7 @@ function applyWorkspaceCreateResult() {
 
 let installerStatusCache = null;
 
-// Full multi-tenant installer wizard (Fase 5, 2026-08-24) -- provisions a
+// Full multi-tenant installer wizard -- provisions a
 // workspace + write-storage item + every fabric_notebooks/NB_*.py into
 // ANOTHER tenant, via the same /api/admin/installer/* endpoints (backend:
 // installer.py, over the `fab` CLI with an isolated auth session, see its
@@ -13788,7 +13784,7 @@ function renderNotificationsTab() {
   `;
 }
 
-// --- Purview-inspired admin tabs (Tanda A, 2026-07-09) -------------------
+// --- Purview-inspired admin tabs -------------------
 // All three follow the exact lazy-load-on-first-open pattern already used
 // for the "sessions" tab: null cache -> fetch on tab click -> re-render.
 
@@ -13950,7 +13946,7 @@ async function loadAdminGovernanceScan() {
   renderGovernancePanelIfOpen();
 }
 
-// Scanner API diagnosis (2026-08-26) -- status/blocked/error per check, each
+// Scanner API diagnosis -- status/blocked/error per check, each
 // with a concrete fix (see scripts/73_discover_governance_scan.ps1's own
 // Add-GovernanceStatus calls). Shown prominently, not buried in a tooltip:
 // per the explicit ask that led to this, a blocked capability should read
@@ -13970,10 +13966,10 @@ function renderGovernanceStatusList(statusRows) {
     </div>`).join('')}</div>`;
 }
 
-// Governance panel tabs (2026-08-26 split -- was one combined tab; RLS/CLS/
-// DDM, sensitivity labels, tags, and endorsement each need "su propia
-// pestaña e interfaz válida para sus propias configuraciones" per explicit
-// request, not one long scroll). Every one of these shares the same
+// Governance panel tabs (split out of one combined tab; RLS/CLS/
+// DDM, sensitivity labels, tags, and endorsement each need "their own
+// tab and an interface suited to their own settings" (an explicit
+// request), not one long scroll). Every one of these shares the same
 // "not scanned yet" empty state, hence this one helper instead of five
 // near-identical copies.
 function renderGovernanceNotScannedCard(titleEs, titleEn) {
@@ -14191,7 +14187,7 @@ function renderGovernanceEndorsementTab() {
 }
 
 // ---------------------------------------------------------------------------
-// Governance panel -- its own isolated top-level surface (2026-08-26), not
+// Governance panel -- its own isolated top-level surface, not
 // a section nested inside Configuración/adminPanel. Flat tab list (no
 // collapsible groups): 7 tabs is small enough that a Configuración-style
 // grouped sidebar would just be indirection for no benefit here, and this
@@ -14254,7 +14250,7 @@ function renderGovernancePanelIfOpen() {
   if (els.governancePanel && !els.governancePanel.hidden) renderGovernancePanel();
 }
 
-// Roadmap Fase 5 (2026-08-31): "Privacidad" panel -- data-subject-rights/
+// "Privacidad" panel -- data-subject-rights/
 // privacy locator for GDPR/FERPA/CCPA requests (a single request can
 // combine access, objection and biometric data). Deliberately
 // its OWN top-level modal (not a Governance tab) per explicit request --
@@ -14274,8 +14270,8 @@ function renderGovernancePanelIfOpen() {
 let privacyCoverageMapCache = null;
 let privacySearchFilter = '';
 let privacyRiskFilter = '';
-// Roadmap Fase 6 (2026-08-31): "framework" (browse by RGPD/FERPA/CCPA,
-// like a settings menu -- the default) vs "alltables" (Fase 5's original
+// "framework" (browse by RGPD/FERPA/CCPA,
+// like a settings menu -- the default) vs "alltables" (the original
 // flat, deduplicated-per-object view). Two different, both useful,
 // questions -- "what do we have under GDPR" vs "give me every flagged
 // table once, sorted by risk" -- not one replacing the other.
@@ -14283,7 +14279,7 @@ let privacyActiveTab = 'framework';
 let privacyFrameworkMapCache = null;
 let privacySelectedFramework = null; // which framework is showing in the right-hand pane, survives re-render
 
-// 2026-09-01: surfaces the REAL server-side reason (handler.py's new
+// Surfaces the REAL server-side reason (handler.py's new
 // try/except around both routes below returns {error, message} on a
 // genuine failure) instead of a bare "No se pudo cargar" -- a live report
 // the day this shipped had no way to tell "backend threw" from "network
@@ -14317,7 +14313,7 @@ async function loadPrivacyFrameworkMap() {
 // column in dbo.bronze_object_column_catalog against all 22+ categories
 // (very large on big tenants), so firing both at once on open doubled
 // that work for no reason and made the panel more likely to time out
-// (real report, 2026-09-01). loadActiveAdminTabData() elsewhere already
+// (a real report). loadActiveAdminTabData() elsewhere already
 // establishes this same "only fetch what's actually visible" convention.
 function loadActivePrivacyTabData() {
   if (privacyActiveTab === 'framework' && privacyFrameworkMapCache === null) loadPrivacyFrameworkMap();
@@ -14411,7 +14407,7 @@ function privacySystemRowHtml(system, es) {
   `;
 }
 
-// Roadmap Fase 6 (2026-08-31): "browse like a settings menu" view --
+// "browse like a settings menu" view --
 // <details>/<summary> native disclosure widgets, one per legal framework,
 // each expanding to its categories. No custom JS accordion state needed
 // beyond remembering which ones were open across a re-render
@@ -14437,15 +14433,13 @@ function renderPrivacyFrameworkDetail(framework, es) {
   `;
 }
 
-// Roadmap Fase 6 follow-up (2026-09-01, real feedback: "las normativas
-// deberían ordenarse en un índice a la izquierda como en el resto de
-// secciones como configuración o gobernanza"): a real two-column nav +
+// A real two-column nav +
 // content layout, reusing .admin-nav/.admin-nav-tab/.admin-tab-panels
 // verbatim -- the exact same primitives renderAdminPanel()/
 // renderGovernancePanel() already use for their own left-hand section
 // index, not a one-off accordion. One framework's categories shown at a
 // time (privacySelectedFramework), same "pick a section, see its content"
-// model as those two panels, instead of Fase 6's original all-expanded
+// model as those two panels, instead of the original all-expanded
 // <details> stack.
 function renderPrivacyFrameworkView() {
   const es = state.lang === 'es';
@@ -14716,7 +14710,7 @@ function renderAdminCapacityInsightTab() {
   // cards below) is independent of any local scan -- it reads straight from
   // the app's own semantic model -- so it must render regardless of whether
   // the OLDER, scan-derived table right below it (bronze_workspaces/items/
-  // executions) has anything yet. A 2026-08-24 bug returned early here
+  // executions) has anything yet. An earlier bug returned early here
   // whenever that older table had no data, which silently hid the new
   // section too even though it had nothing to do with scanning.
   const capacityMetricsSections = renderAdminCapacityMetricsDataSections();
@@ -14833,9 +14827,9 @@ function renderAdminChangesDigestTab() {
   const hasDependencyChanges = dependencies.added_count || dependencies.removed_count || dependencies.modified_count;
   const availableScans = data.available_scans || [];
   const isRange = Boolean(data.date_from || data.date_to);
-  // 2026-08-18: pick any past scan from the dropdown, not just always the
+  // Pick any past scan from the dropdown, not just always the
   // latest one -- every row was already sitting in the same table, this
-  // just exposes the ability to look back. 2026-08-24: date-range mode
+  // just exposes the ability to look back. Date-range mode
   // (below) covers "everything since X" -- this picker stays for "just
   // this one specific scan", the two are independent, not mutually
   // exclusive UI, so both stay visible.
@@ -14851,7 +14845,7 @@ function renderAdminChangesDigestTab() {
         }).join('')}
       </select>
     </div>` : '';
-  // Date-range filter (2026-08-24): aggregates every scan whose event_date
+  // Date-range filter: aggregates every scan whose event_date
   // falls in [from, to] into one digest instead of showing just one scan.
   // "Desde el primer escaneo completo" prefills `from` with that scan's
   // own date and leaves `to` empty (= up to the most recent).
@@ -14870,7 +14864,7 @@ function renderAdminChangesDigestTab() {
       ${data.first_full_scan_started_at ? `<button type="button" class="admin-button-secondary" data-changes-since-first-full="${escapeHtml(data.first_full_scan_started_at)}">${es ? 'Desde el primer escaneo completo' : 'Since the first full scan'}</button>` : ''}
       ${isRange ? `<button type="button" class="admin-button-secondary" data-changes-clear-range="1">${es ? 'Volver al último escaneo' : 'Back to latest scan'}</button>` : ''}
     </div>`;
-  // Grouped by workspace (2026-08-18), most-changed workspace first, each
+  // Grouped by workspace, most-changed workspace first, each
   // collapsed by default -- a flat list of every changed item across every
   // workspace in one scan was long enough that "which workspace is this
   // even in" took real scanning to answer.
@@ -14886,7 +14880,7 @@ function renderAdminChangesDigestTab() {
   // mechanism every other tab's search box already uses) + workspace/
   // item-type dropdowns (options derived from THIS result set, so a
   // workspace with zero changes right now never appears as a dead option)
-  // + change-type chips (2026-08-25 redesign, replacing the old per-
+  // + change-type chips (replacing the old per-
   // workspace <details> accordion with a real filterable table).
   const workspaceOptions = [...new Set(data.changes.map(c => c.workspace_name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const itemTypeOptions = [...new Set(data.changes.map(c => c.item_type).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -15007,7 +15001,7 @@ async function loadAdminChangesDigest(scanStartedAt, dateFrom, dateTo) {
   if (adminActiveTab === 'changes') renderAdminPanel();
 }
 
-// Purview-style classification chips (2026-08-18): sensitivity categories
+// Purview-style classification chips: sensitivity categories
 // as a grid of colored tiles (dot + label + count badge), same visual
 // language Purview's own classification/info-type views use, instead of
 // plain text inside a generic disclosure -- each category gets a stable
@@ -15019,7 +15013,7 @@ function adminSensitivityCategoryColor(index) {
   return `var(--${ADMIN_SENSITIVITY_CATEGORY_COLOR_TOKENS[index % ADMIN_SENSITIVITY_CATEGORY_COLOR_TOKENS.length]})`;
 }
 
-// Redesigned 2026-08-25 (explicit admin-panel request): one rich, dynamic
+// One rich, dynamic
 // TABLE instead of a category-pill grid opening a modal per click -- every
 // row here already passed NB_Discover_Column_Sensitivity.py's name-based
 // pre-filter (Paso 0, see that notebook's own comment), so this is no
@@ -15119,8 +15113,8 @@ function renderAdminSensitivityOverviewTab() {
       </button>`).join('')}
     </div>
   `;
-  // Two distinct signals, clearly labeled (2026-08-18, roadmap Fase 2
-  // follow-through): the original name-pattern heuristic above (any
+  // Two distinct signals, clearly labeled:
+  // the original name-pattern heuristic above (any
   // catalogued object, tenant-wide, unconfirmed) and the newer content-
   // verified one below (Fabric-native Lakehouse tables only, but each hit
   // is a real regex match against sampled cell values) -- until this was
@@ -15214,7 +15208,7 @@ async function resolveSensitivityAccessCounts(containerEl) {
 
 // Real DDM (sys.masked_columns), RLS (sys.security_predicates), and CLS
 // (sys.column_permissions) findings from NB_Extract_SQL_Endpoint_Catalog
-// (2026-08-24) -- see purview_insights._get_column_security_lookup. Only
+//  -- see purview_insights._get_column_security_lookup. Only
 // covers Lakehouse/Warehouse/SQLDatabase objects whose SQL endpoint has
 // actually been scanned; security_scanned distinguishes "checked, found
 // nothing" from "never checked" so an unscanned object never silently
@@ -15236,7 +15230,7 @@ function sensitivitySecurityCellHtml(sample, es) {
 
 // Shared by both sections now that _get_sensitivity_overview also resolves
 // workspace_name when the object is a confirmed Fabric-internal one (see
-// build_graph_map_index.py's workspace_name field, 2026-08-24) -- most
+// build_graph_map_index.py's workspace_name field) -- most
 // "por nombre de columna" objects still won't have one (genuinely external,
 // or Fabric-internal but not yet catalog-confirmed), so an empty/unresolved
 // workspace shows a plain dash instead of a dead button.
@@ -15263,8 +15257,8 @@ function renderSensitivityDetailModal(section, categoryKey) {
   if (section === 'name') {
     els.sensitivityDetailTitle.textContent = `${label} · ${number(cat.object_count)}`;
     els.sensitivityDetailSubtitle.textContent = es
-      ? 'Por nombre de columna, sin confirmar -- puede incluir objetos externos y objetos internos de Fabric aún sin workspace confirmado. Marca cuáles escanear por contenido real (Fase 6).'
-      : "By column name, unconfirmed -- may include external objects and internal Fabric objects not yet confirmed to a workspace. Check which ones to scan by real content (Fase 6).";
+      ? 'Por nombre de columna, sin confirmar -- puede incluir objetos externos y objetos internos de Fabric aún sin workspace confirmado. Marca cuáles escanear por contenido real.'
+      : "By column name, unconfirmed -- may include external objects and internal Fabric objects not yet confirmed to a workspace. Check which ones to scan by real content.";
     els.sensitivityDetailBody.innerHTML = `
       <table class="impact-breakdown-table">
         <thead><tr>
@@ -15409,19 +15403,19 @@ async function loadAdminContentSensitivityOverview() {
   renderGovernancePanelIfOpen();
 }
 
-// --- Server metrics (2026-08-14 redesign): in-memory request counts by
+// --- Server metrics: in-memory request counts by
 // (method, path, status_code), reset on server restart -- same
 // lazy-load-on-first-open pattern as the tabs above. Backend already
 // existed (observability.py) with no UI at all until now.
 
-// 2026-08-18, admin-panel completeness pass: the thinnest of the Insights
+// The thinnest of the Insights
 // tabs -- raw counts with no error-rate rollup and no way to isolate
 // errors beyond eyeballing the row coloring. Both additions are pure
 // client-side derivations of data already in adminMetricsCache, no new
 // backend route needed.
 let adminMetricsStatusFilter = 'all'; // 'all' | '2xx' | '3xx' | '4xx' | '5xx'
 
-// Status-class donut (2026-08-18): built as a conic-gradient rather than
+// Status-class donut: built as a conic-gradient rather than
 // SVG/canvas -- no library, no extra request, and the color stops are
 // trivial to compute from the same status-class counts the filter buttons
 // already group by. True slice-growth animation doesn't interpolate
@@ -15445,8 +15439,7 @@ function buildAdminMetricsDonutGradient(countsByClass, total) {
   return stops.length ? `conic-gradient(${stops.join(', ')})` : 'var(--panel-soft)';
 }
 
-// Reusable interactive time-series bar chart (2026-08-25 Analíticas
-// redesign) -- pure CSS/HTML, no charting library: each bar's height is a
+// Reusable interactive time-series bar chart -- pure CSS/HTML, no charting library: each bar's height is a
 // percentage of the series max, and carries a data-tooltip the CSS hover
 // rule (.admin-bar-chart-bar[data-tooltip]:hover::after) renders as a
 // floating label -- the exact value on hover, without canvas/SVG or a
@@ -15502,8 +15495,8 @@ function renderAnalyticsDaysFilter() {
   </div>`;
 }
 
-// Lineage-USAGE analytics (2026-08-24 Fase 6) -- what the tab's own name
-// ("Analíticas", renamed from "Métricas del servidor" in Fase 1) actually
+// Lineage-USAGE analytics -- what the tab's own name
+// ("Analíticas", renamed from "Métricas del servidor") actually
 // promised: real usage of the explorer itself, not just server-request
 // plumbing (see renderAdminMetricsTab below for that, kept as a secondary
 // card). Backed by bronze_usage_events (analytics.py), a permanent
@@ -15583,7 +15576,7 @@ async function loadAdminUsageAnalytics() {
   if (adminActiveTab === 'metrics') renderAdminPanel();
 }
 
-// Peticiones MCP (2026-08-25) -- usage of the remote MCP server
+// Peticiones MCP -- usage of the remote MCP server
 // (backend/scripts/mcp_http_server.py), same bronze_usage_events table
 // and permanence guarantee as the lineage-usage section above, filtered
 // to mcp_tool_call rows server-side (analytics.get_mcp_usage_analytics).
@@ -15641,7 +15634,7 @@ async function loadAdminMcpUsage() {
   if (adminActiveTab === 'metrics') renderAdminPanel();
 }
 
-// Conexiones externas (2026-08-25) -- purely a client-side rollup of
+// Conexiones externas -- purely a client-side rollup of
 // adminSettingsCache.external_sources, already fully loaded for the
 // Sources tab (fabric_connection_last_test_status/_at, set by "Probar
 // conexión (vía Fabric)" there) -- no new backend route needed, this tab
@@ -15775,7 +15768,7 @@ async function loadAdminMetrics() {
   if (adminActiveTab === 'metrics') renderAdminPanel();
 }
 
-// --- Tanda C (2026-07-09): certifications + business glossary -----------
+// --- Certifications + business glossary -----------
 // Both are admin-curated lists living directly on adminSettingsCache
 // (config/admin_settings.json's certified_items/business_glossary) --
 // edited in place and saved via the existing /api/admin/settings POST,
@@ -15829,7 +15822,7 @@ function renderAdminGlossaryTab() {
   `;
 }
 
-// Roadmap Fase 2 (2026-08-17): free-form tags, same admin-curated-list
+// Free-form tags, same admin-curated-list
 // pattern as certifications just above -- a plain qualified_name+tag pair
 // an admin edits by hand, baked into the graph map's node data by
 // build_graph_map_index.py/onelake_data.py the same way certified_items is.
@@ -15851,7 +15844,7 @@ function renderAdminTagsTab() {
   `;
 }
 
-// Roadmap Fase 1 (2026-08-31, Purview-parity push): mirrors backend/
+// Mirrors backend/
 // scripts/lineage_web/data_quality.py's RULE_TYPES -- 3 fixed entries,
 // unlikely to grow, so a hand-kept mirror is simpler than a round trip
 // just to fetch this dict.
@@ -15941,7 +15934,7 @@ function renderAdminDataQualityTab() {
   `;
 }
 
-// Roadmap Fase 2 (2026-08-31, same Purview-parity push): mirrors
+// Mirrors
 // backend/scripts/lineage_web/sensitivity_classifier.py's RISK_LABELS --
 // 4 fixed entries, unlikely to grow, same hand-kept-mirror reasoning as
 // DATA_QUALITY_RULE_TYPES above.
@@ -15988,7 +15981,7 @@ function renderAdminSensitivityCategoriesTab() {
   `;
 }
 
-// Roadmap Fase 3 (2026-08-31, same Purview-parity push): Purview's
+// Purview's
 // Unified Catalog groups assets into "data products" with an owner and a
 // description -- named "data products" (not "domains") on purpose here,
 // since Fabric's own native per-workspace "Domain" field (data.domain_name,
@@ -16027,7 +16020,7 @@ function renderAdminDataProductsTab() {
   `;
 }
 
-// Roadmap Fase 6 (2026-08-31): mirrors backend/scripts/lineage_web/
+// Mirrors backend/scripts/lineage_web/
 // sensitivity_classifier.py's own SENSITIVITY_CATEGORIES es/en labels --
 // 22 fixed entries, same hand-kept-mirror reasoning as DATA_QUALITY_
 // RULE_TYPES/SENSITIVITY_RISK_LABELS above (a real round trip just to
@@ -16070,7 +16063,6 @@ function privacyCategoryOptionsHtml(selectedKey, es) {
   ).join('');
 }
 
-// Roadmap Fase 6 (2026-08-31, follow-up to Fase 5's privacy locator):
 // admin-maintained "known systems" per sensitivity category -- most of a
 // real data-subject-rights request touches systems entirely OUTSIDE
 // Fabric (biometric access control, a CRM, a marketing platform), which
@@ -16108,7 +16100,7 @@ function renderAdminPrivacySystemsTab() {
 // the panel while the LAST-visited tab, e.g. "lakehouse", is still
 // adminActiveTab from before -- no click event fires in that case, so
 // without this the tab renders active but its data never loads at all;
-// real report, 2026-07-21: reopening the admin panel a second time on the
+// real report: reopening the admin panel a second time on the
 // write-target tab left the workspace picker permanently empty).
 function loadActiveAdminTabData() {
   if (adminActiveTab === 'sessions' && adminSessionsCache === null) loadAdminSessions();
@@ -16128,7 +16120,7 @@ function loadActiveAdminTabData() {
   if (adminActiveTab === 'dataquality' && adminDataQualityOverviewCache === null) loadAdminDataQualityOverview();
 }
 
-// Roadmap Fase 2 audit follow-through (2026-08-18): qualified_name fields
+// qualified_name fields
 // in Certifications/Tags were plain free text with no link to the real
 // catalog -- a typo silently certified/tagged nothing, with no feedback.
 // A shared <datalist> (rendered once per renderAdminPanel() call, see
@@ -16309,8 +16301,8 @@ function wireAdminPanelEvents() {
     // name, only its id (see purview_insights.py's _capacity_label
     // comment) -- prefill with that id (real data, better than a blank
     // field) unless the admin already typed something of their own
-    // (2026-08-18 admin-panel audit finding: capacity was the one field
-    // left fully manual next to two others that resolve themselves).
+    // (capacity was the one field left fully manual next to two others that
+    // resolve themselves).
     const capacityInput = document.getElementById('adminLhCapacity');
     const workspaceOption = (adminLakehouseWorkspaceOptions || []).find(w => w.workspace_id === lhWorkspaceSelect.value);
     if (capacityInput && !capacityInput.value.trim() && workspaceOption && workspaceOption.capacity_id) {
@@ -16340,7 +16332,7 @@ function wireAdminPanelEvents() {
     const workspaceOption = (adminLakehouseWorkspaceOptions || []).find(w => w.workspace_id === (pipelineWorkspaceSelect && pipelineWorkspaceSelect.value));
     const pipelineOption = adminPipelineOptions.find(p => p.pipeline_id === (pipelineItemSelect && pipelineItemSelect.value));
     adminSettingsCache.discovery_pipeline = {
-      mode: 'fabric_pipeline', // 2026-08-24: the only mode now, see Fase 1 cleanup
+      mode: 'fabric_pipeline', // the only mode the admin panel offers
       workspace_id: pipelineWorkspaceSelect ? pipelineWorkspaceSelect.value : '',
       workspace_name: workspaceOption ? workspaceOption.workspace_name : (adminSettingsCache.discovery_pipeline || {}).workspace_name || '',
       pipeline_item_id: pipelineItemSelect ? pipelineItemSelect.value : '',
@@ -16368,9 +16360,9 @@ function wireAdminPanelEvents() {
       }
       return;
     }
-    // 2026-08-24: no local-disk mode anymore -- always onelake, and the
+    // No local-disk mode anymore -- always onelake, and the
     // auto-publish-after-a-LOCAL-full-scan setting is moot now that local
-    // scans aren't how this project runs (see Fase 1 cleanup).
+    // scans aren't how this project runs.
     adminSettingsCache.onelake_data = {
       mode: 'onelake',
       workspace_name: workspaceName,
@@ -16403,7 +16395,7 @@ function wireAdminPanelEvents() {
       capacity_name: document.getElementById('adminLhCapacity').value.trim(),
       sql_endpoint_connection_string: document.getElementById('adminLhSqlEndpoint').value.trim(),
       item_type: (lhItemTypeSelect && lhItemTypeSelect.value) || 'Lakehouse',
-      // 2026-08-24: no local-CSV mode, no "behavior" section to toggle these
+      // No local-CSV mode, no "behavior" section to toggle these
       // -- this project doesn't run local scans/local-CSV copies anymore,
       // so there's nothing for "copy after scan" to do; reads always come
       // straight from the warehouse.
@@ -16494,7 +16486,7 @@ function wireAdminPanelEvents() {
     const es = state.lang === 'es';
     if (resultEl) { resultEl.textContent = es ? 'Enviando...' : 'Sending...'; resultEl.className = 'admin-test-result'; }
     try {
-      // 2026-08-18: sends the form's current (possibly unsaved) SMTP
+      // Sends the form's current (possibly unsaved) SMTP
       // values, not just ?language= -- previously this always tested
       // whatever was last SAVED, so editing the host and clicking "Send
       // test email" without saving first silently tested the old host.
@@ -16540,7 +16532,7 @@ function wireAdminPanelEvents() {
     const es = state.lang === 'es';
     if (resultEl) { resultEl.textContent = es ? 'Enviando...' : 'Sending...'; resultEl.className = 'admin-test-result'; }
     try {
-      // 2026-08-18: same "test the unsaved form" fix as the SMTP test above.
+      // Same "test the unsaved form" fix as the SMTP test above.
       const response = await fetch(`${TRIGGER_SERVER_ORIGIN}/api/admin/notifications/test-teams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -16740,7 +16732,7 @@ function wireAdminPanelEvents() {
     button.addEventListener('click', () => testFabricConnectionForSource(Number(button.dataset.testFabricConnection), button.dataset.connectionId));
   });
 
-  // --- Tanda C: certifications ---
+  // --- Certifications ---
   const addCertButton = els.adminPanel.querySelector('[data-add-cert]');
   if (addCertButton) addCertButton.addEventListener('click', () => {
     adminSettingsCache.certified_items = adminSettingsCache.certified_items || [];
@@ -16768,7 +16760,7 @@ function wireAdminPanelEvents() {
   const certSave = els.adminPanel.querySelector('[data-admin-save="certifications"]');
   if (certSave) certSave.addEventListener('click', () => { cleanCertificationsBeforeSave(); saveAdminSettings(); });
 
-  // --- Tanda C: business glossary ---
+  // --- Business glossary ---
   const addGlossaryButton = els.adminPanel.querySelector('[data-add-glossary]');
   if (addGlossaryButton) addGlossaryButton.addEventListener('click', () => {
     adminSettingsCache.business_glossary = adminSettingsCache.business_glossary || [];
@@ -16782,7 +16774,7 @@ function wireAdminPanelEvents() {
       adminSettingsCache.business_glossary[index][field] = input.value.trim();
     });
   });
-  // Linked assets (2026-08-18: chip list + autocomplete input instead of
+  // Linked assets (chip list + autocomplete input instead of
   // a free-text "one per line" textarea, same reasoning as certifications/
   // tags' own qualified_name fields -- a typo used to silently link
   // nothing, with zero feedback).
@@ -16830,7 +16822,7 @@ function wireAdminPanelEvents() {
   const glossarySave = els.adminPanel.querySelector('[data-admin-save="business_glossary"]');
   if (glossarySave) glossarySave.addEventListener('click', () => { cleanGlossaryBeforeSave(); saveAdminSettings(); });
 
-  // --- Roadmap Fase 2: free-form tags ---
+  // --- Free-form tags ---
   const addTagButton = els.adminPanel.querySelector('[data-add-tag]');
   if (addTagButton) addTagButton.addEventListener('click', () => {
     adminSettingsCache.tags = adminSettingsCache.tags || [];
@@ -16859,7 +16851,7 @@ function wireAdminPanelEvents() {
   const tagsSave = els.adminPanel.querySelector('[data-admin-save="tags"]');
   if (tagsSave) tagsSave.addEventListener('click', () => { cleanTagsBeforeSave(); saveAdminSettings(); });
 
-  // --- Roadmap Fase 1 (2026-08-31): data-quality rules ---
+  // --- Data-quality rules ---
   const addQualityRuleButton = els.adminPanel.querySelector('[data-add-quality-rule]');
   if (addQualityRuleButton) addQualityRuleButton.addEventListener('click', () => {
     adminSettingsCache.data_quality_rules = adminSettingsCache.data_quality_rules || [];
@@ -16904,7 +16896,7 @@ function wireAdminPanelEvents() {
     loadAdminDataQualityOverview();
   });
 
-  // --- Roadmap Fase 2 (2026-08-31): custom sensitivity categories ---
+  // --- Custom sensitivity categories ---
   const addSensCategoryButton = els.adminPanel.querySelector('[data-add-sens-category]');
   if (addSensCategoryButton) addSensCategoryButton.addEventListener('click', () => {
     adminSettingsCache.custom_sensitivity_categories = adminSettingsCache.custom_sensitivity_categories || [];
@@ -16952,7 +16944,7 @@ function wireAdminPanelEvents() {
     saveAdminSettings();
   });
 
-  // --- Roadmap Fase 3 (2026-08-31): data products ---
+  // --- Data products ---
   const addDataProductButton = els.adminPanel.querySelector('[data-add-data-product]');
   if (addDataProductButton) addDataProductButton.addEventListener('click', () => {
     adminSettingsCache.data_products = adminSettingsCache.data_products || [];
@@ -17024,7 +17016,7 @@ function wireAdminPanelEvents() {
     loadCertificationsAndTags();
   });
 
-  // --- Roadmap Fase 6 (2026-08-31): privacy external systems ---
+  // --- Privacy external systems ---
   const addPrivacySystemButton = els.adminPanel.querySelector('[data-add-privacy-system]');
   if (addPrivacySystemButton) addPrivacySystemButton.addEventListener('click', () => {
     adminSettingsCache.privacy_external_systems = adminSettingsCache.privacy_external_systems || [];
@@ -17102,7 +17094,7 @@ async function testExternalSourceConnection(index) {
   }
 }
 
-// Tests THROUGH the assigned gateway (2026-08-18) -- see handler.py's
+// Tests THROUGH the assigned gateway -- see handler.py's
 // /api/admin/fabric-connections/test docstring for why this is a
 // genuinely different check from testExternalSourceConnection above (that
 // one connects directly from this server, which can never reach an
@@ -17264,8 +17256,7 @@ async function testDiscoveryPipelineConnection() {
 }
 
 // Same "test the form, not just what's saved" philosophy as
-// testLakehouseConnection/testDiscoveryPipelineConnection (2026-08-18 --
-// this was the one Setup tab with a credential but no safe test action,
+// testLakehouseConnection/testDiscoveryPipelineConnection (this was the one Setup tab with a credential but no safe test action,
 // only a real "Publicar datos ahora").
 async function testOneLakeConnection() {
   const resultEl = els.adminPanel.querySelector('[data-test-result="onelake"]');
@@ -17469,7 +17460,7 @@ function setLocalScanControlsDisabled(disabled) {
 // immediately instead of waiting for the next status change.
 function setScanRunningUi(isRunning) {
   // Controls used to be disabled for the whole server-wide duration of
-  // "a scan is running" -- with the scan queue (Tanda 10), a second/third
+  // "a scan is running" -- with the scan queue, a second/third
   // request while one is already running is now a normal, encouraged
   // action (it just waits its turn) rather than something to block, so
   // only the brief in-flight moment of an individual submit disables them
@@ -17536,7 +17527,7 @@ function parseCsvNumber(value) {
 }
 
 async function fetchLocalScanWorkspaces() {
-  // 2026-08-24: the select is now visible (locked) from page load rather
+  // The select is now visible (locked) from page load rather
   // than hidden until sign-in -- start it empty with a loading placeholder
   // instead of whatever it last showed, so it's never mistaken for "these
   // are your workspaces" while the real list is still in flight.
@@ -17550,7 +17541,7 @@ async function fetchLocalScanWorkspaces() {
 
     // Signed in: the dropdown is ONLY the workspaces THIS person actually
     // has Fabric access to as Admin/Member/Contributor (queried with their
-    // own token, min_role=contributor -- 2026-08-24) -- never the full
+    // own token, min_role=contributor) -- never the full
     // previously-indexed tenant list, which can include workspaces a
     // colleague found that this person was never granted access to, and
     // never a Viewer-only workspace, which isn't this person's to scan.
@@ -17927,8 +17918,8 @@ function scanHistoryRunKey(run) {
 }
 
 // Compact "+3 -1 ~2" summary for the history table row itself -- this is
-// the "todos los elementos modificados en ese escaneo contabilizados por
-// tipo" headline the log was missing, before anyone expands a row.
+// the "every modified item in that scan, counted by
+// type" headline the log was missing, before anyone expands a row.
 function scanDiffSummaryHtml(run) {
   const d = localScanText();
   const added = Number(run.diff_added || 0);
@@ -18103,7 +18094,7 @@ function toggleScanHistoryPanel(forceOpen) {
   }
 }
 
-// 2026-08-24: split out of the old initLocalScanPanel so the panel's
+// Split out of the old initLocalScanPanel so the panel's
 // listeners can be wired at page load (the panel itself is now always in
 // the DOM, not hidden until sign-in -- see renderLockedShell) without
 // firing any request before a session exists. Safe to call once, before
@@ -18238,7 +18229,7 @@ async function loadLineageDataOnMainThread() {
   // non-JSON response straight to .json()) turns that into a real,
   // readable error message instead of a bare "Unexpected end of JSON
   // input"/"Unexpected token" thrown from deep inside JSON.parse with no
-  // context (confirmed live 2026-08-18: this exact path is what a
+  // context (confirmed live: this exact path is what a
   // stuck "Cargando (modo compatibilidad)..." screen was silently
   // failing on, with nothing surfaced to the user).
   const dataResponse = await fetch('./data/lineage-explorer.json');
@@ -18267,7 +18258,7 @@ async function loadLineageDataOnMainThread() {
 // device-code sign-in via pollDeviceFlow) confirms authState.signedIn --
 // see docs/102_admin_panel_and_user_auth.md. The shell itself (topbar,
 // mode bar, scan panel, workspace list) is no longer part of that gate
-// (2026-08-24) -- it renders locked from the very first frame instead
+//  -- it renders locked from the very first frame instead
 // (see renderLockedShell), so nothing pops into existence and shifts the
 // page around at the moment sign-in completes. The one exception is a
 // server started with LINEAGE_DEMO_MODE=1 for the synthetic demo tenant
@@ -18402,7 +18393,7 @@ function toggleHelpPanel(forceOpen) {
 // glossaryTerm param) opens this same shared panel, scrolled/highlighted to
 // the specific term that was clicked -- one glossary, many entry points,
 // same blurred-backdrop modal behavior as the header help button.
-// Tanda C (2026-07-09): jumps the main search box to one qualified_name,
+// Jumps the main search box to one qualified_name,
 // the same way typing it by hand would -- reused so a business glossary
 // term's linked assets are one click away from "here's the actual data".
 function searchForQualifiedName(qualifiedName) {
@@ -18813,7 +18804,7 @@ if (els.adminPanel) {
     toggleSensitivityDetailModal(true, pill.dataset.sensitivitySection, pill.dataset.sensitivityCategory);
   });
 }
-// "Sensibilidad detectada" now renders inside #governancePanel (2026-08-26)
+// "Sensibilidad detectada" now renders inside #governancePanel
 // -- same delegated click needed there too.
 if (els.governancePanel) {
   els.governancePanel.addEventListener('click', event => {
@@ -18842,7 +18833,7 @@ if (els.sensitivityDetailModal) {
     if (checkbox.checked) sensitivityScanSelection.set(key, { workspace_name: workspaceName, table_name: tableLabel });
     else sensitivityScanSelection.delete(key);
     // Updates the "Escanear seleccionadas" button on the MAIN sensitivity
-    // tab card (behind this modal, now inside #governancePanel -- 2026-08-26)
+    // tab card (behind this modal, now inside #governancePanel)
     // immediately -- this stacked modal lives outside whichever panel is
     // open (see pushStackedModal), so re-rendering it is safe while the
     // modal stays open, same pattern renderExternalSourceConnectionField's
@@ -18861,7 +18852,7 @@ if (els.adminPanel) {
     toggleTenantAdminWorkspacesModal(true, row.dataset.tenantAdminWorkspaces);
   });
 }
-// "Accesos a workspaces" now renders inside #governancePanel (2026-08-26),
+// "Accesos a workspaces" now renders inside #governancePanel,
 // not #adminPanel -- same delegated click needed there too, set up once
 // here rather than re-bound on every renderGovernancePanel() call.
 if (els.governancePanel) {
@@ -18885,7 +18876,7 @@ if (els.adminPanel) {
 }
 // Sensitivity-selection interactions (scan-selected/clear/toggle-samples)
 // now live inside #governancePanel's "Sensibilidad detectada" tab
-// (2026-08-26) -- moved out of the shared #adminPanel delegated handler
+//  -- moved out of the shared #adminPanel delegated handler
 // above into their own, since that tab isn't part of #adminPanel anymore.
 if (els.governancePanel) {
   els.governancePanel.addEventListener('click', event => {
@@ -19002,7 +18993,7 @@ window.addEventListener('resize', () => {
 });
 
 init().catch(error => {
-  // If the auth gate is still showing (2026-08-24: now an overlay scoped
+  // If the auth gate is still showing (now an overlay scoped
   // to the diagram area, not the whole shell -- see the HTML comment
   // above #authGate), the failure happened before/during the auth check
   // itself -- writing into els.treeStage would be invisible underneath
@@ -19195,7 +19186,7 @@ function renderPlanningMapDiagram() {
   // position writes in the loop after that, costs at most 2 forced layouts
   // total regardless of node count instead of one per node/column -- this
   // (plus the render cap above) is what fixed the popup going blank on a
-  // large combined selection, verified live 2026-07-18.
+  // large combined selection, verified live.
   const cardByNodeId = new Map();
   for (const column of columns) {
     for (const node of column.nodes) {

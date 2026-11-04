@@ -35,7 +35,7 @@ DATA_DIR = REPO_ROOT / "frontend" / "semantic-lineage" / "data"
 MANIFEST_PATH = REPO_ROOT / "analysis" / "onelake_web_data_publish_manifest.csv"
 MANIFEST_FIELDS = ["filename", "source_path", "target_path", "bytes", "status", "error", "published_at"]
 
-# The only files the frontend actually fetches (confirmed 2026-07-24 by
+# The only files the frontend actually fetches (confirmed by
 # grepping app.js/graph-map-data.js for `./data/*.json` -- semantic-
 # lineage.json, also under data/, is an intermediate build artifact with
 # no browser consumer and is deliberately not published here).
@@ -97,7 +97,7 @@ def run(args: argparse.Namespace) -> int:
         raise SystemExit(
             f"{args.admin_settings}'s onelake_data block has no workspace_name/lakehouse_name yet -- "
             "nothing to publish to. Run with --dry-run to preview, or fill it in from the admin "
-            "panel's Lectura de datos (OneLake) tab first."
+            "panel's Explorer data (OneLake) tab first."
         )
 
     file_system_client = None

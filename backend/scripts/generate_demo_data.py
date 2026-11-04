@@ -1,24 +1,24 @@
-"""Genera un tenant Fabric sintético ("Contoso") para la demo del producto.
+"""Generates a synthetic Fabric tenant ("Contoso") for the product demo.
 
-Determinista a propósito: todos los IDs se derivan con uuid5 de un nombre
-fijo, así que ejecutar este script siempre produce exactamente los mismos
-ficheros de salida -- no hay ninguna dependencia de un tenant Fabric real,
-por eso es seguro incluirlo en un repositorio público/comercial.
+Deterministic on purpose: every ID is derived with uuid5 from a fixed
+name, so running this script always produces exactly the same output
+files -- there is no dependency on a real Fabric tenant, which is why it
+is safe to include in a public/commercial repository.
 
-Uso:
+Usage:
     python backend/scripts/generate_demo_data.py
 
-Escribe los CSV de entrada mínimos que backend/scripts/11_build_lineage_
+It writes the minimal input CSVs that backend/scripts/11_build_lineage_
 explorer_fast.py, 17_build_object_impact_index_fast.py, 21_build_reverse_
-impact_package_fast.py y build_graph_map_index.py necesitan, y a
-continuación invoca esos cuatro scripts para producir los JSON finales que
-lee el frontend (frontend/semantic-lineage/data/*.json: lineage-explorer,
-object-impact y los dos índices del Graph Map) -- así el esquema de salida
-es exactamente el mismo código que usa el producto real contra un tenant
-real, no una recreación a mano. Todo lo que escribe queda en rutas
-ignoradas por git (index/, analysis/, frontend/**/data/).
+impact_package_fast.py and build_graph_map_index.py need, and then
+invokes those four scripts to produce the final JSON files read by the
+frontend (frontend/semantic-lineage/data/*.json: lineage-explorer,
+object-impact and the two Graph Map indexes) -- so the output schema is
+exactly the same code the real product uses against a real tenant, not a
+hand-made recreation. Everything it writes lands in git-ignored paths
+(index/, analysis/, frontend/**/data/).
 
-Después, para abrir el visor sin iniciar sesión (solo lectura):
+Afterwards, to open the viewer without signing in (read-only):
     LINEAGE_DEMO_MODE=1 python backend/scripts/lineage_web_server.py --bind 127.0.0.1 --directory frontend/semantic-lineage
 """
 
@@ -48,8 +48,8 @@ def write_csv(path, fieldnames, rows):
 
 
 # ---------------------------------------------------------------------------
-# Tenant de demo: "Contoso", una empresa ficticia con una plataforma de datos
-# típica en Fabric (medallion architecture) sobre 3 workspaces.
+# Demo tenant: "Contoso", a fictitious company with a typical Fabric data
+# platform (medallion architecture) across 3 workspaces.
 # ---------------------------------------------------------------------------
 
 WORKSPACES = [
@@ -323,16 +323,16 @@ def build_executions_csv():
     write_csv(REPO_ROOT / "index/executions.csv", fieldnames, rows)
 
 
-# Los informes Markdown que escriben 17 y 21 van a analysis/ (ignorado por
-# git), no a docs/ como en el pipeline real: así el quick start del README
-# no deja ficheros sin seguimiento en el repositorio.
+# The Markdown reports written by 17 and 21 go to analysis/ (ignored by
+# git), not to docs/ as in the real pipeline: this way the README quick start
+# leaves no untracked files in the repository.
 DEMO_REPORTS_DIR = REPO_ROOT / "analysis/demo_reports"
 
 
 def run_build_scripts():
-    # Mismo orden que 99_refresh_lineage_project.ps1: 11 (explorer) -> 17
-    # (índice de impacto) -> 21 (object-impact.json, la vista Impacto) ->
-    # índice del Graph Map, que también lee object-impact.json.
+    # Same order as 99_refresh_lineage_project.ps1: 11 (explorer) -> 17
+    # (impact index) -> 21 (object-impact.json, the Impact view) ->
+    # Graph Map index, which also reads object-impact.json.
     scripts = [
         [sys.executable, str(REPO_ROOT / "backend/scripts/11_build_lineage_explorer_fast.py")],
         [

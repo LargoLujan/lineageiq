@@ -8,7 +8,7 @@
 #
 # PythonCommand defaults to "python", not "python3" (unlike
 # 64_upload_bronze_to_onelake.ps1's own wrapper) -- confirmed live
-# 2026-07-24 that only the "python" install on this project's machines has
+# that only the "python" install on this project's machines has
 # azure-identity/azure-storage-file-datalake installed (see project notes
 # on multiple Python installs); override if your machine differs.
 param(

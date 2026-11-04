@@ -1,6 +1,5 @@
 -- Warehouse-native translation of backend/scripts/27_build_d2_likely_
--- dependency_confirmation_package.ps1 (Phase 2 migration continuation,
--- 2026-07-21). Reads dbo.bronze_dependencies, dbo.silver_likely_
+-- dependency_confirmation_package.ps1 (SQL migration). Reads dbo.bronze_dependencies, dbo.silver_likely_
 -- conflict_cleanup_queue (25), dbo.silver_evidence_hardening_queue (22),
 -- dbo.silver_orchestration_v2_plan (24), dbo.silver_ideal_execution_
 -- edges (13), dbo.bronze_items. First-match-per-key lookups mirror

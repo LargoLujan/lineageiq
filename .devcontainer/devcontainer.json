@@ -1,7 +1,7 @@
 {
   "name": "Fabric Lineage Mapper",
   "dockerComposeFile": "../docker-compose.yml",
-  "service": "fabric-mapper",
+  "service": "lineageiq",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
   "forwardPorts": [8765],

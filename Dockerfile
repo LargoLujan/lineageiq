@@ -53,10 +53,10 @@ RUN python -m pip install --upgrade pip \
     && ln -s /opt/azure-cli/bin/az /usr/local/bin/az \
     && ln -s /opt/fabric-cli/bin/fab /usr/local/bin/fab
 
-COPY docker/entrypoint.sh /usr/local/bin/fabric-mapper-entrypoint
-RUN chmod +x /usr/local/bin/fabric-mapper-entrypoint
+COPY docker/entrypoint.sh /usr/local/bin/lineageiq-entrypoint
+RUN chmod +x /usr/local/bin/lineageiq-entrypoint
 
-ENTRYPOINT ["/usr/local/bin/fabric-mapper-entrypoint"]
+ENTRYPOINT ["/usr/local/bin/lineageiq-entrypoint"]
 CMD ["bash"]
 
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium

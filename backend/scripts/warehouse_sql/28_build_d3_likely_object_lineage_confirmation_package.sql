@@ -1,6 +1,5 @@
 -- Warehouse-native translation of backend/scripts/28_build_d3_likely_
--- object_lineage_confirmation_package.ps1 (Phase 2 migration continuation,
--- 2026-07-21). Reads dbo.silver_object_read_write_classification (23),
+-- object_lineage_confirmation_package.ps1 (SQL migration). Reads dbo.silver_object_read_write_classification (23),
 -- dbo.silver_likely_conflict_cleanup_queue (25, phase D3),
 -- dbo.silver_orchestration_v2_plan (24), dbo.bronze_items.
 -- row_id values ("D3O000001", ...) are assigned by a deterministic sort

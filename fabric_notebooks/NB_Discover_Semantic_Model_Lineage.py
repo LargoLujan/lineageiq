@@ -1,45 +1,45 @@
 # NB_Discover_Semantic_Model_Lineage
 #
-# Fuente para un notebook Python de Fabric -- quinto paso del pipeline de
-# descubrimiento nativo (ver docs/105_fabric_native_discovery_setup.md).
-# Cada bloque "# %%" es una celda -- pégalas en orden.
+# Source for a Fabric Python notebook -- fifth step of the native
+# discovery pipeline (see docs/105_fabric_native_discovery_setup.md).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Réplica fiel de scripts/09_enrich_semantic_model_views.ps1: descarga el
-# TMDL de cada modelo semántico (getDefinition?format=TMDL, LRO async) y
-# extrae las tablas/vistas/queries nativas reales detrás de cada tabla del
-# modelo -- la conexión compartida (Sql.Database(server, database), casi
-# siempre en un único fichero definition/expressions.tmdl) más la
-# navegación Schema/Item de cada tabla, y opcionalmente SQL nativo
-# embebido (Value.NativeQuery, Odbc.Query, etc.) cuando el texto realmente
-# tiene pinta de contener una query.
+# Faithful replica of scripts/09_enrich_semantic_model_views.ps1: downloads the
+# TMDL of each semantic model (getDefinition?format=TMDL, async LRO) and
+# extracts the real tables/views/native queries behind each table of the
+# model -- the shared connection (Sql.Database(server, database), almost
+# always in a single definition/expressions.tmdl file) plus the
+# Schema/Item navigation of each table, and optionally embedded native SQL
+# (Value.NativeQuery, Odbc.Query, etc.) when the text really
+# looks like it contains a query.
 #
-# Escribe en dbo.bronze_semantic_model_view_candidates (13 columnas) --
-# misma tabla que scripts/67_upload_bronze_to_warehouse.ps1 ya sube desde
+# Writes to dbo.bronze_semantic_model_view_candidates (13 columns) --
+# the same table that scripts/67_upload_bronze_to_warehouse.ps1 already uploads from
 # local.
 #
-# Diferencia deliberada frente al original, documentada:
-# - El filtro de workspace de 09 es un ÚNICO nombre exacto (`-eq`, "usado
-#   por el botón de escaneo por workspace"), no una lista separada por
-#   `;` como el resto de notebooks -- se replica tal cual, no se
-#   "arregla". Si WorkspaceNameFilter trae varios nombres, solo el primero
-#   se usa (mismo comportamiento que pasarle una lista al `-eq` original
-#   habría dado: comparación exacta contra el string completo, así que en
-#   la práctica solo un match exacto de un único nombre funciona).
-# - El modo "tenant completo" del original prioriza los MaxModels=80
-#   modelos con más fuentes/informes, usando analysis/semantic_model_
-#   lineage_summary.csv (salida de scripts/08_build_semantic_lineage.ps1,
-#   ya migrado a SQL nativo en warehouse_sql/08_build_semantic_lineage.sql
-#   pero con un esquema de tabla derivada que no se ha verificado aquí).
-#   Esta versión simplifica: procesa TODOS los modelos semánticos
-#   descubiertos, sin ese ranking (MAX_MODELS = 0 por defecto = sin
-#   límite) -- razonable dado que la capacidad F-SKU tiene margen de
-#   sobra; ponle un número a MAX_MODELS si prefieres acotar una primera
-#   ejecución de prueba.
+# Deliberate difference from the original, documented:
+# - The workspace filter of 09 is a SINGLE exact name (`-eq`, "used
+#   by the per-workspace scan button"), not a `;`-separated list
+#   like the rest of the notebooks -- it is replicated as is, not
+#   "fixed". If WorkspaceNameFilter carries several names, only the first
+#   one is used (same behavior that passing a list to the original `-eq`
+#   would have given: exact comparison against the whole string, so in
+#   practice only an exact match of a single name works).
+# - The original's "full tenant" mode prioritizes the MaxModels=80
+#   models with the most sources/reports, using analysis/semantic_model_
+#   lineage_summary.csv (output of scripts/08_build_semantic_lineage.ps1,
+#   already migrated to native SQL in warehouse_sql/08_build_semantic_lineage.sql
+#   but with a derived table schema that has not been verified here).
+#   This version simplifies: it processes ALL the discovered semantic
+#   models, without that ranking (MAX_MODELS = 0 by default = no
+#   limit) -- reasonable given that the F-SKU capacity has plenty of
+#   headroom; set a number on MAX_MODELS if you prefer to bound a first
+#   test run.
 #
-# Self-contained a propósito, mismo criterio que los notebooks anteriores.
+# Self-contained on purpose, same criterion as the previous notebooks.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -63,23 +63,23 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-# Ya no se lee de Key Vault (bloqueado) NI de un parámetro del pipeline
-# (probado 2026-08-12: filtró el valor en texto plano al fallar la
-# conversión de tipo -- nunca más por ahí). Fichero privado en el área
-# Files del Lakehouse del workspace, leído con notebookutils.fs.head() --
-# gobernado por el rol de Fabric del SP sobre este workspace, no por RBAC
-# de Azure sobre un recurso aparte.
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# No longer read from Key Vault (blocked) NOR from a pipeline parameter
+# (tested 2026-08-12: it leaked the value in plain text when the
+# type conversion failed -- never again that way). Private file in the
+# Files area of the workspace Lakehouse, read with notebookutils.fs.head() --
+# governed by the SP's Fabric role on this workspace, not by Azure RBAC
+# on a separate resource.
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 REQUEST_DELAY_SECONDS = 0.35
 RETRY_COUNT = 5
 MAX_OPERATION_POLLS = 12
 MAX_OPERATION_DELAY_SECONDS = 8
-MAX_MODELS = 0  # 0 = sin límite; ver nota de la cabecera sobre el ranking simplificado.
+MAX_MODELS = 0  # 0 = no limit; see the header note about the simplified ranking.
 
 CANDIDATE_COLUMNS = [
     "workspace_name", "workspace_environment", "semantic_model_name", "semantic_model_qualified_name",
@@ -88,16 +88,16 @@ CANDIDATE_COLUMNS = [
 ]
 
 # %% [markdown]
-# ## Parámetros
-# Marca esta celda como celda de parámetros en Fabric. A diferencia de los
-# demás notebooks, aquí WorkspaceNameFilter es UN ÚNICO nombre exacto (o
-# vacío para procesar todos los modelos) -- ver la cabecera del archivo.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric. Unlike the
+# other notebooks, here WorkspaceNameFilter is A SINGLE exact name (or
+# empty to process all the models) -- see the file header.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticación y Warehouse (mismo patrón que los notebooks anteriores)
+# ## Authentication and Warehouse (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -168,7 +168,7 @@ def limit_text(text, max_length=1200):
 
 
 # %% [markdown]
-# ## Fabric REST: getDefinition?format=TMDL con sondeo LRO
+# ## Fabric REST: getDefinition?format=TMDL with LRO polling
 
 # %%
 def fabric_request(method, path, headers, retry_count=RETRY_COUNT):
@@ -247,7 +247,7 @@ def decode_definition_parts(definition_payload):
 
 
 # %% [markdown]
-# ## Parsers TMDL: tabla por ruta, contexto de query nativa, filtros de ruido
+# ## TMDL parsers: table by path, native query context, noise filters
 
 # %%
 def table_name_from_path(path):
@@ -319,7 +319,7 @@ _NATIVE_QUERY_PATTERN = re.compile(
 
 
 # %% [markdown]
-# ## Registro de candidatos (Add-ObjectCandidate)
+# ## Candidate registration (Add-ObjectCandidate)
 
 # %%
 def add_object_candidate(rows, seen, model, definition_path, semantic_table, server, database,
@@ -446,7 +446,7 @@ else:
 print(f"Target semantic models: {len(target_models)} ({'workspace: ' + target_workspace_name if target_workspace_name else 'full tenant'})")
 
 # %% [markdown]
-# ## Ejecutar: getDefinition?format=TMDL + parseo, por modelo
+# ## Run: getDefinition?format=TMDL + parsing, per model
 
 # %%
 fabric_token = acquire_token("https://api.fabric.microsoft.com/.default")
@@ -480,15 +480,15 @@ for model in target_models:
 print(f"Definitions succeeded: {success_count} / {len(target_models)}. Source candidates: {len(rows)}.")
 
 # %% [markdown]
-# ## Escribir en el Warehouse, conservando lo que pertenece a otros workspaces
-# cuando WorkspaceNameFilter tiene un valor
+# ## Write to the Warehouse, keeping what belongs to other workspaces
+# when WorkspaceNameFilter has a value
 
 # %%
-# Reconectar con un token de base de datos fresco -- la conexion de arriba
-# lleva abierta desde antes del bucle por modelo semantico (todo el
-# tenant por defecto, MAX_MODELS=0 = sin limite), el mismo patron que ya
-# causo un fallo real de conexion ("TCP Provider: Error code 0x20") en
-# NB_Discover_Dependencies.py -- mismo fix aplicado aqui preventivamente.
+# Reconnect with a fresh database token -- the connection above
+# has been open since before the per-semantic-model loop (the whole
+# tenant by default, MAX_MODELS=0 = no limit), the same pattern that
+# already caused a real connection failure ("TCP Provider: Error code 0x20") in
+# NB_Discover_Dependencies.py -- same fix applied here preventively.
 connection.close()
 connection = connect_warehouse()
 cursor = connection.cursor()

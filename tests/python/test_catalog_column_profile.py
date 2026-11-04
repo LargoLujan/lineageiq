@@ -1,5 +1,5 @@
-"""Unit tests for catalog.py's _get_column_profile (roadmap Fase 2,
-2026-08-17): column-level statistical profiling for Fabric-native
+"""Unit tests for catalog.py's _get_column_profile:
+column-level statistical profiling for Fabric-native
 Lakehouse tables, read from dbo.bronze_column_profile. No local CSV
 fallback exists for this table (it's only ever produced by the
 Fabric-native NB_Discover_Column_Profile.py notebook), so every test

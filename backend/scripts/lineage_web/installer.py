@@ -1,4 +1,4 @@
-"""Multi-tenant installer (Fase 5, 2026-08-24): the admin panel's
+"""Multi-tenant installer: the admin panel's
 "Instalar en otro tenant" wizard walks an admin through provisioning a
 fresh copy of this project's Fabric-side assets (workspace, Lakehouse/
 Warehouse, every fabric_notebooks/NB_*.py) into ANY tenant they have a
@@ -6,8 +6,8 @@ service principal for.
 
 Built on the `fab` CLI, not raw REST calls -- this is the SAME mechanism
 already used and trusted this project for pushing live notebook edits
-(see docs/109_column_security_discovery.md's own history: `fab export`/
-`fab import`, verified byte-identical on re-export). There is no second
+(`fab export`/`fab import`, verified
+byte-identical on re-export). There is no second
 tenant available this session to test raw REST workspace/item-creation
 calls against, so reusing the CLI (which already handles auth, retries,
 and the exact item-definition wire format) is the lower-risk choice.
@@ -19,7 +19,7 @@ writes its session to a fixed per-user config dir
 the TARGET tenant's service principal here would silently replace
 whatever interactive fab/az session the machine's own operator has open
 for THEIR OWN (usually different) tenant. Verified empirically
-2026-08-24: overriding HOME makes a fresh `fab auth status` report a
+Overriding HOME makes a fresh `fab auth status` report a
 separate, un-authenticated state instead of the real session's.
 
 Pipeline/activity wiring is deliberately NOT automated here -- this
@@ -44,7 +44,7 @@ from .utils import _now_iso
 
 # The 12 core discovery/build notebooks, in the exact pipeline dependency
 # order docs/105_fabric_native_discovery_setup.md's own table documents
-# (column "Depende de"). Kept as a flat ordered list (not the dependency
+# (column "Depends on"). Kept as a flat ordered list (not the dependency
 # graph itself) because that's all the install/deploy step needs -- the
 # graph is only shown back to the admin as the manual pipeline-wiring
 # instructions at the end, verbatim from that doc.
@@ -52,19 +52,19 @@ CORE_NOTEBOOK_ORDER = [
     "NB_Discover_Workspaces_Items",
     "NB_Discover_Dependencies",
     "NB_Discover_Object_Lineage",
+    "NB_Discover_Pipeline_Object_Lineage",
     "NB_Discover_Semantic_Model_Lineage",
     "NB_Confirm_Source_Object_Types",
-    "NB_Discover_Pipeline_Object_Lineage",
-    "NB_Download_Notebook_Definitions",
     "NB_Discover_Executions",
     "NB_Build_Lineage_Explorer",
     "NB_Build_Object_Impact",
     "NB_Build_Graph_Map",
+    "NB_Download_Notebook_Definitions",
     "NB_Build_Notebook_Super_Lineage",
 ]
 
 # Every other fabric_notebooks/NB_*.py this project ships beyond the core
-# 12 (Fase A SQL-endpoint-catalog work, the Bronze/Silver/Gold Lakehouse
+# 12 (SQL-endpoint-catalog work, the Bronze/Silver/Gold Lakehouse
 # bypass, hardening/backfill helpers) -- optional, deployed if present,
 # with no fixed pipeline position asserted here (each has its own header
 # comment explaining where it slots into a real run).
@@ -86,27 +86,23 @@ EXTRA_NOTEBOOKS = [
 # (see this module's own docstring for why).
 MANUAL_PIPELINE_STEP = {
     "es": (
-        "El asistente no crea el Data Pipeline -- ni este proyecto ni esta sesión tienen un segundo tenant "
-        "donde probar un pipeline-content.json generado a ciegas, y este mismo proyecto documenta ese paso "
-        "como manual incluso para su propio tenant (ver docs/105_fabric_native_discovery_setup.md). Crea un "
+        "El asistente no crea el Data Pipeline: la generación automática de su definición aún no está "
+        "validada, así que este paso es manual (ver docs/105_fabric_native_discovery_setup.md). Crea un "
         "Data Pipeline nuevo en el workspace de arriba y añade una actividad Notebook por cada notebook "
-        "desplegado, con estas dependencias (ejecuta la siguiente solo si la anterior tiene éxito):"
+        "desplegado, encadenadas en este orden (ejecuta cada una solo si la anterior tiene éxito):"
     ),
     "en": (
-        "The wizard does not create the Data Pipeline -- neither this project nor this session has a second "
-        "tenant to test a blindly-generated pipeline-content.json against, and this project documents that "
-        "step as manual even for its own tenant (see docs/105_fabric_native_discovery_setup.md). Create a new "
-        "Data Pipeline in the workspace above and add one Notebook activity per deployed notebook, with these "
-        "dependencies (run the next one only if the previous succeeded):"
+        "The wizard does not create the Data Pipeline: generating its definition automatically has not been "
+        "validated yet, so this step stays manual (see docs/105_fabric_native_discovery_setup.md). Create a new "
+        "Data Pipeline in the workspace above and add one Notebook activity per deployed notebook, chained in "
+        "this order (run each one only if the previous one succeeded):"
     ),
 }
 
 # Tenant-specific config values found as plain top-level assignments
-# across fabric_notebooks/NB_*.py (confirmed 2026-08-24 by grepping every
-# notebook: 12 of them already carry placeholder values like "<tu-
-# workspace>"/"<tenant-id>", the other 8 carry this project's own live
-# values -- these names were clearly already designed for exactly this
-# kind of per-tenant substitution). SP_SECRET_ONELAKE_PATH and
+# across fabric_notebooks/NB_*.py. Every notebook ships with placeholder
+# values such as "<your-workspace>" or "<tenant-id>", and the installer
+# replaces them with the admin's own values by variable name. SP_SECRET_ONELAKE_PATH and
 # FABRIC_API_BASE_URL are deliberately excluded: both are constant across
 # every notebook regardless of tenant (a fixed relative Files/ path
 # convention and Fabric's global API host), not something to prompt for.
@@ -191,7 +187,7 @@ def _py_source_to_notebook_cells(py_source):
     '# %%' marker (every notebook's opening comment block) becomes its
     own leading markdown cell, same treatment.
 
-    Verified 2026-08-24 against a REAL fab-exported notebook-content.ipynb
+    Verified against a REAL fab-exported notebook-content.ipynb
     from this project's own live tenant: nbformat 4/5, cells shaped
     [{"cell_type", "metadata", "source": [...]}], metadata.language_info.
     name == "python" -- this is standard Jupyter nbformat, not a
@@ -253,7 +249,7 @@ def _py_source_to_notebook_cells(py_source):
 def _split_source_lines(text):
     """nbformat's own convention: `source` is a list of lines, every line
     except the last keeping its trailing '\\n' -- matches what a real
-    fab-exported notebook-content.ipynb contains (verified 2026-08-24)."""
+    fab-exported notebook-content.ipynb contains (verified)."""
     if not text:
         return []
     parts = text.split("\n")
@@ -284,14 +280,14 @@ def _isolated_fab_env(config):
     replaced by) whatever interactive fab/az session the machine's own
     operator has open for their own tenant -- fab keeps its session at a
     fixed per-user path (~/.config/fab/auth.json). Verified empirically
-    2026-08-24: overriding HOME/USERPROFILE gives `fab auth status` a
+    Overriding HOME/USERPROFILE gives `fab auth status` a
     fresh, separate "not logged in" state instead of the real one.
 
     The SPN credentials themselves go in as FAB_TENANT_ID/FAB_SPN_CLIENT_
     ID/FAB_SPN_CLIENT_SECRET env vars -- fab's own FabAuth._load_env()
     reads these automatically the moment any `fab` subcommand starts, so
     no explicit `fab auth login -u ... -p <secret> --tenant ...` call is
-    needed at all (2026-08-26 security audit: that `-p` put the client
+    needed at all (security hardening: that `-p` put the client
     secret directly in this subprocess's argv, visible to anything that
     can list processes on the machine -- Task Manager, `wmic process`,
     `ps`. Env vars aren't visible that way). See _fab_auth_check below for
@@ -349,7 +345,7 @@ def _fab(args, env, timeout=120):
 
 
 def create_workspace_and_item(config, on_step):
-    """Standalone "dar de alta" popup support (Fase 5): creates a
+    """Standalone "dar de alta" popup support: creates a
     workspace and, inside it, one Lakehouse or Warehouse -- the SAME
     fab mkdir/assign mechanism run_install uses for its own workspace/
     storage steps, just callable on its own for the "Escaneo en Fabric"

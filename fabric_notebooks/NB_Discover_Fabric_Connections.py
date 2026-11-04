@@ -1,40 +1,40 @@
 # NB_Discover_Fabric_Connections
 #
-# Fuente para un notebook Python de Fabric -- Fase A del "escaneo profundo"
-# (ver docs/105_fabric_native_discovery_setup.md para el patron general).
-# Cada bloque "# %%" es una celda -- pegalas en orden.
+# Source for a Fabric Python notebook -- first step of the "deep scan"
+# (see docs/105_fabric_native_discovery_setup.md for the general pattern).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Replica fiel de scripts/69_discover_fabric_connections.ps1: lista las
-# conexiones del tenant que el llamador puede ver (GET /v1/connections) y
-# resuelve el DESTINO REAL de cada una (connectionDetails.path -- para
-# conexiones SQL, "servidor;base de datos"). Los items solo llevan el
-# NOMBRE de la conexion (ej. "LH_Sample_Silver_Cloud"), nunca el
-# servidor -- sin este catalogo, el linaje trata esa etiqueta como si
-# fuera la base de datos y nunca se puede confirmar el origen real. Esto
-# es lo que permite a NB_Extract_SQL_Endpoint_Catalog (Fase A, el otro
-# notebook nuevo) encontrar el servidor real de cada SQLEndpoint/Warehouse
-# sin depender de que el nombre de la conexion ya parezca "servidor;bd".
+# Faithful replica of scripts/69_discover_fabric_connections.ps1: lists the
+# tenant connections the caller can see (GET /v1/connections) and
+# resolves the REAL TARGET of each one (connectionDetails.path -- for
+# SQL connections, "server;database"). Items only carry the
+# NAME of the connection (e.g. "LH_Sample_Silver_Cloud"), never the
+# server -- without this catalog, lineage treats that label as if it
+# were the database and the real source can never be confirmed. This
+# is what allows NB_Extract_SQL_Endpoint_Catalog (the other
+# new notebook) to find the real server of each SQLEndpoint/Warehouse
+# without depending on the connection name already looking like "server;db".
 #
-# Tenant-completo, sin WorkspaceNameFilter -- las conexiones no pertenecen
-# a un workspace concreto, por eso este notebook (a diferencia de los
-# "Discover") no tiene celda de parametros, igual que los notebooks
-# "Build".
+# Tenant-wide, without WorkspaceNameFilter -- connections do not belong
+# to a specific workspace, which is why this notebook (unlike the
+# "Discover" ones) has no parameters cell, same as the "Build"
+# notebooks.
 #
-# Escribe dbo.bronze_fabric_connections del Warehouse configurado --
-# mismas 7 columnas que scripts/69_discover_fabric_connections.ps1 ya
-# escribe en index/fabric_connections.csv, asi backend/scripts/lineage_web/
-# warehouse.py (lectura en vivo) no necesita saber cual de los dos caminos
-# rellenó la tabla la última vez.
+# Writes dbo.bronze_fabric_connections of the configured Warehouse --
+# the same 7 columns that scripts/69_discover_fabric_connections.ps1 already
+# writes to index/fabric_connections.csv, so backend/scripts/lineage_web/
+# warehouse.py (live read) does not need to know which of the two paths
+# filled the table last time.
 #
-# Self-contained a proposito (no usa %run sobre NB_Discover_Workspaces_
-# Items) -- mismo criterio que el resto de notebooks "Discover" de este
-# proyecto: copias pequeñas de los helpers de auth/conexion en vez de un
-# import compartido.
+# Self-contained on purpose (it does not use %run on NB_Discover_Workspaces_
+# Items) -- same criterion as the rest of the "Discover" notebooks of this
+# project: small copies of the auth/connection helpers instead of a shared
+# import.
 
 # %% [markdown]
-# ## Configuracion
-# Mismos valores que en NB_Discover_Workspaces_Items -- copia aqui los que
-# ya rellenaste alli.
+# ## Configuration
+# Same values as in NB_Discover_Workspaces_Items -- copy here the ones you
+# already filled in there.
 
 # %%
 try:
@@ -59,18 +59,18 @@ FABRIC_API_BASE_URL = "https://api.fabric.microsoft.com/v1"
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 REQUEST_DELAY_SECONDS = 0.35
 RETRY_COUNT = 5
 
 # %% [markdown]
-# ## Autenticacion: token propio de cuenta de servicio (MSAL)
+# ## Authentication: own service account token (MSAL)
 
 # %%
 def get_client_secret():
@@ -99,23 +99,23 @@ def acquire_token(scope):
 
 
 def acquire_fabric_api_token():
-    """2026-08-19: una actividad Notebook sin SPN/Workspace Identity
-    explicito corre bajo la identidad del DUENO DEL PIPELINE (confirmado
-    por documentacion oficial de Microsoft -- "Run Notebooks in Pipelines
+    """A Notebook activity without an explicit SPN/Workspace Identity
+    runs under the identity of the PIPELINE OWNER (confirmed
+    by official Microsoft documentation -- "Run Notebooks in Pipelines
     with Service Principal or Workspace Identity": "Pipeline Activity
     notebooks execute under the security context of the pipeline owner").
-    Si el dueno de PL_Discover_Workspaces_Items (su creatorPrincipal,
-    consultable via API) es un usuario con acceso propio a muchos mas
-    workspaces y conexiones que el SP -- lo habitual cuando el SP solo
-    tiene rol en unos pocos workspaces --, el notebook ve todo ese
-    alcance. notebookutils.credentials.getToken('pbi') hereda
-    esa identidad de usuario automaticamente, sin secreto ni configuracion
-    extra. Si por lo que sea el notebook corriera bajo el SP (activity con
-    SPN explicito, o ejecucion standalone fuera de un pipeline), este
-    getToken sigue funcionando pero con el alcance mas limitado del SP
-    (Lakehouse/Notebook/Workspace.ReadWrite.All) -- por eso el login MSAL
-    del SP se conserva como respaldo si notebookutils no esta disponible o
-    falla."""
+    If the owner of PL_Discover_Workspaces_Items (its creatorPrincipal,
+    queryable via API) is a user with their own access to many more
+    workspaces and connections than the SP -- the usual case when the SP only
+    has a role in a few workspaces --, the notebook sees all that
+    scope. notebookutils.credentials.getToken('pbi') inherits
+    that user identity automatically, with no secret or extra
+    configuration. If for whatever reason the notebook ran under the SP (activity with
+    explicit SPN, or standalone execution outside a pipeline), this
+    getToken still works but with the SP's more limited scope
+    (Lakehouse/Notebook/Workspace.ReadWrite.All) -- which is why the SP's MSAL login
+    is kept as a fallback if notebookutils is not available or
+    fails."""
     try:
         return notebookutils.credentials.getToken("pbi")
     except Exception as exc:  # noqa: BLE001 - degrade to the SP's own MSAL login rather than fail the whole notebook
@@ -176,7 +176,7 @@ def field(obj, *names):
     return ""
 
 # %% [markdown]
-# ## Warehouse (pyodbc, mismo patron que NB_Discover_Workspaces_Items)
+# ## Warehouse (pyodbc, same pattern as NB_Discover_Workspaces_Items)
 
 # %%
 def token_struct(token):
@@ -271,13 +271,13 @@ def discover_connections(headers):
 
 # %%
 def decode_token_claims(token):
-    """Decodifica (sin verificar firma -- solo para diagnostico, nunca para
-    autorizar nada) el payload JWT para ver que identidad devolvio
-    getToken('pbi') de verdad. Fabric no expone el print() de un notebook
-    via API (igual que ya vio NB_Discover_Workspaces_Items con su bloque
-    DIAGNOSTICO TEMPORAL), asi que la unica forma de confirmar la teoria de
-    "hereda al dueno del pipeline" es escribir esto a un fichero en
-    OneLake y leerlo despues desde fuera."""
+    """Decodes (without verifying the signature -- only for diagnostics, never to
+    authorize anything) the JWT payload to see which identity
+    getToken('pbi') really returned. Fabric does not expose a notebook's print()
+    via API (as NB_Discover_Workspaces_Items already saw with its
+    TEMPORARY DIAGNOSTIC block), so the only way to confirm the theory of
+    "it inherits the pipeline owner" is to write this to a file in
+    OneLake and read it afterwards from outside."""
     import base64 as _b64
     import json as _json
     payload_b64 = token.split(".")[1]

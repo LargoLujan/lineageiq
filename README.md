@@ -24,7 +24,7 @@
 
 </div>
 
-Microsoft Fabric shows lineage at item level, and Microsoft Purview documents only item-level lineage for Fabric items other than Power BI, so questions such as "which notebooks write this table" or "what breaks if this view changes" are hard to answer. LineageIQ discovers every workspace and item it can read, extracts dependencies from notebook code, pipeline definitions and semantic model TMDL down to the source-object level (tables, views, stored procedures, files), and serves the result as an interactive graph, a governance panel, a REST API and Model Context Protocol (MCP) tools. Discovery is strictly read-only. The project is a work in progress (`package.json` version 0.1.0); it ships with a synthetic demo tenant so you can run it without any Fabric access, in one command with Docker:
+Microsoft Fabric shows lineage at item level, and Microsoft Purview documents only item-level lineage for Fabric items other than Power BI, so questions such as "which notebooks write this table" or "what breaks if this view changes" are hard to answer. LineageIQ discovers every workspace and item it can read, extracts dependencies from notebook code, pipeline definitions and semantic model TMDL down to the source-object level (tables, views, stored procedures, files), and serves the result as an interactive graph, a governance panel, a REST API and Model Context Protocol (MCP) tools. Discovery is strictly read-only. The project is at an early stage (version 0.2.0); it ships with a synthetic demo tenant so you can run it without any Fabric access, in one command with Docker:
 
 ```bash
 docker run --rm -p 8765:8765 ghcr.io/largolujan/lineageiq:latest
@@ -56,6 +56,7 @@ Then open `http://localhost:8765`. See [Try the Demo Image](#try-the-demo-image)
   - [Admin Settings File](#admin-settings-file)
   - [Environment Variables](#environment-variables)
   - [Server Options](#server-options)
+- [Documentation](#documentation)
 - [Known Limitations](#known-limitations)
 - [Testing](#testing)
 - [Publishing Your Own Fork](#publishing-your-own-fork)
@@ -90,7 +91,7 @@ There are two ways to run discovery, and both feed the same viewer:
 - **Scan control from the web**: single-workspace, full-tenant and execution-only scans, queued (up to 20 requests) when a scan is already running, with live progress polling and scan history.
 - **REST API**: a secured `/api/*` surface for automation callers such as a Fabric pipeline Web activity, a CI job or a script, with a live OpenAPI 3.0 spec. See [REST API](#rest-api).
 - **MCP**: three servers (local stdio, stdio over the REST API, and Streamable HTTP) that expose the same catalogue to AI agents. See [MCP Servers](#mcp-servers).
-- **Bilingual UI**: Spanish by default with an English switch, plus light, dark and automatic themes.
+- **Bilingual UI**: English by default with a Spanish switch, plus light, dark and automatic themes.
 
 ## How It Works
 
@@ -203,7 +204,7 @@ The quickest way to see LineageIQ is the prebuilt demo image on GitHub Container
 docker run --rm -p 8765:8765 ghcr.io/largolujan/lineageiq:latest
 ```
 
-Open `http://localhost:8765`; the "Demo data" menu in the top-right corner switches the UI to English. To query the same demo data with the MCP tools from Claude Desktop, Claude Code or any other MCP client, register the stdio server inside the image:
+Open `http://localhost:8765`; the "Demo data" menu in the top-right corner switches the UI language (English by default, Spanish available). To query the same demo data with the MCP tools from Claude Desktop, Claude Code or any other MCP client, register the stdio server inside the image:
 
 ```json
 {
@@ -234,7 +235,7 @@ python backend/scripts/generate_demo_data.py
 $env:LINEAGE_DEMO_MODE = "1"; python backend/scripts/lineage_web_server.py --bind 127.0.0.1 --directory frontend/semantic-lineage
 ```
 
-Open `http://127.0.0.1:8765`. The explorer opens directly, with no sign-in screen, and every view (lineage, reverse impact, planning, DAG view and Graph Map) has data. A "Demo data" badge in the top-right corner marks the mode and opens the language, theme and help menu; the UI starts in Spanish, so pick EN there for English. Stop the server with Ctrl+C. In PowerShell the variable stays set for the rest of that session, so run `Remove-Item Env:LINEAGE_DEMO_MODE` before starting the server for real data from the same window.
+Open `http://127.0.0.1:8765`. The explorer opens directly, with no sign-in screen, and every view (lineage, reverse impact, planning, DAG view and Graph Map) has data. A "Demo data" badge in the top-right corner marks the mode and opens the language, theme and help menu; the UI starts in English, and ES switches it to Spanish. Stop the server with Ctrl+C. In PowerShell the variable stays set for the rest of that session, so run `Remove-Item Env:LINEAGE_DEMO_MODE` before starting the server for real data from the same window.
 
 `LINEAGE_DEMO_MODE=1` is an explicit opt-in that skips sign-in for reads only (see `_read_access_allowed` in `backend/scripts/lineage_web/handler.py`). `GET /api/auth/me` still answers `401` without a session but adds `"demo_mode": true`, which is what tells the web UI to open the read-only explorer instead of the sign-in gate. Scan triggers, admin settings, API key management, comments and favourites still require a session (or, where the route accepts one, an API key), so the server refuses them in demo mode. **Never set it on a deployment pointed at a real tenant's data**: it makes every catalogue and lineage read fully public. Without it (the default), the app shows the sign-in gate and requires a signed-in Microsoft account or an admin-issued API key.
 
@@ -258,11 +259,11 @@ Open `http://127.0.0.1:8765`. The explorer opens directly, with no sign-in scree
 For the demo alone, use the published image (see [Try the Demo Image](#try-the-demo-image)). The top-level `Dockerfile` builds a full toolchain image (Python 3.12, PowerShell, Azure CLI, Fabric CLI, Node.js, Chromium, Graphviz), and `docker-compose.yml` mounts the repository and starts the web viewer automatically on port 8765:
 
 ```bash
-docker compose build fabric-mapper
-docker compose run --rm -e LINEAGE_WEB_PUBLIC_TUNNEL=false fabric-mapper bash
+docker compose build lineageiq
+docker compose run --rm lineageiq bash
 ```
 
-`docker-compose.yml` sets `LINEAGE_WEB_PUBLIC_TUNNEL=true`, which also opens a temporary Cloudflare quick tunnel to the viewer; the `-e LINEAGE_WEB_PUBLIC_TUNNEL=false` override above keeps it local. The same Compose service backs the VS Code Dev Container in `.devcontainer/`. See `docs/08_container_runtime.md` for authentication inside the container, visual validation and secret handling.
+The viewer stays local by default (`LINEAGE_WEB_PUBLIC_TUNNEL=false`). For a temporary peer review you can opt in to a Cloudflare quick tunnel with `-e LINEAGE_WEB_PUBLIC_TUNNEL=true`; it exposes the viewer to anyone with the URL, so use it only for sign-in-protected data and never with `LINEAGE_DEMO_MODE`. The same Compose service backs the VS Code Dev Container in `.devcontainer/`. See `docs/08_container_runtime.md` for authentication inside the container, visual validation and secret handling.
 
 `Dockerfile.render` is a separate, lean image for hosting only the viewer on a platform-as-a-service: no PowerShell or Azure CLI, no baked data snapshot, scans triggered through a Fabric Data Pipeline and reads served live from the Warehouse and OneLake. Create `docker/render_admin_settings.json` from `docker/render_admin_settings.example.json`, then build from the repository root:
 
@@ -318,7 +319,7 @@ Each file in `fabric_notebooks/` is the source of a Fabric notebook: every `# %%
 11. `NB_Download_Notebook_Definitions`
 12. `NB_Build_Notebook_Super_Lineage`
 
-Further notebooks add a deeper scan (`NB_Discover_Fabric_Connections`, `NB_Extract_SQL_Endpoint_Catalog`, `NB_Extract_Object_Column_Catalog`, `NB_Extract_Control_Framework_Lineage`, `NB_Harden_Object_Lineage_Candidates`, `NB_Backfill_Object_Source_Targets`), column profiling and content-based sensitivity (`NB_Discover_Column_Profile`, `NB_Discover_Column_Sensitivity`) and a Bronze, Silver and Gold Lakehouse build (`NB_Bronze_Silver_Gold_Build`, see `docs/101_medallion_lakehouse_provisioning.md`, written in Spanish).
+Further notebooks add a deeper scan (`NB_Discover_Fabric_Connections`, `NB_Extract_SQL_Endpoint_Catalog`, `NB_Extract_Object_Column_Catalog`, `NB_Extract_Control_Framework_Lineage`, `NB_Harden_Object_Lineage_Candidates`, `NB_Backfill_Object_Source_Targets`), column profiling and content-based sensitivity (`NB_Discover_Column_Profile`, `NB_Discover_Column_Sensitivity`) and a Bronze, Silver and Gold Lakehouse build (`NB_Bronze_Silver_Gold_Build`, see `docs/101_medallion_lakehouse_provisioning.md`).
 
 The admin panel also has an "install in another tenant" wizard (`backend/scripts/lineage_web/installer.py`) that uses the `fab` CLI and a service principal to provision a workspace, a Lakehouse or Warehouse and every notebook in a target tenant. Wiring the pipeline activities remains a manual step.
 
@@ -425,7 +426,7 @@ claude mcp add fabric-lineage -- python3 "<repo path>/backend/scripts/mcp_server
 claude mcp add fabric-lineage-remote -- python3 "<repo path>/backend/scripts/mcp_server_remote.py" --base-url http://127.0.0.1:8765
 ```
 
-Then ask questions such as "what feeds the RPT_Sales_Dashboard report?" or "what depends on the sales_summary table?" against the demo data. For the HTTP server, `docs/110_mcp_remote_setup.md` (in Spanish) gives registration steps for Claude Code, Claude Desktop, ChatGPT, Cursor, Windsurf and GitHub Copilot, plus a `curl` smoke test.
+Then ask questions such as "what feeds the RPT_Sales_Dashboard report?" or "what depends on the sales_summary table?" against the demo data. For the HTTP server, `docs/110_mcp_remote_setup.md` gives registration steps for Claude Code, Claude Desktop, ChatGPT, Cursor, Windsurf and GitHub Copilot, plus a `curl` smoke test.
 
 ## Configuration
 
@@ -480,6 +481,20 @@ python backend/scripts/lineage_web_server.py --port 8765 --bind 0.0.0.0 --direct
 
 Sessions live in memory only and expire after 8 hours idle or 24 hours in total; a restart signs everyone out.
 
+## Documentation
+
+| Guide | What it covers |
+|---|---|
+| [`docs/04_execution_system.md`](docs/04_execution_system.md) | The phased, read-only discovery methodology behind the numbered scripts |
+| [`docs/06_tooling_prerequisites.md`](docs/06_tooling_prerequisites.md) | Azure CLI, Fabric CLI, PowerShell and the other access paths |
+| [`docs/08_container_runtime.md`](docs/08_container_runtime.md) | The Docker Compose toolchain, sign-in inside the container and secret handling |
+| [`docs/101_medallion_lakehouse_provisioning.md`](docs/101_medallion_lakehouse_provisioning.md) | Building a Bronze, Silver and Gold Lakehouse from the discovered metadata |
+| [`docs/102_admin_panel_and_user_auth.md`](docs/102_admin_panel_and_user_auth.md) | Sign-in, the user allowlist, API keys, demo mode and every admin panel tab |
+| [`docs/105_fabric_native_discovery_setup.md`](docs/105_fabric_native_discovery_setup.md) | Running discovery inside Fabric: notebooks, pipeline order, service principal and the installer |
+| [`docs/106_onelake_web_data_publish.md`](docs/106_onelake_web_data_publish.md) | Publishing the explorer JSON to OneLake and serving it live |
+| [`docs/110_mcp_remote_setup.md`](docs/110_mcp_remote_setup.md) | Connecting Claude, ChatGPT and other agents to the remote MCP endpoint |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release notes |
+
 ## Known Limitations
 
 - **No item-level incremental sync.** Microsoft's APIs only offer workspace-level change polling (`GetModifiedWorkspaces` with `modifiedSince` between 30 minutes and 30 days back) followed by a re-scan of the changed workspaces; there is no item-level "what changed" endpoint to build true incremental sync on.
@@ -487,9 +502,8 @@ Sessions live in memory only and expire after 8 hours idle or 24 hours in total;
 - **Name-based identity.** The graph's stable identity is `Workspace / Item Type / Item Name`, not the Fabric GUID (captured as metadata only), so a renamed item is recorded as a removal plus an addition, not a rename.
 - **Lineage stops at object level.** Lineage edges link items to tables, views, stored procedures and files; columns are catalogued and profiled but there are no column-to-column lineage edges.
 - **Heuristic classification.** Name-based sensitivity matching produces false positives and misses opaque column names, so matches are "worth a human look", not a guarantee. Content-based checks and column profiles cover only the Lakehouse tables the profiling notebooks can reach.
-- **Manual pipeline wiring.** The Fabric-native discovery pipeline has to be assembled by hand in Fabric; the notebooks are pasted cell by cell.
+- **Manual pipeline wiring.** The Fabric-native discovery pipeline has to be assembled by hand in Fabric; the notebooks are pasted cell by cell (see `docs/105_fabric_native_discovery_setup.md`).
 - **Hand-maintained route registry.** `routes.py`, the source of `/api/openapi.json`, is kept in sync with `handler.py` by hand, and a few internal routes (the tenant installer, analytics events and the `/mcp` proxy) are not listed in it.
-- **Partly Spanish sources.** The UI defaults to Spanish, and some docs and notebook comments are written in Spanish. Some code comments refer to design notes that are not part of this repository.
 
 ## Testing
 
@@ -521,7 +535,7 @@ Invoke-Pester tests/powershell/LineageCommon.Tests.ps1
 
 ## Publishing Your Own Fork
 
-If you point LineageIQ at a real tenant and later want to share a sanitised fork, read `docs/repository_publication_cleanup.md` and run:
+If you point LineageIQ at a real tenant and later want to share a sanitised fork, run the pre-publication check first. It walks the working tree, flags every path that must never be published (secret and env files, generated analysis and CSV output, downloaded Fabric data, generated reports, conversation logs) and reports what has to stay git-ignored. It is local and read-only:
 
 ```bash
 pwsh -NoLogo -File backend/scripts/check_repository_publication.ps1 -SummaryOnly

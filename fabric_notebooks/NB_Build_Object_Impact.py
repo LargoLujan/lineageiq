@@ -1,33 +1,33 @@
 # NB_Build_Object_Impact
 #
-# Fuente para un notebook Python de Fabric -- noveno paso del pipeline de
-# descubrimiento nativo, después de NB_Build_Lineage_Explorer (ver docs/
-# 105_fabric_native_discovery_setup.md). Cada bloque "# %%" es una celda
-# -- pégalas en orden.
+# Source for a Fabric Python notebook -- ninth step of the native
+# discovery pipeline, after NB_Build_Lineage_Explorer (see docs/
+# 105_fabric_native_discovery_setup.md). Each "# %%" block is a cell
+# -- paste them in order.
 #
-# Puerto fiel, fusionado, de backend/scripts/17_build_object_impact_index_
-# fast.py (construye las filas de impacto objeto->item) + backend/scripts/
-# 21_build_reverse_impact_package_fast.py (las ensambla en el JSON final)
-# -- el ALGORITMO de ambos es exactamente el mismo, sin reescribir una
-# sola línea de esa lógica; lo único que cambia es la capa de E/S:
-#   - lineage-explorer.json se lee de OneLake (ya lo publica NB_Build_
-#     Lineage_Explorer, el paso anterior) en vez de disco local.
-#   - read_csv() ahora consulta una tabla bronze del Warehouse en vez de
-#     leer un CSV local (INPUT_TABLE_BY_ARG más abajo) -- solo bronze_
-#     pipeline_object_lineage_candidates existe hoy; el resto degrada a
-#     lista vacía, igual que un CSV ausente en los scripts originales.
-#   - los dos scripts originales se comunicaban a través de 4 CSV
-#     intermedios (object_impact_index.csv, object_impact_summary.csv,
-#     más las de coverage); aquí van directos en memoria de la fase 17 a
-#     la fase 21 -- las de coverage no se generan porque nada en la web
-#     en vivo las consume (eran solo un documento informativo local).
-#   - object-impact.json se escribe a OneLake (Files/generated/) en vez
-#     de al disco local.
+# Faithful, merged port of backend/scripts/17_build_object_impact_index_
+# fast.py (builds the object->item impact rows) + backend/scripts/
+# 21_build_reverse_impact_package_fast.py (assembles them into the final JSON)
+# -- the ALGORITHM of both is exactly the same, without rewriting a
+# single line of that logic; the only thing that changes is the I/O layer:
+#   - lineage-explorer.json is read from OneLake (already published by NB_Build_
+#     Lineage_Explorer, the previous step) instead of local disk.
+#   - read_csv() now queries a bronze table of the Warehouse instead of
+#     reading a local CSV (INPUT_TABLE_BY_ARG further down) -- only bronze_
+#     pipeline_object_lineage_candidates exists today; the rest degrades to
+#     an empty list, same as a missing CSV in the original scripts.
+#   - the two original scripts communicated through 4 intermediate
+#     CSVs (object_impact_index.csv, object_impact_summary.csv,
+#     plus the coverage ones); here they go straight in memory from script 17 to
+#     script 21 -- the coverage ones are not generated because nothing in the
+#     live web app consumes them (they were just a local informational document).
+#   - object-impact.json is written to OneLake (Files/generated/) instead
+#     of local disk.
 #
-# Self-contained a propósito, mismo criterio que los notebooks anteriores.
+# Self-contained on purpose, same criterion as the previous notebooks.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -55,25 +55,25 @@ from pathlib import Path
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
-# Lakehouse de lectura/escritura de los JSON grandes -- mismo elemento que
-# NB_Build_Lineage_Explorer. También de aquí se lee el secreto propio
-# (SP_SECRET_ONELAKE_PATH): ya no de Key Vault (bloqueado) ni de un
-# parámetro del pipeline (probado 2026-08-12: filtró el valor en texto
-# plano al fallar la conversión de tipo -- nunca más por ahí).
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# Read/write Lakehouse for the large JSON files -- same item as
+# NB_Build_Lineage_Explorer. Our own secret is also read from here
+# (SP_SECRET_ONELAKE_PATH): no longer from Key Vault (blocked) nor from a
+# pipeline parameter (tested 2026-08-12: it leaked the value in plain
+# text when the type conversion failed -- never again that way).
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
 EXPLORER_ONELAKE_PATH = "Files/generated/lineage-explorer.json"
 OUTPUT_ONELAKE_PATH = "Files/generated/object-impact.json"
 
-# Nombre de tabla bronze del Warehouse para cada entrada lógica que los
-# dos scripts originales aceptaban como ruta de fichero -- "" = todavía
-# sin tabla equivalente (degrada a lista vacía, igual que un CSV ausente
-# en los scripts originales).
+# Name of the Warehouse bronze table for each logical input that the
+# two original scripts accepted as a file path -- "" = no
+# equivalent table yet (degrades to an empty list, same as a missing CSV
+# in the original scripts).
 INPUT_TABLE_BY_ARG = {
     "object_type_resolution_queue_path": "",
     "pipeline_object_lineage_candidates_path": "bronze_pipeline_object_lineage_candidates",
@@ -83,7 +83,7 @@ INPUT_TABLE_BY_ARG = {
 }
 
 # %% [markdown]
-# ## Autenticación, Warehouse y OneLake (mismo patrón que los notebooks anteriores)
+# ## Authentication, Warehouse and OneLake (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -183,7 +183,7 @@ def write_json_atomic(onelake_relative_path, payload):
 
 
 # %% [markdown]
-# ## Fase 17 -- construir las filas de impacto (puerto fiel de 17_build_object_impact_index_fast.py)
+# ## Build the impact rows (faithful port of 17_build_object_impact_index_fast.py)
 
 # %%
 EXACT_TYPES = {"table", "view", "stored_procedure", "file", "shortcut", "query"}
@@ -481,7 +481,7 @@ def build_impact_rows_and_summary(explorer):
 
 
 # %% [markdown]
-# ## Fase 21 -- ensamblar el JSON final (puerto fiel de 21_build_reverse_impact_package_fast.py)
+# ## Assemble the final JSON (faithful port of 21_build_reverse_impact_package_fast.py)
 
 # %%
 EXACT_TYPE_PATTERN = re.compile(r"(^|; )(table|view|stored_procedure|file|shortcut|query)(;|$)")

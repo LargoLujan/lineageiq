@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/40_build_d2_closure_control.ps1
--- (Phase 1 migration, 2026-07-21). Reads dbo.bronze_d2_likely_dependency_edge_queue,
+-- (SQL migration). Reads dbo.bronze_d2_likely_dependency_edge_queue,
 -- dbo.bronze_d2_likely_dependency_item_queue, dbo.bronze_pipeline_activity_lineage.
 --
 -- Two-level structure, unlike D1: edges are first grouped into canonical
@@ -47,8 +47,8 @@ pair_agg AS (
 ),
 -- Each STRING_AGG needs its own query scope -- Fabric Warehouse rejects
 -- multiple ordered STRING_AGGs sharing a GROUP BY when their ORDER BY
--- columns differ ("mutually incompatible orderings", confirmed live
--- 2026-07-21). Also matches Get-UniqueJoined's DISTINCT-then-join
+-- columns differ ("mutually incompatible orderings", confirmed live).
+-- Also matches Get-UniqueJoined's DISTINCT-then-join
 -- semantics exactly (the original combined form would have double-counted
 -- a relationship_type shared by both edges in a pair).
 distinct_edge_ids AS (SELECT DISTINCT pair_key, edge_id FROM edges WHERE edge_id <> ''),

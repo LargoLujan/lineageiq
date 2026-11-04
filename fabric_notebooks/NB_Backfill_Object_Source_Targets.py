@@ -1,46 +1,46 @@
 # NB_Backfill_Object_Source_Targets
 #
-# Fuente para un notebook Python de Fabric -- puerto pragmatico de
-# scripts/58_backfill_semantic_sibling_source_targets.py y una adaptacion
-# de scripts/61_backfill_item_flow_source_targets.py (ver docs/105_fabric_
-# native_discovery_setup.md para el patron general). Cada bloque "# %%" es
-# una celda -- pegalas en orden.
+# Source for a Fabric Python notebook -- a pragmatic port of
+# scripts/58_backfill_semantic_sibling_source_targets.py and an adaptation
+# of scripts/61_backfill_item_flow_source_targets.py (see docs/105_fabric_
+# native_discovery_setup.md for the general pattern). Each "# %%" block is
+# a cell -- paste them in order.
 #
-# 2026-08-19: de los 4 scripts locales 58-61, solo este alcance es viable
-# hoy con datos 100% disponibles en Fabric-native:
-#   - 58 (backfill entre modelos semanticos "hermanos"): autonomo, sin
-#     dependencias externas -- portado fiel.
-#   - 59/60 (backfill via metadata/catalogo externo + semantic_model_
-#     datamart_dependencies.csv): NECESITAN scripts 08 (constructor base
-#     de semantic_model_datamart_dependencies, no portado) y/o el catalogo
-#     SQL externo (script 48, bloqueado por falta de ruta de red -- ver
-#     docs/105, verificado 2026-08-17). Portarlos tal cual hoy produciria
-#     cero backfills reales -- NO portados, documentado como gap explicito
-#     en vez de codigo muerto.
-#   - 61 (backfill via flow catalog de notebooks + catalogo SQL): su
-#     entrada principal (notebook_lineage_flow_catalog.csv, script 53) NO
-#     esta portada tampoco, pero su segunda via de evidencia (el catalogo
-#     SQL de Fabric ya confirmado, dbo.bronze_sql_endpoint_object_catalog,
-#     Fase A) SI esta disponible -- adaptado aqui como "backfill vía
-#     catalogo confirmado" para bronze_item_object_lineage_candidates y
-#     bronze_pipeline_object_lineage_candidates: si una fila candidata no
-#     tiene servidor/bd pero su (schema, objeto) coincide con EXACTAMENTE
-#     un target en el catalogo SQL confirmado, se rellena desde ahi.
+# Of the 4 local scripts 58-61, only this scope is viable today with data
+# that is 100% available inside Fabric:
+#   - 58 (backfill between "sibling" semantic models): self-contained, no
+#     external dependencies -- ported faithfully.
+#   - 59/60 (backfill via external metadata/catalog + semantic_model_
+#     datamart_dependencies.csv): NEED script 08 (base builder of
+#     semantic_model_datamart_dependencies, not ported) and/or the
+#     external SQL catalog (script 48, blocked by the lack of a network
+#     route -- see docs/105, verified 2026-08-17). Porting them as-is today
+#     would produce zero real backfills -- NOT ported, documented as an
+#     explicit gap instead of dead code.
+#   - 61 (backfill via the notebook flow catalog + SQL catalog): its main
+#     input (notebook_lineage_flow_catalog.csv, script 53) is not ported
+#     either, but its second evidence path (the already confirmed Fabric
+#     SQL catalog, dbo.bronze_sql_endpoint_object_catalog, built by
+#     NB_Extract_SQL_Endpoint_Catalog) IS available -- adapted here as
+#     "backfill via confirmed catalog" for bronze_item_object_lineage_candidates
+#     and bronze_pipeline_object_lineage_candidates: if a candidate row has
+#     no server/db but its (schema, object) matches EXACTLY one target in
+#     the confirmed SQL catalog, it is filled in from there.
 #
-# Depende de que hayan corrido antes: NB_Extract_SQL_Endpoint_Catalog
-# (Fase A), NB_Discover_Object_Lineage, NB_Discover_Pipeline_Object_
-# Lineage, NB_Discover_Semantic_Model_Lineage. Reescribe EN SITIO: dbo.
+# Depends on these having run before: NB_Extract_SQL_Endpoint_Catalog,
+# NB_Discover_Object_Lineage, NB_Discover_Pipeline_Object_Lineage,
+# NB_Discover_Semantic_Model_Lineage. Rewrites IN PLACE: dbo.
 # bronze_semantic_model_view_candidates, dbo.bronze_item_object_lineage_
-# candidates, dbo.bronze_pipeline_object_lineage_candidates. Escribe
-# ademas dbo.bronze_source_target_backfill_summary con el desglose.
+# candidates, dbo.bronze_pipeline_object_lineage_candidates. Also writes
+# dbo.bronze_source_target_backfill_summary with the breakdown.
 #
-# Sin celda de parametros -- igual que NB_Harden_Object_Lineage_
-# Candidates, corre siempre sobre las 3 tablas enteras.
+# No parameters cell -- same as NB_Harden_Object_Lineage_Candidates, it
+# always runs over the 3 full tables.
 
 # %% [markdown]
-# ## Configuracion
-# Mismos valores que en NB_Discover_Workspaces_Items -- copia aqui los que
-# ya rellenaste alli.
+# ## Configuration
+# Same values as in NB_Discover_Workspaces_Items -- copy here the ones you
+# already filled in there.
 
 # %%
 try:
@@ -62,15 +62,15 @@ from collections import Counter, defaultdict
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 # %% [markdown]
-# ## Autenticacion + Warehouse (mismo patron que los demas notebooks)
+# ## Authentication + Warehouse (same pattern as the other notebooks)
 
 # %%
 def get_client_secret():
@@ -159,11 +159,11 @@ MARKER_58 = "semantic_sibling_source_target_backfill"
 MARKER_61 = "confirmed_catalog_source_target_backfill"
 
 # %% [markdown]
-# ## Paso 1 (script 58): backfill entre modelos semanticos "hermanos"
-# Misma logica exacta que el script local: si una fila candidata de
-# modelo semantico no tiene servidor/bd pero otra fila con el MISMO
-# nombre de modelo, tabla semantica, esquema, objeto y tipo de objeto SI
-# lo tiene (y solo hay un valor unico entre esos "hermanos"), se rellena.
+# ## Step 1 (script 58): backfill between "sibling" semantic models
+# Exactly the same logic as the local script: if a semantic model candidate
+# row has no server/db but another row with the SAME model name, semantic
+# table, schema, object and object type does (and there is only one unique
+# value among those "siblings"), it is filled in.
 
 # %%
 def semantic_candidate_key(row):
@@ -207,10 +207,10 @@ def backfill_semantic_siblings(rows):
     return changed
 
 # %% [markdown]
-# ## Paso 2 (adaptado de script 61): backfill de candidatos item/pipeline
-# via el catalogo SQL ya confirmado (Fase A). Si una fila candidata no
-# tiene servidor/bd pero su (esquema, objeto) coincide con EXACTAMENTE un
-# target del catalogo confirmado, se rellena desde ahi.
+# ## Step 2 (adapted from script 61): backfill of item/pipeline candidates
+# via the already confirmed SQL catalog. If a candidate row has no
+# server/db but its (schema, object) matches EXACTLY one target in the
+# confirmed catalog, it is filled in from there.
 
 # %%
 def build_catalog_targets_by_object(catalog_rows):

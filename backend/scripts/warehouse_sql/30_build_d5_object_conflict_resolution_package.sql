@@ -1,6 +1,5 @@
 -- Warehouse-native translation of backend/scripts/30_build_d5_object_
--- conflict_resolution_package.ps1 (Phase 2 migration continuation,
--- 2026-07-21). Reads dbo.silver_orchestration_v2_object_conflicts (24),
+-- conflict_resolution_package.ps1 (SQL migration). Reads dbo.silver_orchestration_v2_object_conflicts (24),
 -- dbo.silver_orchestration_v2_edges (24, v2_relationship_type LIKE
 -- 'object_%' -- underscore is escaped since it's a T-SQL LIKE wildcard),
 -- dbo.silver_orchestration_v2_plan (24), dbo.silver_object_read_write_
@@ -12,7 +11,7 @@
 -- participant_id have no such sort anchor in the original and are
 -- opaque per-row identifiers like other D-package row ids in this
 -- migration; validation matches those rows by content.
--- Validated 2026-07-21: 0 new bugs. conflict_id text itself rarely
+-- Validated: 0 new bugs. conflict_id text itself rarely
 -- matches PS's (many tied reader+writer+executor sums make the
 -- object_display_name tie-break sensitive to PS's culture-aware sort vs
 -- this file's LOWER()-ordinal sort) -- confirmed harmless since object_

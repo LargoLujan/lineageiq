@@ -1,6 +1,6 @@
 """Per-user Fabric REST calls (the signed-in user's own delegated token, never a shared session).
 
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion,
+Split out of lineage_web_server.py -- pure code motion,
 no logic changed from the original.
 """
 import json
@@ -44,11 +44,11 @@ def _fetch_my_workspaces(access_token):
 
 
 def _fetch_all_tenant_workspaces(access_token):
-    """The tenant-wide list (Tanda 10 follow-up), via the Fabric ADMIN API
+    """The tenant-wide list, via the Fabric ADMIN API
     (`/v1/admin/workspaces`) instead of the regular delegated one
     `_fetch_my_workspaces` calls -- only succeeds for a signed-in user who
     actually holds the "Fabric Administrator" Entra ID role (confirmed live
-    2026-07-10: the same call with a non-admin token returns a 403
+    The same call with a non-admin token returns a 403
     InsufficientScopes, which callers should treat as "not an admin, fall
     back to _fetch_my_workspaces" rather than a hard error). Filtered to
     type=Workspace&state=Active server-side -- excludes every user's
@@ -97,7 +97,7 @@ def _fetch_all_tenant_workspaces(access_token):
 
 
 def _fetch_capacities(access_token):
-    """The tenant's Fabric capacities with real display names (2026-08-18) --
+    """The tenant's Fabric capacities with real display names --
     unlike workspace/item listings, capacities DO carry a human name, just
     from a different endpoint (`/v1/capacities`, the CORE api, not
     `/v1/admin/...`) than the one already used elsewhere in this file.
@@ -143,7 +143,7 @@ def _fetch_capacities(access_token):
 
 
 def _fetch_connections(access_token):
-    """Fabric Connections (2026-08-18, for assigning a real gateway-backed
+    """Fabric Connections (for assigning a real gateway-backed
     connection to an external source) -- `GET /v1/connections`, needs the
     delegated Connection.Read.All scope. Returned unfiltered by type: this
     project's own EXTERNAL_SOURCE_TYPES labels (sql_server, postgresql,
@@ -191,7 +191,7 @@ def _fetch_connections(access_token):
 
 
 def _test_fabric_connection(access_token, connection_id):
-    """POST /v1/connections/{id}/testConnection (2026-08-18) -- the only
+    """POST /v1/connections/{id}/testConnection -- the only
     documented way to verify an assigned Fabric Connection can actually
     reach its source THROUGH the gateway. This project's older "Probar
     conexión" button always connects directly from wherever this server
@@ -286,7 +286,7 @@ def _fetch_paged_items(access_token, workspace_id):
     picker functions below used to do a single unpaginated request each;
     for any workspace with more items than fit on one page, whatever came
     after page 1 was silently invisible to the admin panel's picker -- a
-    real "I don't see the Warehouse I just created" report (2026-07-20)
+    real "I don't see the Warehouse I just created" report
     traced back to exactly this."""
     import urllib.request
 
@@ -345,7 +345,7 @@ def _fetch_items_of_type_in_workspace(access_token, workspace_id, item_type, det
             props = detail.get("properties") or {}
             # A Lakehouse's sqlEndpointProperties is a nested object
             # ({"connectionString": "..."}); a Warehouse's connectionInfo
-            # turned out (real traceback, 2026-07-21: 'str' object has no
+            # turned out (real traceback: 'str' object has no
             # attribute 'get') to just BE the connection string itself, no
             # nesting -- handle both shapes rather than assume either.
             raw_sql_props = props.get(sql_props_key)
@@ -377,7 +377,7 @@ def _fetch_items_of_type_in_workspace(access_token, workspace_id, item_type, det
 
 
 def _fetch_lakehouses_in_workspace(access_token, workspace_id):
-    """Powers the admin panel's Lakehouse picker (see Fase 8, docs/102_
+    """Powers the admin panel's Lakehouse picker (see docs/102_
     admin_panel_and_user_auth.md): the operator picks a workspace and a
     Lakehouse by NAME, never by pasting an ID by hand -- this resolves the
     real ID (and the SQL analytics endpoint connection string, which only
@@ -392,7 +392,7 @@ def _fetch_warehouses_in_workspace(access_token, workspace_id):
     Warehouse's SQL endpoint is the one Fabric item type with a genuinely
     read-write T-SQL endpoint -- a Lakehouse's SQL analytics endpoint is
     query-only, no INSERT/CREATE TABLE -- so this is what the admin panel's
-    write-target picker (2026-07-20) actually needs to list. Returns the
+    write-target picker actually needs to list. Returns the
     same {lakehouse_name, lakehouse_id, sql_endpoint_connection_string}
     shape on purpose: it lands in the exact same admin_settings.json
     "lakehouse" fields either way (see renderAdminPanel's write-target tab
@@ -430,7 +430,7 @@ def _fetch_workspace_role_assignments(access_token, workspace_id):
     return payload.get("value") or [], None
 
 
-# "Colaborador o admin" (2026-08-24, admin panel's individual-scan picker):
+# "Contributor or admin" (the admin panel's individual-scan picker):
 # the roles that mean "this person can meaningfully act on this workspace",
 # not just look at it -- Viewer is deliberately excluded even though it's
 # real access, since triggering a scan of a workspace someone can only view
@@ -443,7 +443,7 @@ def _filter_workspaces_by_min_role(access_token, workspaces, user_email, allowed
     _fetch_my_workspaces) down to the ones where their own role is in
     `allowed_roles` (default SCAN_ELIGIBLE_ROLES) -- Fabric's plain
     `/v1/workspaces` listing doesn't return the caller's role at all (only
-    id/displayName/capacityId/tags, confirmed live 2026-08-24), so this
+    id/displayName/capacityId/tags, confirmed live), so this
     means one roleAssignments call per workspace to find. Matches by
     userPrincipalName, case-insensitive (Entra UPNs aren't case-sensitive
     in practice and this project already normalizes emails the same way
@@ -472,9 +472,8 @@ def _filter_workspaces_by_min_role(access_token, workspaces, user_email, allowed
 
 
 def _fetch_data_pipelines_in_workspace(access_token, workspace_id):
-    """Powers the admin panel's Fabric-pipeline tab picker (2026-08-18,
-    admin-panel completeness pass): pick a workspace and a Data Pipeline
-    by NAME, same picker UX _fetch_lakehouses_in_workspace/_fetch_
+    """Powers the admin panel's Fabric-pipeline tab picker: pick a
+    workspace and a Data Pipeline by NAME, same picker UX _fetch_lakehouses_in_workspace/_fetch_
     warehouses_in_workspace already give the Lakehouse tab, instead of
     pasting workspace_id/pipeline_item_id GUIDs copied out of a Fabric URL
     by hand. Unlike a Lakehouse/Warehouse, a Data Pipeline has no SQL

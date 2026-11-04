@@ -8,8 +8,8 @@ no browser consumer and is deliberately not part of this list).
 These files are published to a Fabric Lakehouse's OneLake Files area by
 backend/scripts/72_publish_web_data_to_onelake.py, run locally (same
 cadence as today's builds -- the JSON-BUILDING logic itself stays local,
-only where the finished file lives changes). When enabled
-(admin_settings.json -> onelake_data.mode == "onelake"), handler.py's
+only where the finished file lives changes). When enabled (the
+default; admin_settings.json -> onelake_data.mode == "onelake"), handler.py's
 _serve_static asks this module for a local path instead of reading
 frontend/semantic-lineage/data/<file> directly; this module downloads
 from OneLake at most once per _CACHE_TTL_SECONDS, caches the raw bytes
@@ -17,7 +17,8 @@ under ONELAKE_CACHE_DIR, and pre-gzips a "<file>.gz" sibling next to it so
 the EXISTING pregzipped-sibling fast path in _serve_static picks it up
 for free -- nothing else about how a static file is served changes.
 
-Off by default (onelake_data.mode == "local_files"); a fetch failure with
+On by default (onelake_data.mode == "onelake"), and it reverts to the
+local files (mode "local_files") when OneLake is not configured; a fetch failure with
 no usable cache yet returns None, and the caller falls back to the local
 file (present or not -- a 404 either way is no worse than before this
 existed). A stale cache is served (with a logged warning) in preference
@@ -93,8 +94,8 @@ def _sp_fields_present(config):
 
 class _ServiceSessionCredential:
     """A minimal azure-core TokenCredential backed by the persisted
-    delegated "service session" (see service_session.py, added
-    2026-07-24) -- lets DataLakeServiceClient use it exactly like any
+    delegated "service session" (see service_session.py)
+    -- lets DataLakeServiceClient use it exactly like any
     other azure-identity credential, no Entra app registration needed.
     Real token expiry isn't surfaced by acquire_service_token, so this
     always reports a short 5-minute one -- forces the SDK to ask again
@@ -136,7 +137,7 @@ def _credential(settings, config):
         return ClientSecretCredential(tenant_id, client_id, client_secret)
 
     # Next: the persisted delegated "service session" (see
-    # service_session.py, added 2026-07-24) -- whichever admin most
+    # service_session.py) -- whichever admin most
     # recently signed in, reused for tenants with no Entra app
     # registration and nobody with permission to create one. Works on a
     # host with no `az` CLI at all (e.g. Render), unlike the fallback
@@ -216,8 +217,8 @@ def _merge_certified_items(data, filename):
 
 
 def _merge_tags(data, filename):
-    """Same idea as _merge_certified_items, one field over (roadmap Fase 2,
-    2026-08-17: admin_settings.json's free-form tags)."""
+    """Same idea as _merge_certified_items, one field over
+    (admin_settings.json's free-form tags)."""
     if filename not in _CERTIFIABLE_FILENAMES:
         return data
     settings = _load_admin_settings()
@@ -254,8 +255,7 @@ def test_connection(config):
     without publishing anything -- unlike fetch_cached_path (which only
     ever reads a FILE that must already have been published), this
     confirms the workspace/Lakehouse Files area itself is reachable with
-    the configured credential, even before the first real publish (2026-
-    08-18, roadmap admin-panel completeness pass: this was the one Setup
+    the configured credential, even before the first real publish (this was the one Setup
     tab with a credential/connection but no safe "Probar conexión" --
     only a real "Publicar datos ahora"). Same "no side effect, always
     return a JSON verdict" contract as fabric_pipeline.test_connection

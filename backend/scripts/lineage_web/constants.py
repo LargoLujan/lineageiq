@@ -1,5 +1,5 @@
 """Non-path module-level constants shared across the lineage_web package.
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion.
+Split out of lineage_web_server.py -- pure code motion.
 """
 import re
 
@@ -12,12 +12,12 @@ MAX_SESSION_HISTORY_ENTRIES = 200
 DEVICE_FLOW_STALE_SECONDS = 900
 MAX_PENDING_DEVICE_FLOWS_PER_IP = 3
 # A request that arrives while a scan is already running is queued instead
-# of rejected (Tanda 10) -- this caps how many can pile up behind it so a
+# of rejected -- this caps how many can pile up behind it so a
 # runaway caller (or someone clicking repeatedly) can't grow the queue
 # without bound; a real person queuing this many distinct scans in one
 # sitting is not a case this project needs to optimize for.
 MAX_QUEUED_SCANS = 20
-# Applies to /api/* only (Tanda 5, E.3) -- static file serving is excluded
+# Applies to /api/* only -- static file serving is excluded
 # since one page load can legitimately fire a dozen+ requests (HTML, CSS,
 # several vendor bundles, several large data JSON files) with no
 # meaningful abuse surface of its own. Calibrated against real frontend
@@ -42,7 +42,7 @@ DEFAULT_ADMIN_SETTINGS = {
     "entra_client_id": "",
     "admin_emails": [],
     "full_scan_emails": [],
-    # Added 2026-08-24 (Fase 3): the admin panel's "Usuarios permitidos" tab
+    # The admin panel's "Usuarios permitidos" tab
     # became one hand-maintained table (email/full name/job title/three
     # permission checkboxes) instead of two flat email lists typed blind --
     # see frontend's renderAdminUsersTab. admin_emails/full_scan_emails above
@@ -55,10 +55,8 @@ DEFAULT_ADMIN_SETTINGS = {
     "users": [],
     # Same flat-list-derived-from-users convention as admin_emails/
     # full_scan_emails above, for the "install/register workspaces"
-    # permission. Not enforced anywhere yet -- the multi-tenant installer
-    # wizard it belongs to doesn't exist yet (Fase 5) -- but the checkbox
-    # already exists in the users table, so the flag has somewhere real to
-    # live in the meantime instead of being invented twice later.
+    # permission. Reserved: the installer endpoints are admin-only today, so
+    # this flag is stored and shown in the users table but not enforced yet.
     "install_emails": [],
     # Off by default: with per-user sign-in now in place, a scan/stop request
     # with no session should require signing in rather than silently falling
@@ -74,7 +72,7 @@ DEFAULT_ADMIN_SETTINGS = {
         "lakehouse_id": "",
         "capacity_name": "",
         "sql_endpoint_connection_string": "",
-        # Added 2026-07-20, purely additive: "Lakehouse" (default, backward
+        # Purely additive: "Lakehouse" (default, backward
         # compatible with every config saved before this field existed) or
         # "Warehouse". Everything else in this object keeps the same field
         # names regardless of which item type was actually picked -- see
@@ -87,7 +85,7 @@ DEFAULT_ADMIN_SETTINGS = {
         # this write-target's SQL endpoint, not just to local CSVs -- see
         # scan_manager.py's _maybe_trigger_warehouse_upload.
         "auto_upload_after_scan": False,
-        # Added 2026-07-21: how 66_test_external_source_connection.ps1 (test)
+        # How 66_test_external_source_connection.ps1 (test)
         # and 67_upload_bronze_to_warehouse.ps1 (real upload) authenticate to
         # this SQL endpoint. "user_session" (default, backward compatible)
         # uses whichever admin is clicking the button's own delegated token
@@ -107,29 +105,26 @@ DEFAULT_ADMIN_SETTINGS = {
         # same password_ref convention as external_sources[].password_ref
         # below -- the real secret lives in .env, never in this JSON.
         "sp_client_secret_ref": "",
-        # Added 2026-07-24: the write side (auto_upload_after_scan above)
+        # The write side (auto_upload_after_scan above)
         # already keeps dbo.bronze_* tables fresh after every scan; this is
-        # the read-side opt-in -- "local_files" (default, unchanged behavior)
-        # keeps catalog.py reading index/*.csv straight off this machine's
-        # disk; "warehouse" makes it query dbo.bronze_workspaces/items/
-        # dependencies live instead (see lineage_web/warehouse.py), which is
-        # what lets a web server running anywhere (not just this machine)
-        # show current data without a redeploy. Requires auth_mode ==
-        # "service_principal" above -- falls back to local_files behavior
-        # automatically if the Warehouse read fails for any reason.
-        # 2026-08-24: default flipped to "warehouse" -- this project no
-        # longer runs local scans/keeps local CSVs current, so local_files
-        # would just be permanently stale (see Fase 1 admin-panel cleanup,
-        # which also removed the UI toggle for this).
+        # the read-side setting -- "warehouse" (the default) makes catalog.py
+        # query dbo.bronze_workspaces/items/dependencies live (see
+        # lineage_web/warehouse.py), which is what lets a web server running
+        # anywhere (not just this machine) show current data without a
+        # redeploy. "local_files" keeps catalog.py reading index/*.csv
+        # straight off this machine's disk; that is also what happens
+        # automatically when the Warehouse is not configured or the read
+        # fails for any reason. Requires auth_mode == "service_principal"
+        # above.
         "web_read_mode": "warehouse",
     },
-    # Added 2026-07-24: lets a scan run entirely inside Fabric (an existing
+    # Lets a scan run entirely inside Fabric (an existing
     # Data Pipeline, triggered on demand via the Job Scheduler REST API)
     # instead of scan_manager.py spawning local PowerShell/az-cli -- see
     # fabric_pipeline.py. "local" (scan_manager.py spawning subprocesses on
     # this machine) still exists as a code path but is no longer reachable
-    # from the admin panel (2026-08-24 Fase 1 cleanup removed the mode
-    # toggle -- this project only ever scans via the Fabric pipeline now).
+    # from the admin panel (the mode toggle was removed -- scans only run via the
+    # Fabric pipeline).
     # A separate service principal from `lakehouse` above on purpose (the
     # pipeline lives in its own workspace/item and only needs Fabric API
     # permissions, not database access) -- fine to point both at the same
@@ -138,7 +133,7 @@ DEFAULT_ADMIN_SETTINGS = {
         "mode": "fabric_pipeline",
         "workspace_id": "",
         "pipeline_item_id": "",
-        # Display-only (2026-08-18) -- resolved and saved alongside the
+        # Display-only -- resolved and saved alongside the
         # ids by the admin panel's live picker (see fabric_api._fetch_
         # data_pipelines_in_workspace), same "id is what's actually used,
         # name is just what's shown back" split as lakehouse.workspace_
@@ -151,18 +146,15 @@ DEFAULT_ADMIN_SETTINGS = {
         "sp_client_id": "",
         "sp_client_secret_ref": "",
     },
-    # Added 2026-07-24: where the big generated JSON payloads (lineage-
+    # Where the big generated JSON payloads (lineage-
     # explorer.json and friends -- see onelake_data.py's own docstring for
-    # the full list) are served FROM. "local_files" (handler.py reading
-    # frontend/semantic-lineage/data/ off this machine's disk) still exists
-    # as a code path but is no longer reachable from the admin panel
-    # (2026-08-24 Fase 1 cleanup removed the mode toggle and required
-    # workspace_name/lakehouse_name -- this project always serves live from
-    # OneLake now). "onelake" fetches/caches each file from a Fabric
-    # Lakehouse's OneLake Files area, published there by backend/scripts/
-    # 68_publish_web_data_to_onelake.py (this does NOT move the JSON-
-    # building logic itself into Fabric, only where the finished file
-    # lives). Deliberately separate from `lakehouse` above: that write
+    # the full list) are served FROM. "onelake" (the default) fetches/caches
+    # each file from a Fabric Lakehouse's OneLake Files area, published there
+    # by backend/scripts/72_publish_web_data_to_onelake.py (this does NOT move
+    # the JSON-building logic itself into Fabric, only where the finished file
+    # lives). "local_files" (handler.py reading frontend/semantic-lineage/data/
+    # off this machine's disk) is what is used when OneLake is not configured
+    # or cannot be reached. Deliberately separate from `lakehouse` above: that write
     # target is very often a Warehouse (SQL tables only, no Files/ area),
     # while this needs an actual Lakehouse -- can point at a different
     # item than `lakehouse`, or the same one if it happens to be a
@@ -171,8 +163,8 @@ DEFAULT_ADMIN_SETTINGS = {
         "mode": "onelake",
         # workspace_name/lakehouse_name (by NAME, not id) are all this
         # block has ever actually used -- onelake_data.py's _download()
-        # only ever reads those two off `config`, confirmed by grep
-        # (2026-08-18 admin-panel audit finding): workspace_id/
+        # only ever reads those two off `config`, confirmed by grep.
+        # workspace_id/
         # lakehouse_id fields used to exist here but nothing ever read or
         # wrote them, unlike `lakehouse` above (whose *_id fields are real
         # -- resolved from the admin's own live picker selection).
@@ -188,7 +180,7 @@ DEFAULT_ADMIN_SETTINGS = {
         # this on" convenience as lakehouse.auto_upload_after_scan.
         "auto_publish_after_scan": False,
     },
-    # Added 2026-08-24: connection to the Microsoft Fabric Capacity Metrics
+    # Connection to the Microsoft Fabric Capacity Metrics
     # app's own semantic model -- the only place real CU (Capacity Unit)
     # consumption per item/capacity actually lives (see capacity_metrics.py's
     # own docstring; purview_insights._get_capacity_insight's "CU (mes)"
@@ -216,10 +208,10 @@ DEFAULT_ADMIN_SETTINGS = {
     # Static, machine-to-machine credentials for automation callers that
     # can't do an interactive Entra device-code sign-in -- the primary case
     # is a Fabric pipeline's Web activity triggering/polling a scan (see
-    # Tanda 5, E.0/E.1). Each entry is {name, key_hash, key_preview,
+    # _api_key_name in handler.py). Each entry is {name, key_hash, key_preview,
     # created_at, description, created_by, scope, expires_at} (last 4
-    # added 2026-08-18, admin-panel completeness pass -- with several keys
-    # in use, name alone didn't say who a key was for or what it could do).
+    # added later -- with several keys in use, name alone didn't say who a
+    # key was for or what it could do).
     # The raw key is only ever shown once, at creation time, in the admin
     # panel -- key_hash IS the stored credential-check value (nothing else
     # to hash against, same tradeoff as an API gateway's static key), so
@@ -229,7 +221,7 @@ DEFAULT_ADMIN_SETTINGS = {
     # _api_key_scope); expires_at is an optional ISO timestamp, blank means
     # never (see auth.py's _api_key_expired).
     "api_keys": [],
-    # Audit trail of revoked keys (2026-08-18) -- POST /api/admin/api-
+    # Audit trail of revoked keys -- POST /api/admin/api-
     # keys/revoke appends here instead of only deleting from api_keys
     # above, bounded to the most recent 100 entries. Each entry:
     # {name, key_preview, description, revoked_at, revoked_by} -- never
@@ -248,20 +240,20 @@ DEFAULT_ADMIN_SETTINGS = {
         "smtp_password_ref": "",
         "from_address": "",
         "subscribers": [],
-        # Microsoft Teams webhook (Tanda A follow-up) -- fully implemented
+        # Microsoft Teams webhook -- fully implemented
         # in the admin panel and scan_manager._maybe_send_teams_
         # notification since it shipped, but never added here, so a fresh
         # config/admin_settings.json never showed these keys and this
         # dict (documented as the schema of record for every other
         # setting) silently drifted from what the app actually reads/
-        # writes (2026-08-18 admin-panel audit finding).
+        # writes.
         "teams_webhook_url": "",
         "teams_language": "es",
         "teams_notify_succeeded": False,
         "teams_notify_failed": False,
         "teams_notify_cancelled": False,
     },
-    # Tanda C (Purview-inspired, 2026-07-09): a "certified/official source"
+    # A "certified/official source"
     # badge an admin applies by hand -- deliberately just a curated list of
     # qualified_names (+ who/when/why), not derived from anything scanned,
     # since "this is the trusted one" is a human judgment call Purview's own
@@ -273,7 +265,7 @@ DEFAULT_ADMIN_SETTINGS = {
     # mean", not "what is an Active Customer") -- each entry:
     # {term_es, term_en, definition_es, definition_en, linked_qualified_names}.
     "business_glossary": [],
-    # Roadmap Fase 2 (2026-08-17): free-form tags on items, same
+    # Free-form tags on items, same
     # admin-curated pattern as certified_items just above -- a plain list an
     # admin edits by hand rather than anything scanned, so "this is a
     # finance report" is as easy to record as "this is the certified one".
@@ -281,7 +273,7 @@ DEFAULT_ADMIN_SETTINGS = {
     # item) or a tag (grouping several items). Each entry:
     # {qualified_name, tag, tagged_by, tagged_at}.
     "tags": [],
-    # Roadmap Fase 1 (2026-08-31, Purview-parity push): data-quality rules
+    # Data-quality rules
     # an admin defines by hand, evaluated against dbo.bronze_column_profile
     # (already collected by NB_Discover_Column_Profile.py -- no new scan,
     # no new Fabric permission, see data_quality.py). Same admin-curated
@@ -291,7 +283,7 @@ DEFAULT_ADMIN_SETTINGS = {
     # ("null_percentage_max"|"distinct_count_min"|"row_count_min"),
     # threshold (number), created_by, created_at, note}.
     "data_quality_rules": [],
-    # Roadmap Fase 2 (2026-08-31, same Purview-parity push): admin-defined
+    # Admin-defined
     # sensitivity categories on top of the 9 built-in ones in
     # sensitivity_classifier.py -- see that module's own
     # _custom_category_registry for exactly how these merge in (and its
@@ -303,7 +295,7 @@ DEFAULT_ADMIN_SETTINGS = {
     # ("low"|"medium"|"high"|"very_high"), recommendation_es,
     # recommendation_en, created_by, created_at}.
     "custom_sensitivity_categories": [],
-    # Roadmap Fase 3 (2026-08-31, same Purview-parity push): Purview's
+    # Purview's
     # Unified Catalog groups assets into "data products" with an owner and
     # a description, cutting across whatever workspace/domain each asset
     # actually lives in. Named "data_products" (not "domains") on purpose
@@ -316,7 +308,6 @@ DEFAULT_ADMIN_SETTINGS = {
     # shape). Each entry: {id, name, owner_email, description_es,
     # description_en, linked_qualified_names, created_by, created_at}.
     "data_products": [],
-    # Roadmap Fase 6 (2026-08-31, follow-up to the Fase 5 privacy locator):
     # admin-maintained "known systems" per sensitivity category -- most of
     # what a real data-subject-rights request touches (biometric access
     # control, a CRM, a marketing platform) lives entirely OUTSIDE this
@@ -344,8 +335,8 @@ HISTORY_FIELDS = [
     "diff_added", "diff_removed", "diff_modified", "diff_by_type_json", "diff_path",
 ]
 DIFF_TRACKED_FIELDS = ("item_name", "description", "sensitivity_label", "folder_id", "default_identity", "status")
-# Same idea as DIFF_TRACKED_FIELDS, one level down the graph (roadmap
-# Nivel 1, 2026-08-17: "historial point-in-time de dependencias") -- a
+# Same idea as DIFF_TRACKED_FIELDS, one level down the graph (a point-in-time
+# dependency history) -- a
 # dependency's identity is the edge itself (from/to/relationship_type, see
 # scan_manager._diff_dependencies), so only fields that can change WITHOUT
 # it becoming a different edge belong here.

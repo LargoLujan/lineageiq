@@ -35,7 +35,7 @@
             </svg>
             <span id="graphMapButtonLabel" class="graph-map-3d-button-label">Grafo</span>
           </button>
-          <!-- Roadmap Fase 4 (2026-08-31): DAG view, wired in dag-view.js/
+          <!-- DAG view, wired in dag-view.js/
                dag-view.css. It used to carry a `hidden` attribute, but the
                global `button` display rule in styles.css overrode it, so
                the button was always on screen, and the README and the demo
@@ -63,7 +63,7 @@
             <span class="governance-button-icon" aria-hidden="true">♟️</span>
             <span id="governanceButtonLabel" class="graph-map-3d-button-label">Gobernanza</span>
           </button>
-          <!-- Roadmap Fase 5 (2026-08-31): privacy/data-subject-rights
+          <!-- Privacy/data-subject-rights
                locator, gated to admins like Gobernanza right above it. -->
           <button id="privacyButton" class="graph-map-3d-button" type="button" hidden aria-haspopup="dialog" aria-controls="privacyPanel" aria-expanded="false" title="Privacidad">
             <svg class="privacy-lock-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
@@ -328,7 +328,7 @@
                    (els.searchInput.value = ''), so removing the element
                    outright would throw. Hiding is the safe equivalent --
                    see the [hidden] CSS guard in styles.css. (The old back
-                   button was fully removed 2026-07-20, including its JS.) -->
+                   button was fully removed, including its JS.) -->
               <label class="search-box" hidden>
                 <span id="searchLabel">Buscar</span>
                 <input id="searchInput" type="search" placeholder="Workspace, modelo, notebook, origen..." autocomplete="off" />
@@ -395,7 +395,7 @@
                Positioned absolute against .graph-surface instead, so it
                stays pinned bottom-left regardless of scroll position. -->
           <div id="modeLegend" class="legend diagram-legend" aria-label="Legend"></div>
-          <!-- 2026-08-24: moved here from a page-wide `position: fixed`
+          <!-- Moved here from a page-wide `position: fixed`
                overlay -- the rest of .app-shell (topbar, mode bar, scan
                panel, workspace list) now renders from page load instead of
                staying hidden until sign-in, so nothing pops into existence
@@ -551,7 +551,7 @@
     <script src="./vendor/dagre.min.js"></script>
     <script src="./app.js?v=20261104-demo-mode"></script>
     <script src="./vendor/3d-force-graph.min.js"></script>
-    <!-- three.module.min.js (Tanda 8 deferred item: distinct 3D shapes per
+    <!-- three.module.min.js (for distinct 3D shapes per
          node type) is a native ES module -- 3d-force-graph.min.js bundles
          its own internal Three.js copy but never exposes it as a global, so
          a second, separate Three.js load is the only way graph-map.js can
@@ -564,13 +564,13 @@
     <script type="module" src="./three-bridge.js?v=20260817-csp"></script>
     <script src="./graph-map-data.js?v=20260708-graph-map-3d"></script>
     <script src="./graph-map.js?v=20260821-workspace-dblclick-fix"></script>
-    <!-- Roadmap Fase 4 (2026-08-31, Purview-parity push): a 2D DAG lineage
+    <!-- A 2D DAG lineage
          diagram, anchored to one item's upstream/downstream instead of
          Graph Map Mode's whole-tenant 3D explorer -- self-contained, same
          open/close/backdrop independence as graph-map.js, no shared state
          with app.js (see dag-view.js's own header comment). Runs its own
-         Sugiyama layout pass via dagre.min.js (loaded above, vendored since
-         2026-07-03 for Planning Mode's card placement but never actually
+         Sugiyama layout pass via dagre.min.js (loaded above, vendored
+         for Planning Mode's card placement but never actually
          called until now -- see dag-view.js's own comment on that). -->
     <script src="./dag-view.js?v=20260831-dag-view"></script>
   </body>

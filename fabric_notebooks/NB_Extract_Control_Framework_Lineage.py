@@ -1,40 +1,41 @@
 # NB_Extract_Control_Framework_Lineage
 #
-# Fuente para un notebook Python de Fabric -- Fase C del "escaneo profundo"
-# (ver docs/105_fabric_native_discovery_setup.md para el patron general).
-# Cada bloque "# %%" es una celda -- pegalas en orden.
+# Source for a Fabric Python notebook -- part of the "deep scan"
+# (see docs/105_fabric_native_discovery_setup.md for the general pattern).
+# Each "# %%" block is a cell -- paste them in order.
 #
-# Replica fiel de scripts/70_extract_control_framework_lineage.py: en
-# muchos tenants buena parte de los notebooks/copyjobs son
-# "metadata-driven" -- su codigo
-# no nombra ninguna tabla destino (el parseo estatico de NB_Discover_
-# Object_Lineage da "Destino pendiente"), porque que se carga donde se
-# decide en tiempo de ejecucion desde un esquema "control" de cada
-# lakehouse. Pero ese mismo framework REGISTRA cada ejecucion en
-# control.TableStatus con la tabla origen completa, la tabla destino
-# completa y el nombre del notebook ejecutor (ExecutedBy =
-# "NB_Load_OrderList_2026/07/14-06:57:25") -- evidencia de linaje en
-# tiempo de ejecucion, mas fuerte que cualquier parseo de codigo.
+# Faithful replica of scripts/70_extract_control_framework_lineage.py: in
+# many tenants a good part of the notebooks/copyjobs are
+# "metadata-driven" -- their code
+# does not name any target table (the static parsing of NB_Discover_
+# Object_Lineage yields "Destino pendiente", a literal the code uses as the
+# pending-target placeholder), because what is loaded where is
+# decided at run time from a "control" schema of each
+# lakehouse. But that same framework RECORDS each execution in
+# control.TableStatus with the full source table, the full target
+# table and the name of the executing notebook (ExecutedBy =
+# "NB_Load_OrderList_2026/07/14-06:57:25") -- run-time lineage
+# evidence, stronger than any code parsing.
 #
-# Depende de que haya corrido antes NB_Extract_SQL_Endpoint_Catalog (Fase
-# A) -- lee dbo.bronze_sql_endpoint_object_catalog para encontrar que
-# bases de datos exponen un esquema "control" con tabla de estado, y
-# dbo.bronze_items para resolver el nombre del notebook ejecutor al item
-# real.
+# Depends on NB_Extract_SQL_Endpoint_Catalog having run before
+# -- it reads dbo.bronze_sql_endpoint_object_catalog to find which
+# databases expose a "control" schema with a status table, and
+# dbo.bronze_items to resolve the executing notebook name to the real
+# item.
 #
-# Escribe dbo.bronze_control_framework_lineage_candidates (mismas 17
-# columnas que dbo.bronze_item_object_lineage_candidates, a proposito --
-# es una fuente ADICIONAL de candidatos, no un reemplazo; ver la nota del
-# script original sobre "--control-framework-candidates-path") y dbo.
+# Writes dbo.bronze_control_framework_lineage_candidates (the same 17
+# columns as dbo.bronze_item_object_lineage_candidates, on purpose --
+# it is an ADDITIONAL source of candidates, not a replacement; see the note in the
+# original script about "--control-framework-candidates-path") and dbo.
 # bronze_control_framework_lineage_gaps.
 #
-# Self-contained a proposito (no usa %run) -- mismo criterio que el resto
-# de notebooks "Extract"/"Discover" de este proyecto.
+# Self-contained on purpose (it does not use %run) -- same criterion as the rest
+# of the "Extract"/"Discover" notebooks of this project.
 
 # %% [markdown]
-# ## Configuracion
-# Mismos valores que en NB_Discover_Workspaces_Items -- copia aqui los que
-# ya rellenaste alli.
+# ## Configuration
+# Same values as in NB_Discover_Workspaces_Items -- copy here the ones you
+# already filled in there.
 
 # %%
 try:
@@ -57,30 +58,30 @@ from collections import defaultdict
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
 
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
 CATALOG_CONNECT_TIMEOUT_SECONDS = 15
 DB_TOKEN_REFRESH_SECONDS = 1200
 
 # %% [markdown]
-# ## Parametros
-# Marca esta celda como celda de parametros en Fabric. El pipeline la
-# sobreescribe con el mismo WorkspaceNameFilter que recibe
-# NB_Discover_Workspaces_Items. Vacio = tenant completo.
+# ## Parameters
+# Mark this cell as a parameters cell in Fabric. The pipeline
+# overrides it with the same WorkspaceNameFilter that
+# NB_Discover_Workspaces_Items receives. Empty = whole tenant.
 #
-# Nota (igual que NB_Extract_Object_Column_Catalog): el filtro es por el
-# workspace DUENO del endpoint de control, no por el notebook resuelto.
+# Note (same as NB_Extract_Object_Column_Catalog): the filter applies to the
+# workspace that OWNS the control endpoint, not to the resolved notebook.
 
 # %%
 WorkspaceNameFilter = ""
 
 # %% [markdown]
-# ## Autenticacion: token propio de cuenta de servicio (MSAL)
+# ## Authentication: own service account token (MSAL)
 
 # %%
 def get_client_secret():
@@ -108,8 +109,8 @@ def acquire_token(scope):
     return result["access_token"]
 
 # %% [markdown]
-# ## Warehouse (pyodbc, mismo patron que NB_Discover_Workspaces_Items) +
-# conexion generica a cualquier SQL endpoint del tenant
+# ## Warehouse (pyodbc, same pattern as NB_Discover_Workspaces_Items) +
+# generic connection to any SQL endpoint in the tenant
 
 # %%
 def token_struct(token):
@@ -195,7 +196,7 @@ def normalize_key(value):
     return re.sub(r"\s+", " ", str(value).strip().lower())
 
 # %% [markdown]
-# ## Parseo del framework de control (igual que el script local)
+# ## Control framework parsing (same as the local script)
 
 # %%
 STATUS_TABLE_NAMES = {"tablestatus", "status"}
@@ -283,7 +284,7 @@ def load_notebook_index(connection):
     # are simply runs bronze_executions hasn't captured yet for that
     # workspace, not a resolution failure.
     try:
-        # 2026-08-19 fix: bronze_executions (see EXECUTION_COLUMNS in
+        # Fix: bronze_executions (see EXECUTION_COLUMNS in
         # NB_Discover_Executions.py) has no workspace_environment column at
         # all -- the first version of this query selected it anyway, the
         # resulting pyodbc.Error was swallowed by the except below exactly

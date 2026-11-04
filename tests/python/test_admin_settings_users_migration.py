@@ -1,7 +1,7 @@
 """Unit tests for lineage_web/admin_settings.py's _migrate_users_from_flat_
-lists (2026-08-24) -- backfills the "Usuarios permitidos" table's `users`
+lists -- backfills the "Usuarios permitidos" table's `users`
 list from admin_emails/full_scan_emails for any real installation that had
-those flat lists populated before the Fase 3 table existed. Written after
+those flat lists populated before the "users" table existed. Written after
 a real production config/admin_settings.json lost its "Usuarios
 permitidos" display (the flat lists were untouched, but the new table had
 nothing to read until this migration existed).

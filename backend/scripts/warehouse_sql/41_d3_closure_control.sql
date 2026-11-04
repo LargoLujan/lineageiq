@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/41_build_d3_closure_control.ps1
--- (Phase 1 migration, 2026-07-21). Reads dbo.bronze_d3_likely_object_lineage_object_queue
+-- (SQL migration). Reads dbo.bronze_d3_likely_object_lineage_object_queue
 -- (the biggest D-family input so far) and
 -- dbo.bronze_d3_likely_object_lineage_item_queue.
 --
@@ -45,7 +45,7 @@ first_row AS (
 -- Every GroupCounts-style aggregation caps at the 30 most frequent
 -- (value, count) pairs before STRING_AGG runs: Fabric Warehouse's
 -- STRING_AGG hard-errors past 8000 bytes rather than truncating (real
--- error, 2026-07-21, on a source-object group with many distinct
+-- error on a source-object group with many distinct
 -- hardening_issue_types combinations), so truncation has to happen on the
 -- INPUT row count, not on the aggregated string afterward. 30 is well
 -- past what the original's 700/900-char Limit-Text would keep anyway for

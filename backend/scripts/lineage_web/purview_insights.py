@@ -1,8 +1,8 @@
 """Purview-inspired governance views -- access audit, capacity insight, a
-changes digest (Tanda A, 2026-07-09), and a tenant-wide sensitivity
-overview (Tanda B, 2026-07-09).
+changes digest, and a tenant-wide sensitivity
+overview.
 
-Live-Warehouse/OneLake read when available (2026-08-14: these four views
+Live-Warehouse/OneLake read when available (these four views
 used to read local-only files that nothing keeps fresh once discovery
 moved to the Fabric-native pipeline -- see catalog.py's own
 _warehouse_or_local, the same pattern applied here), falling back to the
@@ -96,7 +96,7 @@ def _get_access_audit():
     # per-workspace list can't answer at a glance. Keyed by name (not
     # email -- older rows predate principal_email existing at all, see
     # 68_discover_workspace_role_assignments.ps1) with email carried
-    # alongside for display/click-through (2026-08-24).
+    # alongside for display/click-through.
     admin_workspaces_by_principal = {}
     principal_type_by_name = {}
     principal_email_by_name = {}
@@ -136,8 +136,7 @@ def _get_access_audit():
         ],
         "tenant_wide_admins": tenant_wide_admins[:25],
         # So the admin panel can show "+N more" instead of silently
-        # dropping them with no indication a cap was even hit (2026-08-18
-        # admin-panel audit finding).
+        # dropping them with no indication a cap was even hit.
         "tenant_wide_admin_total_count": len(tenant_wide_admins),
     }
 
@@ -210,15 +209,15 @@ def _get_capacity_insight():
 
 
 def _get_dependency_changes(target_scans, limit):
-    """Companion to _get_changes_digest, one level down the graph (roadmap
-    Nivel 1, 2026-08-17) -- bronze_dependency_history has no local-CSV
+    """Companion to _get_changes_digest, one level down the graph
+    -- bronze_dependency_history has no local-CSV
     fallback (unlike bronze_item_history/ITEM_HISTORY_PATH): it's a brand
     new table this web server itself started writing to, with nothing
     equivalent ever produced locally, so this reads the Warehouse
     directly rather than going through _warehouse_or_local. Filtered to
     the SAME scan_started_at value(s) _get_changes_digest already
     resolved from the item history (a single-element set in single-scan
-    mode, or every scan inside a date range -- 2026-08-24), so this
+    mode, or every scan inside a date range), so this
     section always describes the same scan(s) as the one above it -- a
     scan that didn't touch bronze_dependency_history at all (e.g. it
     predates this feature, or Warehouse writes are off) just contributes
@@ -242,8 +241,7 @@ def _get_dependency_changes(target_scans, limit):
         "removed_count": counts["removed"],
         "modified_count": counts["modified"],
         # So the admin panel can show "N more not shown" when limit is hit
-        # instead of silently truncating with no indication (2026-08-18
-        # admin-panel audit finding).
+        # instead of silently truncating with no indication.
         "total_count": len(matched_rows),
         "changes": [
             {
@@ -260,9 +258,9 @@ def _get_dependency_changes(target_scans, limit):
 
 
 def _get_changes_digest(limit=200, scan_started_at=None, date_from=None, date_to=None):
-    """scan_started_at (2026-08-18): picks one of this response's own
+    """scan_started_at: picks one of this response's own
     available_scans values instead of always the latest scan. date_from/
-    date_to (2026-08-24, both optional, inclusive, "YYYY-MM-DD" against
+    date_to (both optional, inclusive, "YYYY-MM-DD" against
     each row's event_date): aggregates EVERY scan in that range into one
     digest instead of a single scan -- takes priority over scan_started_at
     when either is given. Neither given = latest scan only (unchanged
@@ -275,14 +273,13 @@ def _get_changes_digest(limit=200, scan_started_at=None, date_from=None, date_to
         }
 
     # Most-recent-first, capped -- this project's own scan history already
-    # caps similarly (Tanda 10's queue, /api/history's implicit UI paging),
+    # caps similarly (the scan queue, /api/history's implicit UI paging),
     # so a tenant with years of daily scans doesn't hand back thousands of
     # timestamps to populate one dropdown with.
     available_scans = sorted({row.get("scan_started_at", "") for row in rows if row.get("scan_started_at")}, reverse=True)[:50]
     latest_scan = max((row.get("scan_started_at", "") for row in rows), default="")
-    # The earliest FULL scan on record -- "primer escaneo completo", the
-    # user's own reference point for "show me everything since the start"
-    # (2026-08-24). A single-workspace scan never counts as this even if
+    # The earliest FULL scan on record -- the reference point for "show me everything since the
+    # start". A single-workspace scan never counts as this even if
     # it happens to be the very first row ever written.
     first_full_scan = min(
         (row.get("scan_started_at", "") for row in rows if row.get("scope_label") == FULL_SCAN_LABEL and row.get("scan_started_at")),
@@ -301,7 +298,7 @@ def _get_changes_digest(limit=200, scan_started_at=None, date_from=None, date_to
         target_scan = scan_started_at if scan_started_at in available_scans else latest_scan
         target_rows = [row for row in rows if row.get("scan_started_at", "") == target_scan]
 
-    # Per-scan change counts (2026-08-18): lets the scan picker show "N
+    # Per-scan change counts: lets the scan picker show "N
     # changes" next to each date without a second round trip -- `rows` is
     # already fully loaded above, so this is just counting what's already
     # in memory, not an extra query.
@@ -318,7 +315,7 @@ def _get_changes_digest(limit=200, scan_started_at=None, date_from=None, date_to
             counts[event_type] += 1
 
     # Which real scan(s) contributed to target_rows, newest first, each
-    # with who triggered it (2026-08-24) -- a single entry in single-scan
+    # with who triggered it -- a single entry in single-scan
     # mode, several in range mode. Empty triggered_by_email means an
     # anonymous/session-less trigger (a Fabric-pipeline scan with no
     # signed-in user attached), not a data gap.
@@ -361,7 +358,7 @@ def _get_changes_digest(limit=200, scan_started_at=None, date_from=None, date_to
 
 def _sensitivity_overview_from_warehouse(sample_limit, custom_categories=None):
     """Live-Warehouse counterpart to the OneLake/local-JSON path below
-    (2026-08-30) -- dbo.bronze_object_column_catalog classified by column
+     -- dbo.bronze_object_column_catalog classified by column
     NAME via sensitivity_classifier.classify_columns, joined against dbo.
     bronze_sql_endpoint_object_catalog to resolve workspace_name/source_
     server/source_database per object.
@@ -372,7 +369,7 @@ def _sensitivity_overview_from_warehouse(sample_limit, custom_categories=None):
     reinvented so this reads the tenant's data the same way every other
     object-attribution path in this project already does.
 
-    2026-08-30 widened to try a SERVER-AWARE key first (catalog._object_key
+    It tries a SERVER-AWARE key first (catalog._object_key
     -- server+database+schema+object, same normalization) before falling
     back to the server-less alias above: a Dev/Pro pair of the SAME
     Lakehouse (identical database/schema/object names, different server)
@@ -444,7 +441,7 @@ def _sensitivity_overview_from_warehouse(sample_limit, custom_categories=None):
     }
 
 
-# Roadmap Fase 5 (2026-08-31, privacy locator): the shared per-OBJECT
+# The shared per-OBJECT
 # classification + workspace-resolution walk _sensitivity_overview_from_
 # warehouse above already did inline -- extracted so _get_privacy_
 # coverage_map below (per-object, deduplicated, "where is this data"
@@ -523,7 +520,7 @@ def _classified_objects_with_workspace(column_rows, sql_catalog_rows, custom_cat
     return flagged_objects, len(objects)
 
 
-# 2026-09-01: a real 502 on this route in production surfaced that this
+# A real 502 on this route in production surfaced that this
 # recomputed EVERY category match for EVERY object on every single call --
 # the raw Warehouse rows behind it are already cached (warehouse.py's own
 # _table_cache), but that only saves the network round trip, not the
@@ -541,7 +538,7 @@ _privacy_coverage_cache = {}  # cache_key -> (result, computed_at)
 
 
 def _get_privacy_coverage_map(settings=None, use_cache=True):
-    """Roadmap Fase 5 (2026-08-31): "where does this kind of data live"
+    """"where does this kind of data live"
     locator for GDPR/data-subject-rights requests (which can combine
     access, objection and biometric data). The existing per-CATEGORY
     Sensitivity tab repeats the same table once per category it matches --
@@ -648,7 +645,7 @@ def _get_privacy_coverage_map(settings=None, use_cache=True):
 
 
 def _get_privacy_framework_map(settings=None, use_cache=True):
-    """Roadmap Fase 6 (2026-08-31, follow-up to Fase 5's locator): the same
+    """The same
     classification data, grouped by legal FRAMEWORK first (GDPR/FERPA/
     CCPA), then by category -- a "browse like a settings menu" structure
     for "what data do we have under GDPR" questions, requested after the
@@ -694,7 +691,7 @@ def _get_privacy_framework_map(settings=None, use_cache=True):
     # always have one (enforced by sensitivity_classifier.py's own test
     # suite); a custom one only surfaces here if the admin who created it
     # actually tagged it with a real framework, otherwise it stays visible
-    # in the plain coverage map (Fase 5) but not in this framework browse.
+    # in the plain coverage map but not in this framework browse.
     all_category_keys = list(SENSITIVITY_CATEGORIES.keys()) + [
         key for key in ((entry.get("key") or "").strip() for entry in custom_categories) if key
     ]
@@ -736,7 +733,7 @@ def _get_privacy_framework_map(settings=None, use_cache=True):
 
 
 def _get_sensitivity_overview(sample_limit=15, settings=None):
-    # Live-Warehouse read first (2026-08-30, see _sensitivity_overview_
+    # Live-Warehouse read first (see _sensitivity_overview_
     # from_warehouse's own docstring) -- the graph-map-index-objects.json
     # chain below is local-build-only and has been dead since discovery
     # moved to Fabric-native scanning; this bypasses it for this one
@@ -816,7 +813,7 @@ def _column_security_key(*parts):
 
 def _get_column_security_lookup():
     """Cross-references dbo.bronze_column_security (DDM/CLS, per-column,
-    written by NB_Extract_SQL_Endpoint_Catalog's 2026-08-24 sys.masked_
+    written by NB_Extract_SQL_Endpoint_Catalog's sys.masked_
     columns/sys.column_permissions queries) and dbo.bronze_row_level_
     security (RLS, per-object, sys.security_predicates) against a
     (workspace_name, "schema.object", column_name) key -- the same
@@ -872,7 +869,7 @@ def _get_column_security_lookup():
 def _get_column_sensitivity_samples_lookup():
     """{(workspace, table, column) key -> {sample_values, sample_size,
     categories_matched}} from dbo.bronze_column_sensitivity_samples (see
-    fabric_notebooks/NB_Discover_Column_Sensitivity.py's 2026-08-25
+    fabric_notebooks/NB_Discover_Column_Sensitivity.py's
     rewrite -- the "CAMBIO DE POLÍTICA DE PRIVACIDAD" that started storing
     real example values, in their OWN table, separate from the percentage
     -only bronze_column_sensitivity_content). Tolerant of the table not
@@ -900,11 +897,11 @@ def _get_column_sensitivity_samples_lookup():
 
 def _get_content_sensitivity_overview(sample_limit=15, settings=None):
     """Tenant-wide rollup of dbo.bronze_column_sensitivity_content +
-    dbo.bronze_column_sensitivity_samples (roadmap Fase 2, 2026-08-17/18;
-    redesigned 2026-08-25 per an explicit admin-panel request), the
+    dbo.bronze_column_sensitivity_samples (redesigned so it only
+    samples columns whose name already matched), the
     content-VERIFIED counterpart to _get_sensitivity_overview above (which
-    only ever matches by column NAME, never real cell values). Since the
-    2026-08-25 rewrite, NB_Discover_Column_Sensitivity.py only ever
+    only ever matches by column NAME, never real cell values). Since that
+    rewrite, NB_Discover_Column_Sensitivity.py only ever
     samples a column whose NAME already matched (Paso 0 in that notebook),
     so every row here already passed that first filter -- this is no
     longer "confirmed vs unconfirmed", it's "name-flagged, and THIS is
@@ -926,7 +923,7 @@ def _get_content_sensitivity_overview(sample_limit=15, settings=None):
     No local-CSV fallback: this table only ever comes from the Fabric-
     native notebook, there was never a local-build equivalent.
 
-    settings (optional, 2026-08-31): threaded through to category_label/
+    settings (optional): threaded through to category_label/
     category_risk/etc. for custom_sensitivity_categories label resolution
     -- a no-op today (a custom category key can never appear in `category`
     below, since NB_Discover_Column_Sensitivity.py doesn't know about
@@ -1029,7 +1026,7 @@ def _get_content_sensitivity_overview(sample_limit=15, settings=None):
 
 def _get_sql_security_overview():
     """DDM/CLS/RLS at the SQL level (dbo.bronze_column_security, dbo.bronze_
-    row_level_security -- see docs/109_column_security_discovery.md), as
+    row_level_security), as
     flat row lists for the Governance panel's own "RLS, CLS y DDM" tab --
     distinct from _get_column_security_lookup() above, which builds
     point-lookup dicts keyed for joining against a specific sensitivity

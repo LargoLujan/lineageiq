@@ -62,7 +62,7 @@ def _save(data):
             json.dump(data, handle)
         # This file holds a live refresh token for whichever admin most
         # recently signed in -- as sensitive as a password, not an
-        # ordinary config file (2026-08-17 security audit). chmod is a
+        # ordinary config file. chmod is a
         # real restriction on the Linux container this runs in on Render;
         # on Windows (local/tunnel dev) it has little practical effect
         # (no POSIX permission bits), but is harmless to call either way.

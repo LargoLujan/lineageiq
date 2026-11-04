@@ -1,10 +1,10 @@
 services:
-  fabric-mapper:
+  lineageiq:
     build:
       context: .
       dockerfile: Dockerfile
-    image: hyperledger-fabric-mapper:local
-    container_name: hyperledger-fabric-mapper
+    image: lineageiq:local
+    container_name: lineageiq
     working_dir: /workspace
     entrypoint: ["/workspace/docker/entrypoint.sh"]
     volumes:
@@ -17,7 +17,7 @@ services:
       LINEAGE_WEB_ROOT: /workspace/frontend/semantic-lineage
       LINEAGE_WEB_PORT: "8765"
       LINEAGE_WEB_HOST: "0.0.0.0"
-      LINEAGE_WEB_PUBLIC_TUNNEL: "true"
+      LINEAGE_WEB_PUBLIC_TUNNEL: "false"
       LINEAGE_WEB_TUNNEL_WAIT_SECONDS: "120"
     ports:
       - "8765:8765"

@@ -1,5 +1,5 @@
 """Unit tests for the pure-logic pieces of backend/scripts/lineage_web/
-installer.py (Fase 5, 2026-08-24, the multi-tenant installer wizard).
+installer.py (the multi-tenant installer wizard).
 Everything that shells out to the real `fab` CLI (run_install, _fab,
 _isolated_fab_env) is NOT covered here -- there is no second Fabric tenant
 this project can test workspace/notebook creation against, see the

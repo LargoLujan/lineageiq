@@ -1,5 +1,5 @@
 """Generates a real OpenAPI 3.0 spec from routes.py's route registry
-(Tanda 5, E.4) -- served live at GET /api/openapi.json rather than as a
+ -- served live at GET /api/openapi.json rather than as a
 pre-built static file, since the spec describes this server's own code
 shape (not scanned tenant data) and would otherwise risk drifting out of
 sync with routes.py between rebuilds.

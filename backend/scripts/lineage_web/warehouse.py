@@ -9,14 +9,15 @@ so a web server process running anywhere (not just the machine that ran
 the scan) can see data as fresh as the last successful upload, without a
 redeploy or local file copy.
 
-Off by default (lakehouse.web_read_mode == "local_files", see
-constants.DEFAULT_ADMIN_SETTINGS); nothing here runs unless an admin
-opts in from the panel's Lakehouse tab. Two ways to authenticate, tried
+On by default (lakehouse.web_read_mode == "warehouse", see
+constants.DEFAULT_ADMIN_SETTINGS); when the Lakehouse/Warehouse target is
+not configured, reads fall back to the local files (web_read_mode
+"local_files"). Two ways to authenticate, tried
 in this order: (1) a fixed service-principal identity (lakehouse.sp_*,
 auth_mode="service_principal") when fully configured -- an admin's
 deliberate, most predictable choice, matching the Warehouse *write*
 side's own auth_mode; (2) the persisted delegated "service session" (see
-service_session.py, added 2026-07-24) -- whichever admin most recently
+service_session.py) -- whichever admin most recently
 signed in, reused here for tenants with no Entra app registration and
 nobody with permission to create one. Either way this is one shared
 identity for the server process's own reads, never the visitor's own
@@ -171,7 +172,7 @@ def _escape_odbc_value(value):
     doubled per that same convention. server/database here come from
     admin_settings.json (a signed-in admin's own saved config, via POST
     /api/admin/settings), so this is defense-in-depth rather than closing
-    a remotely-exploitable hole (2026-08-17 security audit) -- but cheap
+    a remotely-exploitable hole -- but cheap
     enough that there's no reason not to."""
     return "{" + str(value).replace("}", "}}") + "}"
 
@@ -279,7 +280,7 @@ def delete_bronze_rows(table_name, where):
     internal constants a caller hardcodes, never request input -- only
     the VALUES vary per call, and those are always passed parameterized.
     Returns the number of rows deleted. Added for collaboration.py's
-    comments/favorites (2026-08-17) -- the first callers that need to
+    comments/favorites -- the first callers that need to
     remove a specific row rather than only ever appending or replacing
     the whole table."""
     settings, lakehouse = _lakehouse_settings()

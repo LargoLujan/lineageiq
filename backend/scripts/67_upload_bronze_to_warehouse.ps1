@@ -5,7 +5,7 @@
 # Spark notebook like 64_upload_bronze_to_onelake.py's Lakehouse path.
 #
 # Why a Warehouse and not a Lakehouse: a Lakehouse's SQL analytics endpoint
-# is query-only -- no INSERT/CREATE TABLE, confirmed 2026-07-20. A Fabric
+# is query-only -- no INSERT/CREATE TABLE, confirmed. A Fabric
 # Warehouse's SQL endpoint is genuinely read-write T-SQL, so writing tables
 # there needs nothing beyond a normal SqlConnection + SqlBulkCopy, no
 # notebook step to paste in and no OneLake staging area. Reads the exact
@@ -19,11 +19,10 @@
 # Bronze here means exactly what it means everywhere else in this project
 # (see docs/101_medallion_lakehouse_provisioning.md and item_history's own
 # bronze framing): raw, untyped columns, every one VARCHAR(8000) (Fabric
-# Warehouse's T-SQL surface rejects NVARCHAR outright, confirmed live
-# 2026-07-21).
+# Warehouse's T-SQL surface rejects NVARCHAR outright, confirmed live).
 #
-# Cost/traffic efficiency (2026-07-21, explicit request: avoid rewriting a
-# table that hasn't actually changed): each entity's source CSV is content-
+# Cost/traffic efficiency (avoid rewriting a table that hasn't actually
+# changed): each entity's source CSV is content-
 # hashed and compared against the hash recorded the last time it was
 # successfully uploaded -- if unchanged, that entity is skipped entirely,
 # no bulk-load/MERGE traffic at all. If it DID change but the destination
@@ -39,15 +38,14 @@
 #
 # The "what changed since last time" state itself lives INSIDE the
 # Warehouse (dbo._bronze_upload_state, one row per entity), not in a local
-# file (2026-07-21, explicit request: this must not depend on anything that
+# file (this must not depend on anything that
 # would disappear once local CSVs are eventually retired -- the Warehouse
 # is meant to become the permanent, self-sufficient store, not just a
 # mirror something else keeps track of). Read once at the top of the run
 # (a single small query, not per-entity) and upserted back after every
 # entity that actually changes -- adds a handful of small metadata queries
 # per run, not the 128-way full staging+MERGE cost skipping this state
-# entirely would (measured live: 31s with state vs 17m20s without,
-# 2026-07-21).
+# entirely would (measured live: 31s with state vs 17m20s without).
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot "../../config/lakehouse_target.json"),
     [string]$AzCommand = "az",
@@ -62,9 +60,8 @@ $ErrorActionPreference = "Stop"
 
 # The first 21 entries were originally kept in sync by hand with
 # 64_upload_bronze_to_onelake.py's ENTITY_SOURCE_PATHS; this list has since
-# grown past that one on purpose (2026-07-21, explicit request: "todo lo que
-# ya está escaneado en local ... y demás", followed by a real "is it really
-# everything?" question once the first 21 were live). Every index/*.csv and
+# grown past that one on purpose, to cover everything already scanned
+# locally and more (not just the first 21). Every index/*.csv and
 # analysis/*.csv finished catalog/summary output now included too --
 # deliberately EXCLUDING two categories that don't belong in a permanent
 # queryable table: (1) the d1_-d8_/e1_/e2_/probe_/notebook_lineage_batch_
@@ -201,7 +198,7 @@ $Entities = [ordered]@{
     workspace_devops_link_candidates                                 = "analysis/workspace_devops_link_candidates.csv"
     workspace_governance_devops_gaps                                 = "analysis/workspace_governance_devops_gaps.csv"
     workspace_governance_enrichment                                  = "analysis/workspace_governance_enrichment.csv"
-    # Added 2026-07-21 for the SQL-migration pilot (39_build_d1_closure_
+    # Added for the SQL-migration pilot (39_build_d1_closure_
     # control.ps1's main input): the D1-D8 "queue" files are real
     # computational data other steps depend on, not the human-review
     # scratch (decision templates, manual evidence templates) the rest of
@@ -226,7 +223,7 @@ $Entities = [ordered]@{
     d7_orchestration_review_queue                                    = "analysis/d7_orchestration_review_queue.csv"
     d7_nonprod_candidate_queue                                       = "analysis/d7_nonprod_candidate_queue.csv"
     d7_wave_promotion_queue                                          = "analysis/d7_wave_promotion_queue.csv"
-    # Added 2026-07-21 for Phase 2 (05_build_graph.ps1 reads its own prior
+    # Added for 05_build_graph.ps1 (it reads its own prior
     # graph/nodes.csv output to retain ExternalConnection nodes no longer
     # referenced by a current dependency -- same self-referential pattern
     # as the semantic_model_view_candidates backfill chain).
@@ -426,7 +423,7 @@ try {
             # across every branch when assigning it to a variable, so a
             # branch that itself returns @() (zero pipeline objects) collapses
             # the whole assignment to $null, not an empty array -- and $null
-            # has no .Count under Set-StrictMode. Real crash, 2026-07-21, on
+            # has no .Count under Set-StrictMode. Real crash on
             # every header-only (zero-row) source CSV: "The property 'Count'
             # cannot be found on this object."
             $columns = @(if ($rows.Count -gt 0) { $rows[0].PSObject.Properties.Name })
@@ -463,7 +460,7 @@ try {
             }
 
             # Not just an NVARCHAR(MAX) length problem -- confirmed live
-            # against the real Warehouse (2026-07-21) that NVARCHAR is
+            # against the real Warehouse that NVARCHAR is
             # rejected outright at ANY length ("not supported in this
             # edition of SQL Server", identical error for both MAX and a
             # bounded 4000). A Fabric Warehouse's T-SQL surface area simply
@@ -485,7 +482,7 @@ try {
                     $value = [string]($row.$col)
                     # A value longer than the VARCHAR(8000) column it's going
                     # into fails the WHOLE table's bulk copy, not just that
-                    # one row -- real case, 2026-07-21:
+                    # one row -- real case:
                     # deep_object_lineage_source_objects' "evidence" column
                     # had a 20,839-char value, taking all other rows in that
                     # table down with it ("Received an invalid column length

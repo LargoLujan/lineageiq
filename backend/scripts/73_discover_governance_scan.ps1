@@ -36,7 +36,7 @@
 #     re-run this script once someone with Admin Portal access has checked/
 #     adjusted the above; nothing else needs to change.
 #
-# AUTH MODE (2026-08-26 update): supports a service principal instead of a
+# AUTH MODE: supports a service principal instead of a
 # named person's delegated session, which is the actually-recommended path
 # for unattended/non-nominal scanning -- confirmed against Microsoft Learn's
 # "Enable service principal authentication for admin APIs": PostWorkspaceInfo/
@@ -49,7 +49,7 @@
 # same sp_tenant_id/sp_client_id/sp_client_secret_ref fields admin_settings.py
 # already writes there) so "use the SP we already have" needs zero extra
 # flags -- falls back to the signed-in delegated Azure CLI session (the
-# original 2026-08-26 behavior, still fully supported) when no SP is
+# original behavior, still fully supported) when no SP is
 # configured or its token acquisition fails. Setup a tenant admin still has
 # to do once, by hand (this script cannot grant its own access):
 #   1. Confirm the app has NO admin-consent-required Power BI permissions
@@ -71,7 +71,7 @@ param(
     [string]$OutputRlsRolesPath = (Join-Path $PSScriptRoot "../../analysis/governance_rls_roles.csv"),
     [string]$OutputStatusPath = (Join-Path $PSScriptRoot "../../analysis/governance_scan_status.csv"),
     [string]$OutputSummaryPath = (Join-Path $PSScriptRoot "../../analysis/governance_scan_summary.csv"),
-    [string]$OutputDocPath = (Join-Path $PSScriptRoot "../../docs/110_governance_scan.md"),
+    [string]$OutputDocPath = (Join-Path $PSScriptRoot "../../docs/73_governance_scan.md"),
     [string]$AzCommand = "az",
     [string]$PowerBiApiBaseUrl = "https://api.powerbi.com/v1.0/myorg",
     [string]$PowerBiTokenResource = "https://analysis.windows.net/powerbi/api",

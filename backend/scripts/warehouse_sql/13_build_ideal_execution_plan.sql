@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/13_build_ideal_execution_plan.ps1
--- (Phase 2 migration, 2026-07-21). Reads dbo.bronze_items, dbo.bronze_
+-- (SQL migration). Reads dbo.bronze_items, dbo.bronze_
 -- graph_nodes, dbo.bronze_dependencies, dbo.bronze_execution_duration_
 -- by_item, dbo.bronze_executions, dbo.bronze_deep_object_lineage_item_
 -- enrichment, plus 07's own already-validated silver_* outputs (critical

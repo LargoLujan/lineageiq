@@ -1,6 +1,6 @@
 """Filesystem layout: every REPO_ROOT-derived path this server touches,
-in one place so D.1's directory-move depth math only ever needs auditing
-here. Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code
+in one place so the directory-depth math only ever needs auditing
+here. Split out of lineage_web_server.py -- pure code
 motion, no logic changed.
 """
 from pathlib import Path
@@ -24,8 +24,7 @@ DIFF_DIR = STATE_DIR / "diffs"
 # A dedicated constant (used with the same .resolve()+containment check as
 # DIFF_DIR/_resolve_static_path) instead of catalog.py concatenating
 # REPO_ROOT itself, so path traversal there gets the same defense-in-depth
-# guard the rest of this package already applies (2026-08-17 security
-# audit).
+# guard the rest of this package already applies.
 NOTEBOOK_DEFINITIONS_DIR = REPO_ROOT / "data" / "notebook_definitions"
 ITEM_HISTORY_PATH = REPO_ROOT / "analysis" / "item_history.csv"
 ITEM_HISTORY_FIELDS = ("event_date", "event_type", "qualified_name", "item_type", "item_name", "workspace_name", "scope_label", "scan_started_at", "triggered_by_email")
@@ -38,10 +37,10 @@ FULL_SCAN_SCRIPT_PATH = REPO_ROOT / "backend" / "scripts" / "99_refresh_lineage_
 EXECUTIONS_SCAN_SCRIPT_PATH = REPO_ROOT / "backend" / "scripts" / "71_scan_production_executions.ps1"
 ADMIN_SETTINGS_PATH = REPO_ROOT / "config" / "admin_settings.json"
 LAKEHOUSE_TARGET_PATH = REPO_ROOT / "config" / "lakehouse_target.json"
-# Fase 5 (2026-08-24), the multi-tenant installer wizard's source of truth
+# The multi-tenant installer wizard's source of truth
 # for what gets deployed -- see installer.py.
 FABRIC_NOTEBOOKS_DIR = REPO_ROOT / "fabric_notebooks"
-# Downloadable from the admin panel's API keys tab (2026-08-24) -- a
+# Downloadable from the admin panel's API keys tab -- a
 # colleague setting up the remote MCP agent needs this one file, not a
 # full repo checkout ("todo remoto", no local Fabric access/repo required
 # for a commercial deployment). See handler.py's GET /mcp_server_remote.py.
@@ -53,7 +52,7 @@ SERVICE_SESSION_PATH = REPO_ROOT / "config" / "service_session.json"
 TEST_EXTERNAL_SOURCE_SCRIPT_PATH = REPO_ROOT / "backend" / "scripts" / "66_test_external_source_connection.ps1"
 WAREHOUSE_UPLOAD_SCRIPT_PATH = REPO_ROOT / "backend" / "scripts" / "67_upload_bronze_to_warehouse.ps1"
 ONELAKE_PUBLISH_SCRIPT_PATH = REPO_ROOT / "backend" / "scripts" / "72_publish_web_data_to_onelake.ps1"
-# Purview-inspired admin tabs (Tanda A, 2026-07-09): all three read data
+# Purview-inspired admin tabs: all three read data
 # already produced by existing scripts (68/06/07), nothing new to scan.
 WORKSPACE_ROLE_ASSIGNMENTS_PATH = REPO_ROOT / "index" / "workspace_role_assignments.csv"
 EXECUTION_DURATION_BY_ITEM_PATH = REPO_ROOT / "analysis" / "execution_duration_by_item.csv"
@@ -64,7 +63,7 @@ SCHEDULE_REVIEW_CANDIDATES_PATH = REPO_ROOT / "analysis" / "schedule_review_cand
 # frontend/semantic-lineage/data/ (the local-files source) so the two
 # never collide or get silently mixed up.
 ONELAKE_CACHE_DIR = REPO_ROOT / "analysis" / "onelake_cache"
-# Governance scan (2026-08-26, scripts/73_discover_governance_scan.ps1) --
+# Governance scan (scripts/73_discover_governance_scan.ps1) --
 # Scanner API: sensitivity label, endorsement, tags, and semantic model RLS
 # roles, tenant-wide. See that script's own docstring for the 401
 # blocker this API can hit; governance_scan_status.csv is

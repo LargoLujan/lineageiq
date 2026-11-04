@@ -9,10 +9,10 @@ discovery work happens inside Fabric notebooks the pipeline calls, on the
 tenant's own capacity compute (see docs/101_medallion_lakehouse_
 provisioning.md).
 
-Off by default (admin_settings.json -> discovery_pipeline.mode ==
-"local", scan_manager.py's existing subprocess path is untouched); opt-in
-once an admin has built the pipeline in Fabric and filled in its
-workspace/item id.
+This is the default scan mode (admin_settings.json ->
+discovery_pipeline.mode == "fabric_pipeline"); scan_manager.py's existing
+subprocess path (mode "local") is untouched. It needs an admin to have
+built the pipeline in Fabric and filled in its workspace/item id.
 
 Two ways to authenticate the Job Scheduler calls, tried in this order
 (the delegated path exists for tenants with no Entra app registration
@@ -35,7 +35,7 @@ subprocess path today; it does not require the user's browser tab or
 device to stay open or connected.
 
 Endpoints confirmed live against Microsoft Learn's Job Scheduler (Core)
-REST API docs (2026-07-24):
+REST API docs:
   - Start: POST /v1/workspaces/{workspaceId}/items/{itemId}/jobs/instances?jobType=Pipeline
     (job instance id comes back as the last path segment of the Location
     response header, not in the body)
@@ -213,7 +213,7 @@ def trigger_pipeline_run(workspace_name_filter="", session=None, extra_parameter
     have any effect on the Fabric side; harmless if the pipeline doesn't
     define it. Returns the new job instance id.
 
-    extra_parameters (2026-08-24, Fase 6 targeted sensitivity scan): an
+    extra_parameters (targeted sensitivity scan): an
     optional {name: value} dict merged into executionData.parameters
     alongside WorkspaceNameFilter -- e.g. {"TargetColumnsFilter": "..."}
     for NB_Discover_Column_Sensitivity.py's own new parameter (see that
@@ -230,7 +230,7 @@ def trigger_pipeline_run(workspace_name_filter="", session=None, extra_parameter
     The pipeline's own notebooks get the SP client secret they need for
     their own Warehouse/Fabric-Admin-API calls from a private OneLake
     Files path (see fabric_notebooks/NB_*.py's get_client_secret()), not
-    from a parameter here -- tried that once (2026-08-12) and a Fabric
+    from a parameter here -- tried that once and a Fabric
     type-conversion error on the SpClientSecret parameter leaked the raw
     value into the job's own failureReason. Never doing that again."""
     settings, pipeline = _pipeline_settings()
@@ -285,7 +285,7 @@ def test_connection(pipeline_config, session=None):
     both the workspace/item ids and the caller's access, with no side
     effect on the Fabric side.
 
-    2026-08-18 fix: this used to hard-require the service principal fields
+    This used to hard-require the service principal fields
     even though the admin panel's own hint text says they're optional and
     a signed-in session is the recommended way to run scans -- testing
     that exact recommended (no-SP) configuration always reported what
@@ -294,7 +294,7 @@ def test_connection(pipeline_config, session=None):
     (the caller's current signed-in session, if any) is now tried first,
     same fallback order trigger_pipeline_run/get_job_status/cancel_job
     already use via _get_token -- but this function deliberately does NOT
-    call _get_token itself (2026-08-18 code review finding): _get_token's
+    call _get_token itself: _get_token's
     module-level _token_cache is shared with real scan runs, and this is a
     "test" button that can be clicked with edited-but-unsaved form values,
     a stale cached SP token from an earlier, different config would make
@@ -313,7 +313,7 @@ def test_connection(pipeline_config, session=None):
             token = _acquire_sp_fabric_token(settings, pipeline_config)
         except FabricPipelineError as exc:
             return {"ok": False, "message": str(exc)}
-        except Exception as exc:  # noqa: BLE001 - MSAL performs authority/OIDC discovery in its constructor and can raise a plain ValueError (bad tenant id, unreachable host) instead of a FabricPipelineError; a "test" button must always return a JSON verdict, never crash the request with no response (2026-08-18 code review finding)
+        except Exception as exc:  # noqa: BLE001 - MSAL performs authority/OIDC discovery in its constructor and can raise a plain ValueError (bad tenant id, unreachable host) instead of a FabricPipelineError; a "test" button must always return a JSON verdict, never crash the request with no response
             return {"ok": False, "message": f"No se pudo verificar: {exc}"}
 
     url = f"{FABRIC_API_BASE}/workspaces/{pipeline_config['workspace_id']}/items/{pipeline_config['pipeline_item_id']}"

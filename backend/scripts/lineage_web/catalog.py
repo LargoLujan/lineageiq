@@ -1,12 +1,11 @@
 """Read-only queries over the existing index/*.csv and data/*.json lineage
-artifacts, exposed over HTTP (Tanda 5, E.2). This is the same data
+artifacts, exposed over HTTP. This is the same data
 mcp_server.py's tools already read directly off disk for a local MCP
 client; the query semantics here (substring matching, exact-name
 disambiguation) are deliberately copied from there rather than reinvented,
 so a remote caller and a local AI agent answer the same question the same
-way. Tanda 6, F.2 is expected to eventually make mcp_server.py call these
-endpoints instead of reading the files itself, at which point this becomes
-the single implementation both surfaces share.
+way. mcp_server.py's core catalog tools call these same functions, so
+this is the single implementation both surfaces share.
 """
 import csv
 import json
@@ -36,9 +35,9 @@ def _read_csv_rows(path):
 
 
 def _warehouse_or_local(table_name, local_path):
-    """Live-Warehouse read when an admin has opted in (lakehouse.
-    web_read_mode == "warehouse"), otherwise -- and always on any
-    Warehouse failure -- the same local index/*.csv read this project has
+    """Live-Warehouse read by default (lakehouse.
+    web_read_mode == "warehouse"), otherwise -- when no Warehouse is
+    configured, and always on any Warehouse failure -- the same local index/*.csv read this project has
     always done. See warehouse.py's own docstring for why this is a fixed
     service-principal identity rather than a per-user token."""
     if warehouse.is_warehouse_read_enabled():
@@ -127,11 +126,11 @@ def _item_link_fields(qualified_name):
     }
 
 
-# Roadmap Fase 2 (2026-08-17, Tanda 6 F.2 follow-through): mcp_server.py's
+# mcp_server.py's
 # list_workspaces tool used to read index/workspaces.csv directly, the same
 # July snapshot every other tool here has already moved off of via
 # _warehouse_or_local -- which can be stale (far fewer rows than the tenant really has)
-# while auditing what the MCP surface actually answers with. This gives it
+# when checking what the MCP surface actually answers with. This gives it
 # the same live-Warehouse-when-enabled, local-CSV-fallback path as
 # everything else in this module.
 def _list_workspaces(name_contains=""):
@@ -154,7 +153,7 @@ def _list_workspaces(name_contains=""):
     return results
 
 
-# Roadmap Fase 2 (2026-08-17): column-level statistical profiling
+# Column-level statistical profiling
 # (null %, distinct count, safe min/max) for Fabric-native Lakehouse
 # tables -- see fabric_notebooks/NB_Discover_Column_Profile.py. Scoped to
 # whichever workspaces the service principal already had a data role in
@@ -204,7 +203,7 @@ def _get_column_profile(workspace_name, lakehouse_name, table_name):
     }
 
 
-# Roadmap Fase 2 (2026-08-17): content-based sensitivity signals (email/
+# Content-based sensitivity signals (email/
 # phone/national_id/financial regex matches against a bounded sample of
 # real cell values) -- see fabric_notebooks/NB_Discover_Column_
 # Sensitivity.py. Same scope/fallback contract as _get_column_profile
@@ -342,8 +341,8 @@ def _object_impact_candidate_rows():
     dbo.bronze_item_object_lineage_candidates + dbo.bronze_pipeline_
     object_lineage_candidates (see fabric_notebooks/NB_Discover_Object_
     Lineage.py / NB_Discover_Pipeline_Object_Lineage.py) + dbo.bronze_
-    control_framework_lineage_candidates (Fase C, NB_Extract_Control_
-    Framework_Lineage.py, added 2026-08-19 -- runtime-confirmed lineage
+    control_framework_lineage_candidates (NB_Extract_Control_
+    Framework_Lineage.py -- runtime-confirmed lineage
     for the ~37% of notebooks/copyjobs whose code names no target table)
     all share the same 17-column base shape, so a plain concatenation is
     enough. Returns None (never an empty list) when Warehouse reads
@@ -360,7 +359,7 @@ def _object_impact_candidate_rows():
         try:
             rows += warehouse.query_bronze_table("bronze_control_framework_lineage_candidates")
         except warehouse.WarehouseError:
-            pass  # table doesn't exist yet on a Warehouse that predates Fase C -- item/pipeline candidates alone are still a valid result
+            pass  # table doesn't exist yet on a Warehouse that predates that notebook -- item/pipeline candidates alone are still a valid result
         return rows
     except warehouse.WarehouseError as exc:
         print(f"[catalog] Warehouse read of object-lineage candidates failed, falling back to object-impact.json: {exc}")
@@ -376,10 +375,10 @@ def _object_key(source_server, source_database, schema_name, object_name):
 
 
 def _object_columns_by_key():
-    """{(server, database, schema, object) -> [column rows]}, from Fase B's
-    NB_Extract_Object_Column_Catalog (dbo.bronze_object_column_catalog,
-    added 2026-08-19). Distinct from the external-source gateway approach
-    rolled back 2026-08-18 -- this covers Fabric-internal SQL endpoints the
+    """{(server, database, schema, object) -> [column rows]}, from
+    NB_Extract_Object_Column_Catalog (dbo.bronze_object_column_catalog).
+    Distinct from the external-source gateway approach
+    that was rolled back -- this covers Fabric-internal SQL endpoints the
     service principal can reach directly, no per-source pipeline needed.
     Row shape (column_name/data_type/max_length/precision/scale/
     is_nullable) matches what app.js's detailColumnRows/columnTypeDisplay
@@ -402,7 +401,7 @@ def _object_columns_by_key():
 
 def _object_type_overrides_by_key():
     """{(server, database, schema, object) -> confirmed object_type}, from
-    Fase A's NB_Extract_SQL_Endpoint_Catalog (dbo.bronze_sql_endpoint_
+    NB_Extract_SQL_Endpoint_Catalog (dbo.bronze_sql_endpoint_
     object_catalog) -- a real sys.objects match beats whatever a regex
     candidate guessed (table_or_view, native_query_object, ...)."""
     try:
@@ -421,9 +420,9 @@ def _get_object_impact_from_warehouse(query, limit, candidate_rows):
     """Same response shape as the object-impact.json path below, built
     live from NB_Discover_Object_Lineage/NB_Discover_Pipeline_Object_
     Lineage's candidate tables instead. columns/column_count and
-    object_type_values now enrich from Fase A/B's confirmed catalogs
+    object_type_values now enrich from the confirmed catalogs
     (dbo.bronze_sql_endpoint_object_catalog / dbo.bronze_object_column_
-    catalog, added 2026-08-19) when a match exists; both fall back to the
+    catalog) when a match exists; both fall back to the
     candidate's own guess (empty / whatever the regex parser produced)
     when there's no confirmed catalog row for that object yet -- same
     "record gaps, don't fabricate" convention as the rest of this project.
@@ -595,7 +594,7 @@ def _get_notebook_code(qualified_name, max_chars=_NOTEBOOK_CODE_MAX_CHARS):
     # tenant controls, not just this app's admins) or a value stored in
     # lineage_rows by a scan; neither is a value this endpoint's own
     # caller can set directly, but nothing upstream contains it against
-    # NOTEBOOK_DEFINITIONS_DIR either (2026-08-17 security audit).
+    # NOTEBOOK_DEFINITIONS_DIR either.
     code_file = (REPO_ROOT / definition_path.replace("\\", "/")).resolve()
     try:
         code_file.relative_to(NOTEBOOK_DEFINITIONS_DIR.resolve())
@@ -634,7 +633,7 @@ def _get_notebook_code(qualified_name, max_chars=_NOTEBOOK_CODE_MAX_CHARS):
     }
 
 
-# Roadmap Fase 2 (2026-08-18): the 6 tools that were only ever available in
+# The 6 tools that were only ever available in
 # mcp_server.py's LOCAL (stdio) server -- get_related_elements,
 # get_objects_for_item, get_workspace_roles, get_execution_stats,
 # get_failure_hotspots, get_schedules -- ported here so they're also

@@ -181,7 +181,7 @@ def _fetch_tenant_name(session, settings):
 
 def _fetch_user_profiles(session, settings, emails):
     """Resolves displayName/jobTitle/department for a list of OTHER users
-    by email (2026-08-24, admin panel's "Usuarios por workspace") -- needs
+    by email (admin panel's "Usuarios por workspace") -- needs
     User.ReadBasic.All or User.Read.All delegated, same not-guaranteed-
     pre-consented caveat as _search_tenant_users below (returns {} for any
     email that fails, never raises). One Graph call per email rather than
@@ -226,7 +226,7 @@ def _fetch_user_profiles(session, settings, emails):
 
 
 def _search_tenant_users(session, settings, query, limit=15):
-    """Typeahead search over the tenant's Entra directory (2026-08-18, for
+    """Typeahead search over the tenant's Entra directory (for
     the admin panel's Users tab) -- lets an admin pick a real person
     instead of typing an email blind. Needs User.Read.All or User.
     ReadBasic.All delegated, which -- like Organization.Read.All above --

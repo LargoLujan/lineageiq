@@ -1,5 +1,5 @@
-"""Unit tests for catalog.py's live-Warehouse object-impact search
-(2026-07-24): _get_object_impact should prefer dbo.bronze_item_object_
+"""Unit tests for catalog.py's live-Warehouse object-impact search:
+_get_object_impact should prefer dbo.bronze_item_object_
 lineage_candidates + dbo.bronze_pipeline_object_lineage_candidates when
 lakehouse.web_read_mode == "warehouse", falling back to the pre-built
 object-impact.json otherwise or on any Warehouse failure.

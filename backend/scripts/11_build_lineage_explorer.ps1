@@ -314,9 +314,9 @@ function Test-ExactObjectType {
     return ((Normalize-ObjectType $Value) -in $script:ExactObjectTypes)
 }
 
-# Ejemplo ilustrativo: adapta esta lista a los sistemas de negocio que
-# aparecen en los nombres de workspace/item de tu propio tenant, para
-# normalizarlos a su forma "bonita".
+# Illustrative example: adapt this list to the business systems that
+# appear in the workspace/item names of your own tenant, to normalize
+# them to their "pretty" form.
 $script:FabricTokenWords = @{
     ADVENTUREWORKS = "AdventureWorks"
     BRONZE = "Bronze"

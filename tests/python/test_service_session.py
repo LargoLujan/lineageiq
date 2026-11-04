@@ -1,4 +1,4 @@
-"""Unit tests for lineage_web/service_session.py (2026-07-24): the
+"""Unit tests for lineage_web/service_session.py: the
 persisted delegated "service session" warehouse.py/onelake_data.py fall
 back to when no service principal is configured, so live reads still
 work on a host with nobody signed in right now (e.g. Render) without

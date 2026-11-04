@@ -68,10 +68,10 @@ RUN python docker/gzip_data.py frontend/semantic-lineage
 
 # Everything above needs root (installing apt/odbc packages, pip installs,
 # the build-time gzip pass); the actual running server never does, so it
-# shouldn't have it either (2026-08-17 security audit: this container had
-# no USER directive at all, so the HTTP-serving process ran as root by
-# default -- unnecessary root inside the container even though the
-# container itself isn't privileged). chown covers config/ and wherever
+# shouldn't have it either (security hardening: without a USER
+# directive the HTTP-serving process would run as root by default --
+# unnecessary root inside the container even though the container
+# itself isn't privileged). chown covers config/ and wherever
 # onelake_data.py's runtime cache/admin_settings.json writes land, since
 # both are created under /app at runtime by this same user.
 RUN useradd --no-create-home --uid 1000 appuser && chown -R appuser:appuser /app

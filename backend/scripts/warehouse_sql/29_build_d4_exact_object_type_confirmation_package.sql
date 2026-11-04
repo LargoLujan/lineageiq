@@ -1,6 +1,5 @@
 -- Warehouse-native translation of backend/scripts/29_build_d4_exact_
--- object_type_confirmation_package.ps1 (Phase 2 migration continuation,
--- 2026-07-21). Reads dbo.silver_source_object_type_resolution_queue (15,
+-- object_type_confirmation_package.ps1 (SQL migration). Reads dbo.silver_source_object_type_resolution_queue (15,
 -- status='needs_metadata_review'), dbo.silver_object_read_write_
 -- classification (23, scheduling_readiness='needs_object_type_
 -- confirmation'), dbo.bronze_source_object_type_metadata_gaps,
@@ -12,7 +11,7 @@
 -- ("D4I000001", ...) has no such sort anchor in the original and is
 -- treated as an opaque per-row identifier like other D-package row ids
 -- in this migration; validation matches impact rows by content.
--- Validated 2026-07-21: 0 new bugs. Impact rows whose source_key has no
+-- Validated: 0 new bugs. Impact rows whose source_key has no
 -- match in #pending_source fall back to dbo.silver_object_read_write_
 -- classification's own hardening_priority_score, which already carries a
 -- documented small residual from 22's duplicate-candidate-row

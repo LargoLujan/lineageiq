@@ -1,6 +1,6 @@
 """Static file serving with cached on-the-fly gzip.
 
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion,
+Split out of lineage_web_server.py -- pure code motion,
 no logic changed from the original.
 """
 import gzip

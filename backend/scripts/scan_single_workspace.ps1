@@ -23,7 +23,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# D.0 (2026-07-08 revision pass): see the identical fix/comment in
+# See the identical fix/comment in
 # 99_refresh_lineage_project.ps1's Invoke-LineageStep -- every
 # -ScriptPath "backend/scripts/xxx.ps1" below was resolved against $PWD, not this
 # file's own location.
@@ -37,7 +37,7 @@ $script:StepResults = [System.Collections.Generic.List[object]]::new()
 # file, not derived from anything dynamic, so it only drifts if a step is
 # added or removed here without updating it too.
 # +1 unconditional (69 connections discovery); +1 more in the SQL-catalog
-# block (70 control-framework runtime lineage), both added 2026-07-17.
+# block (70 control-framework runtime lineage).
 $script:TotalSteps = $(if ($SkipSqlCatalog) { 14 } else { 18 }) + $(if ($PublishBronze) { 1 } else { 0 })
 
 function Write-ScanProgress {
@@ -287,9 +287,8 @@ try {
 
     # Graph Map Mode's own index (graph-map-index.json/graph-map-index-
     # objects.json) -- reads object-impact.json/lineage-explorer.json just
-    # rebuilt above, so it must run after both. Was never wired into this
-    # quick-scan before 2026-07-24 (nor into the full refresh), so Graph
-    # Map Mode silently kept showing stale data for a workspace touched
+    # rebuilt above, so it must run after both. Without this step, Graph
+    # Map Mode would silently keep showing stale data for a workspace touched
     # only through this button.
     Invoke-WorkspaceScanStep -Name "Graph Map index rebuild (local)" -ScriptPath "backend/scripts/build_graph_map_index.ps1"
 

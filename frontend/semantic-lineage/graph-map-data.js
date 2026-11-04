@@ -1,9 +1,9 @@
-// Graph Map Mode -- data layer (Fase G.1).
+// Graph Map Mode -- data layer.
 //
 // Deliberately separate from graph-map.js (rendering/interactions/state):
 // this file's only job is fetching the pre-built graph indices
 // backend/scripts/build_graph_map_index.py produces and handing back Cytoscape-ready
-// elements, plus (G.8) the object-level detail for one item on demand.
+// elements, plus the object-level detail for one item on demand.
 //
 // Two files, not one -- data/graph-map-index.json (item level: workspaces +
 // every Fabric item type, a few MB at most) is what the default view loads;
@@ -45,7 +45,7 @@
      * Resolves to { nodes, edges, by_item_id } for every source object
      * (table/view/stored procedure/file/etc.) and its edges into items.
      * Only fetch this when a caller actually needs object-level detail
-     * (G.8's focused graph) -- it's an order of magnitude bigger than the item graph.
+     * (the focused graph) -- it's an order of magnitude bigger than the item graph.
      */
     loadObjectGraph: function () {
       if (!objectGraphPromise) {
@@ -78,7 +78,7 @@
 
     /**
      * Build source->targets and target->sources adjacency maps from a list
-     * of Cytoscape edge elements, once, so selection (G.3) never has to
+     * of Cytoscape edge elements, once, so selection never has to
      * scan the full edge list per click -- it just walks these maps.
      * Returns { outgoing, incoming }, each nodeId -> [{ edgeId, nodeId }].
      */

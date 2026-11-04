@@ -1,6 +1,6 @@
 """Live reads against the Microsoft Fabric Capacity Metrics app's own
 semantic model -- the ONE place real CU (Capacity Unit) consumption
-actually lives. Confirmed 2026-08-24: neither the Fabric REST API nor
+actually lives. Confirmed: neither the Fabric REST API nor
 anything this project already scans (bronze_workspaces, bronze_items, ...)
 ever carries CU usage -- see purview_insights._get_capacity_insight's own
 "CU (mes)" column, which has always shown "No disponible" with a tooltip
@@ -280,7 +280,7 @@ ADDCOLUMNS(
 
 _RECENT_USERS_DAX = "EVALUATE TOPN(50, VALUES('Item History User List'[User]))"
 
-# Placeholder rows this project's own manual exploration (2026-08-24) found
+# Placeholder rows this project's own manual exploration found
 # mixed in among real identities: a genuinely blank user, and the two
 # literal strings the app itself uses for a background/system-triggered
 # operation with nobody to attribute it to. Not real people -- dropped
@@ -364,7 +364,7 @@ def get_overview(config, session=None, top_item_limit=30):
         for row in user_rows:
             clean = _strip_bracket_prefix(row)
             # The bracketed key case doesn't always match the column's own
-            # [Name] property -- confirmed 2026-08-24: this specific query
+            # [Name] property -- confirmed: this specific query
             # comes back as "...[user]" (lowercase) even though INFO.VIEW.
             # COLUMNS() reports the column's Name as "User". DAX/AS column
             # names are inherently case-insensitive; relying on exact JSON

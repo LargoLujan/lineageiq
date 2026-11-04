@@ -45,7 +45,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# D.0 (2026-07-08 revision pass): every child-script path this orchestrator
+# Every child-script path this orchestrator
 # invokes below was a bare "backend/scripts/xxx.ps1" string, resolved against
 # whatever the caller's current directory happened to be rather than this
 # script's own location -- worked only by convention (always invoked from
@@ -68,7 +68,7 @@ $script:TotalSteps = 0
 if ($Mode -in @("read-only-inventory", "full-read-only")) {
     # 20 = the 18 pre-existing steps in that branch (the old value of 17 had
     # drifted by one) + Fabric connections discovery (69) + control-framework
-    # runtime lineage extraction (70), both added 2026-07-17.
+    # runtime lineage extraction (70).
     $script:TotalSteps += 20
 }
 else {
@@ -296,9 +296,8 @@ try {
     Invoke-LineageStep -Name "Reverse impact package rebuild" -ScriptPath "backend/scripts/21_build_reverse_impact_package.ps1"
     # Graph Map Mode's own index (graph-map-index.json/graph-map-index-
     # objects.json) -- reads object-impact.json/lineage-explorer.json just
-    # rebuilt above as input, so it must run after both, not before. Was
-    # never actually wired into this orchestrator before 2026-07-24 despite
-    # the -PublishWebData comment below assuming it was.
+    # rebuilt above as input, so it must run after both, not before. The
+    # -PublishWebData comment below relies on it having run.
     Invoke-LineageStep -Name "Graph Map index rebuild" -ScriptPath "backend/scripts/build_graph_map_index.ps1"
     Invoke-LineageStep -Name "Fabric placeholder/path normalization" -ScriptPath "backend/scripts/62_normalize_fabric_placeholder_paths.ps1"
     Invoke-LineageStep -Name "Evidence hardening queue rebuild" -ScriptPath "backend/scripts/22_build_evidence_hardening_queue.ps1"

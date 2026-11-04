@@ -1,7 +1,7 @@
 """Unit tests for the security-critical logic added to
 backend/scripts/lineage_web_server.py (session expiry, admin/full-scan
 allowlists, device-code flow rate limiting, session revocation) -- see
-docs/102_admin_panel_and_user_auth.md, Fase 1 and Fase 3.
+docs/102_admin_panel_and_user_auth.md.
 
 These test the module's internal functions directly (no HTTP, no MSAL, no
 real Fabric calls) since the module has no dependency-injection seams for
@@ -75,7 +75,7 @@ def test_email_in_allowlist_handles_missing_list_key():
 
 
 # ---------------------------------------------------------------------------
-# Session expiry (Fase 1): idle timeout + absolute lifetime
+# Session expiry: idle timeout + absolute lifetime
 # ---------------------------------------------------------------------------
 
 def test_get_session_returns_live_session():
@@ -157,7 +157,7 @@ def test_revoke_sessions_for_email_handles_empty_email():
 
 
 # ---------------------------------------------------------------------------
-# Session history (2026-08-18, admin panel Sessions tab: active + history)
+# Session history (admin panel Sessions tab: active + history)
 # ---------------------------------------------------------------------------
 
 def test_revoke_sessions_for_email_records_history_with_correct_reason():
@@ -213,7 +213,7 @@ def test_session_history_is_capped_and_newest_first():
 
 
 # ---------------------------------------------------------------------------
-# Device-code flow rate limiting / stale-flow pruning (Fase 1)
+# Device-code flow rate limiting / stale-flow pruning
 # ---------------------------------------------------------------------------
 
 def _make_pending_flow(client_ip="1.2.3.4", age_seconds=0):
@@ -270,7 +270,7 @@ def test_device_flows_from_a_different_ip_are_not_rate_limited_together():
 
 
 # ---------------------------------------------------------------------------
-# Static API keys (Tanda 5, E.0): machine-to-machine auth for automation
+# Static API keys: machine-to-machine auth for automation
 # callers (a Fabric pipeline's Web activity) that can't do an interactive
 # device-code sign-in.
 # ---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ def test_migrate_api_keys_is_a_noop_for_already_hashed_entries():
 
 
 # ---------------------------------------------------------------------------
-# API key last_used_at (2026-08-18, admin-panel completeness pass):
+# API key last_used_at:
 # in-memory only, updated by _valid_api_key on a real match. Deliberately
 # NOT persisted to admin_settings.json -- see state.py's own comment.
 # ---------------------------------------------------------------------------
@@ -364,7 +364,7 @@ def test_valid_api_key_does_not_record_anything_for_an_expired_key():
 
 
 # ---------------------------------------------------------------------------
-# API key expires_at / scope (2026-08-18, admin-panel completeness pass)
+# API key expires_at / scope
 # ---------------------------------------------------------------------------
 
 def test_valid_api_key_name_accepts_a_key_with_no_expiry():
@@ -410,7 +410,7 @@ def test_valid_api_key_returns_none_none_for_an_expired_key():
 
 
 def test_valid_api_key_resolves_scope_from_the_matched_entry_not_a_by_name_rescan():
-    # 2026-08-18 code review finding: two entries can share a name (the
+    # Two entries can share a name (the
     # duplicate-name check at creation is a lock-free read-modify-write, so
     # a race can still produce this). Scope MUST come from whichever entry
     # the raw key's hash actually matched, never from a separate by-name
@@ -424,7 +424,7 @@ def test_valid_api_key_resolves_scope_from_the_matched_entry_not_a_by_name_resca
 
 
 # ---------------------------------------------------------------------------
-# Rate limiting (Tanda 5, E.3): per-client-IP fixed window over /api/*.
+# Rate limiting: per-client-IP fixed window over /api/*.
 # ---------------------------------------------------------------------------
 
 def test_rate_limit_allows_requests_under_the_cap():
@@ -464,7 +464,7 @@ def test_rate_limit_window_resets_after_it_expires():
 
 
 # ---------------------------------------------------------------------------
-# Request metrics (Tanda 5, E.3): in-memory counts by (method, path, status).
+# Request metrics: in-memory counts by (method, path, status).
 # ---------------------------------------------------------------------------
 
 def test_record_request_accumulates_counts_for_the_same_key():
@@ -480,7 +480,7 @@ def test_record_request_accumulates_counts_for_the_same_key():
 
 
 # ---------------------------------------------------------------------------
-# _list_sessions_for_admin (2026-08-18 admin-panel audit finding):
+# _list_sessions_for_admin:
 # is_fabric_tenant_admin was already computed and stored on every session
 # at sign-in, but never actually included in this function's own returned
 # row -- the admin panel's Sessions tab had no way to show it. _fetch_my_

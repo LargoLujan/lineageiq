@@ -1,6 +1,6 @@
 """Admin settings: load/save/merge config/admin_settings.json.
 
-Split out of lineage_web_server.py (D.3, 2026-07-08) -- pure code motion,
+Split out of lineage_web_server.py -- pure code motion,
 no logic changed from the original.
 """
 import json
@@ -12,7 +12,7 @@ from .paths import ADMIN_SETTINGS_PATH, LAKEHOUSE_TARGET_PATH
 from .utils import _hash_api_key
 
 # Guards the actual file I/O in _load_admin_settings/_write_admin_settings
-# (2026-08-26 security audit finding: the write used to be a direct
+# (security hardening: the write used to be a direct
 # open(..., "w"), so a crash/restart mid-write could leave a torn/corrupt
 # JSON file, and two threads writing at once could interleave). Does NOT
 # cover the full read-mutate-write span of each handler.py route (that
@@ -23,7 +23,7 @@ from .utils import _hash_api_key
 # breaks the whole admin panel until someone repairs the file by hand.
 _settings_io_lock = threading.Lock()
 
-# Added 2026-08-11: lets a deploy seed admin_emails/full_scan_emails from
+# Lets a deploy seed admin_emails/full_scan_emails from
 # the hosting platform's own env-var secret store (Render's Environment
 # tab) instead of a real name/email list ever being committed to a git
 # repo -- same "env var, never a file" convention this project already
@@ -78,8 +78,8 @@ def _seed_emails_from_env(settings):
 
 
 def _migrate_users_from_flat_lists(settings):
-    """One-time upgrade for any real installation from before Fase 3
-    (2026-08-24): admin_emails/full_scan_emails existed as flat lists long
+    """One-time upgrade for any real installation from before the "users"
+    table: admin_emails/full_scan_emails existed as flat lists long
     before the "Usuarios permitidos" table did, and _merge_admin_settings
     has no way to know a brand-new "users" key should be backfilled from
     them instead of starting empty -- without this, upgrading silently
@@ -119,7 +119,7 @@ def _migrate_users_from_flat_lists(settings):
 
 def _migrate_api_keys(settings):
     """One-time upgrade of any legacy {"key": <raw>} entry (created before
-    2026-08-17) to {"key_hash", "key_preview"} -- see auth.py's
+    API keys were hashed) to {"key_hash", "key_preview"} -- see auth.py's
     _valid_api_key_name. A key already in use keeps working: the raw value
     its owner already has still hashes to the same key_hash. Returns
     (settings, changed) so the caller only re-writes the file when there
@@ -189,7 +189,7 @@ def _reserved_secret_env_var_name(settings):
     itself admin-configurable, not a fixed string.
 
     A data-source password_ref / notification smtp_password_ref must never
-    be allowed to equal this (2026-08-26 security audit): those two are
+    be allowed to equal this: those two are
     resolved server-side and then handed to wherever the SAME admin points
     the "Probar conexión"/"Enviar prueba" button -- an arbitrary SQL host
     or SMTP server the admin typed into the same form. Without this check,
@@ -221,13 +221,13 @@ def _mirror_lakehouse_target_config(settings):
         "lakehouse_id": lakehouse.get("lakehouse_id", ""),
         "capacity_name": lakehouse.get("capacity_name", ""),
         "sql_endpoint_connection_string": lakehouse.get("sql_endpoint_connection_string", ""),
-        # Added 2026-07-20 alongside 67_upload_bronze_to_warehouse.ps1 --
+        # Added alongside 67_upload_bronze_to_warehouse.ps1 --
         # not read by any of the five scripts this mirror originally
         # existed for, kept here anyway so a Lakehouse/Warehouse pick made
         # in the admin panel is visible to anything reading this file
         # directly, not just admin_settings.json.
         "item_type": lakehouse.get("item_type", "Lakehouse"),
-        # Added 2026-07-21 alongside the service-principal (permanent token)
+        # Added alongside the service-principal (permanent token)
         # auth mode -- 67_upload_bronze_to_warehouse.ps1 reads these three
         # straight off this mirrored file (Set-StrictMode requires the keys
         # to always exist, even empty, so a config saved before this field

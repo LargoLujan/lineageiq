@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the unified nodes+edges index for Graph Map Mode (Fase G.1).
+"""Build the unified nodes+edges index for Graph Map Mode.
 
 Combines the item-level catalog (index/items.csv, index/workspaces.csv,
 index/dependencies.csv) with the object-level impact index
@@ -48,12 +48,12 @@ DATA_DIR = REPO_ROOT / "frontend" / "semantic-lineage" / "data"
 # Split in two so Graph Map Mode's default view (item level) is a small,
 # fast fetch -- the object level (tables/views/columns, once every source
 # object is included) is an order of magnitude bigger and only needed when a user actually expands into "focused graph" detail
-# for one specific node (G.8), not on every page load.
+# for one specific node, not on every page load.
 ITEM_OUTPUT_PATH = DATA_DIR / "graph-map-index.json"
 OBJECT_OUTPUT_PATH = DATA_DIR / "graph-map-index-objects.json"
 
 # item_type -> layer, for the color-by-layer legend Graph Map Mode's visual
-# polish (G.9) will use. Lakehouse/Warehouse are split further by name
+# polish will use. Lakehouse/Warehouse are split further by name
 # (bronze/silver/gold) below, matching the same heuristic already used in
 # backend/scripts/52_build_notebook_super_lineage.py's lakehouse_tier().
 ITEM_TYPE_LAYER = {
@@ -108,7 +108,7 @@ RELATIONSHIP_LABELS: dict[str, dict[str, str]] = {
     "refreshes": {"es": "Actualiza", "en": "Refreshes"},
     "serves_report": {"es": "Sirve al informe", "en": "Serves report"},
     "uses_model": {"es": "Usa el modelo", "en": "Uses model"},
-    # H.6 (2026-07-08 revision pass): an item that reads/writes a table
+    # An item that reads/writes a table
     # living in a Lakehouse/Warehouse doesn't always get a captured direct
     # Fabric dependency row for that specific relationship (e.g. it goes
     # through a SQL analytics endpoint the item->item dependency crawl
@@ -118,7 +118,7 @@ RELATIONSHIP_LABELS: dict[str, dict[str, str]] = {
     # explicit Fabric-level dependency row exists for it.
     "implied_data_usage": {"es": "Usa datos de (inferido)", "en": "Uses data from (inferred)"},
     "unknown": {"es": "Relación desconocida", "en": "Unknown relation"},
-    # G/portal-1 (2026-07-09): one edge per (external origin, consuming item)
+    # One edge per (external origin, consuming item)
     # pair -- see build_external_origin_graph.
     "external_feed": {"es": "Alimenta desde el exterior", "en": "Feeds from external source"},
 }
@@ -137,7 +137,7 @@ FABRIC_INTERNAL_SOURCE_TYPES = {
     "UsageMetricsDataConnector",
 }
 
-# G/portal-1 originally hardcoded a 4-value whitelist (SQL/ExternalAPI/
+# This originally hardcoded a 4-value whitelist (SQL/ExternalAPI/
 # File/NotebookStaticData) -- real-world data has dozens of distinct
 # source_type values (e.g. Dataverse shows up as "Cds"/"CommonDataService",
 # never in that list, so reports reading from it rendered with no origin
@@ -153,7 +153,7 @@ FABRIC_INTERNAL_SOURCE_TYPES = {
 def is_external_origin_source_type(source_type: str) -> bool:
     return bool(source_type) and source_type not in FABRIC_INTERNAL_SOURCE_TYPES and source_type not in ITEM_TYPE_LAYER
 
-# H.4: node size (px) reflects real magnitude, not a flat 22px for
+# Node size (px) reflects real magnitude, not a flat 22px for
 # everything -- workspace > lakehouse/warehouse/SQLEndpoint (sized by how
 # many source objects they actually contain) > every other item (fixed) >
 # a source object/table (sized a little by column count). Ranges are
@@ -255,7 +255,7 @@ def build_workspace_nodes(
     return nodes, known_ids, workspace_technical_id_by_name
 
 
-# Purview-inspired "health/freshness" signal (Tanda A, 2026-07-09): a real
+# Purview-inspired "health/freshness" signal: a real
 # item is worth flagging in the graph itself if its last run failed, or if
 # it simply hasn't run in a long time -- both already computable from data
 # 06_discover_executions.ps1/07_optimize_orchestration.ps1 already scan and
@@ -327,7 +327,7 @@ def health_fields_for(qualified_name: str, execution_health: dict[str, dict[str,
     }
 
 
-# Tanda C (Purview-inspired, 2026-07-09): config/admin_settings.json's
+# config/admin_settings.json's
 # certified_items (admin panel's "Certificaciones" tab) -- a human-curated
 # "this is the trusted/official source" badge, indexed by qualified_name
 # once here rather than scanned per node.
@@ -340,7 +340,7 @@ def build_certification_index(certified_items: list[dict[str, Any]]) -> dict[str
     return index
 
 
-# Roadmap Fase 2 (2026-08-17): admin_settings.json's tags -- same
+# admin_settings.json's tags -- same
 # admin-curated indexing pattern as build_certification_index just above,
 # except a node can have several, so this groups by qualified_name into a
 # list instead of keeping the last entry.
@@ -367,14 +367,14 @@ def build_item_nodes(
     certification_index: dict[str, dict[str, Any]],
     tag_index: dict[str, list[str]],
 ) -> tuple[list[dict[str, Any]], set[str]]:
-    # H.5 (2026-07-08 revision pass): re-enabling compound (parent/child)
+    # Re-enabling compound (parent/child)
     # nesting -- items now carry `parent: workspace::<name>`, so Cytoscape
     # visually clusters each workspace's items together, matching the
     # "gravitational" clustering-by-real-hierarchy the map is meant to
-    # show. Tried this in G.2 and reverted after cytoscape-dagre threw
+    # show. Tried this earlier and reverted after cytoscape-dagre threw
     # "Not possible to find intersection inside of the rectangle" on
     # compound nesting -- but that was dagre's fragility specifically,
-    # verified since abandoned in favor of `fcose` (G.2) for the very
+    # verified since abandoned in favor of `fcose` for the very
     # reason that dagre can't handle a real tenant's disconnected-graph
     # shape at all. fcose supports compound graphs natively (part of why
     # it was picked); re-verified live before shipping this.
@@ -399,8 +399,8 @@ def build_item_nodes(
             "default_identity": row.get("default_identity", ""),
             # Both ids together let the client build a real
             # https://app.fabric.microsoft.com/groups/{workspace_id}/items/{item_id}
-            # deep link (G.5's "abrir en Fabric" button) -- confirmed in an
-            # earlier session that Fabric has no dedicated web-URL field of
+            # deep link (the "open in Fabric" button) -- confirmed earlier
+            # that Fabric has no dedicated web-URL field of
             # its own, this generic type-agnostic pattern is what's used.
             "technical_id": row.get("technical_id", ""),
             "workspace_technical_id": workspace_technical_id_by_name.get(workspace_name, ""),
@@ -470,7 +470,7 @@ def build_object_graph(
         source_type = obj.get("source_type", "")
         columns = obj.get("columns", []) or []
         column_count = len(columns)
-        # Tanda B (2026-07-09): a simplified, name-pattern-based equivalent
+        # A simplified, name-pattern-based equivalent
         # of Purview's automatic classifiers -- see sensitivity_classifier.py
         # for the real caveats (name heuristics, not content inspection).
         sensitivity_categories = sorted(classify_columns(c.get("column_name", "") for c in columns))
@@ -556,11 +556,11 @@ def _origin_display_name(source_type: str, server: str, database: str) -> str:
     return server or database or source_type
 
 
-# G/portal-1 (2026-07-09): "materialize non-Fabric origins as their own
+# "materialize non-Fabric origins as their own
 # object" -- requested explicitly so semantic models/notebooks/copyjobs that
 # read from a SQL Server outside Fabric, a SharePoint file, or an external
 # API render as visibly connected to something, instead of that dependency
-# being invisible until someone drills into G.8's per-item object detail.
+# being invisible until someone drills into the per-item object detail.
 # Deliberately NOT one node per source object (that's what the much bigger
 # object-level graph_map_index-objects.json already is, with tens of
 # thousands of direct edges on a large tenant -- too heavy to add to the
@@ -666,7 +666,7 @@ def compute_workspace_item_counts(item_rows: list[dict[str, str]]) -> dict[str, 
 
 
 def compute_storage_table_counts(impact_payload: dict[str, Any] | None) -> dict[str, int]:
-    # H.4: how many source objects (tables/views/SPs) does each
+    # How many source objects (tables/views/SPs) does each
     # Lakehouse/Warehouse/SQLEndpoint really contain -- object-impact.json
     # already resolved this per-object via a live SQL-endpoint catalog
     # query (see build_object_graph's catalog_evidence), grouping by that
@@ -687,13 +687,13 @@ def build_implied_storage_edges(
     existing_pairs: set[tuple[str, str]],
     start_index: int,
 ) -> list[dict[str, Any]]:
-    # H.6: an item reading/writing a table doesn't always have a captured
+    # An item reading/writing a table doesn't always have a captured
     # item-to-item Fabric dependency row for the Lakehouse/Warehouse that
     # table actually lives in (e.g. it goes through the SQL analytics
     # endpoint, which the item-dependency crawl doesn't always resolve
     # back to the item using it) -- real cross-workspace depth ("a table
     # in one workspace's lakehouse used by a notebook in another
-    # workspace") was otherwise only reachable by drilling into G.8's
+    # workspace") was otherwise only reachable by drilling into the
     # focused view one item at a time. Adds one edge per (item, owning
     # storage item) pair actually observed in the object catalog, deduped
     # against pairs already covered by a real dependency edge in either
@@ -746,7 +746,7 @@ def count_by(items: list[dict[str, Any]], data_key: str, field: str) -> dict[str
 
 
 def build_by_item_index(object_edges: list[dict[str, Any]]) -> dict[str, list[int]]:
-    # For G.8's focused graph: given a selected item's qualified_name, look
+    # For the focused graph: given a selected item's qualified_name, look
     # up which object-level edges touch it in O(1) instead of a linear scan
     # over tens of thousands of edges on every click.
     index: dict[str, list[int]] = {}
@@ -789,7 +789,7 @@ def main() -> None:
     )
     item_edges = build_item_edges(dependency_rows, known_item_ids)
 
-    # H.6: fold in implied item->owning-storage-item edges (see
+    # Fold in implied item->owning-storage-item edges (see
     # build_implied_storage_edges) before computing is_connected/summary
     # counts below, so they're indistinguishable from captured dependency
     # edges everywhere except their own `relationship_type`/`is_implied`
@@ -816,8 +816,8 @@ def main() -> None:
     # in its own row, and with hundreds of singleton components that blows
     # out one axis until real nodes render sub-pixel. `is_connected` lets the client render a clean
     # layout by default (connected nodes only) while keeping every node in
-    # the one file for G.4's search/index panel to still find and center
-    # on any of them. H.5: every workspace node is now forced `is_connected`
+    # the one file for the search/index panel to still find and center
+    # on any of them. Every workspace node is forced `is_connected`
     # regardless of its own (nonexistent) edges -- items nest inside it as
     # a compound parent, so it must always be present for that to render,
     # not just when something happens to link to it directly.

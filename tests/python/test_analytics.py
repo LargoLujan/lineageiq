@@ -1,6 +1,5 @@
-"""Unit tests for backend/scripts/lineage_web/analytics.py (Fase 6,
-2026-08-24, lineage-usage analytics behind the admin panel's "Analíticas"
-tab). record_usage_event/get_usage_analytics both go through
+"""Unit tests for backend/scripts/lineage_web/analytics.py (lineage-usage
+analytics behind the admin panel's "Analíticas" tab). record_usage_event/get_usage_analytics both go through
 warehouse.append_bronze_rows/query_bronze_table -- mocked here rather than
 hitting a real Warehouse, same pattern as test_notifications.py's smtplib/
 urllib mocks.

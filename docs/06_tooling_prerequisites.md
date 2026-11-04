@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phases 1 and later need controlled access to Microsoft Fabric, Azure DevOps, SharePoint, and OneLake. Before discovery starts, run a local tooling preflight to confirm which tools and existing project patterns are available.
+The discovery scripts need controlled access to Microsoft Fabric. Before discovery starts, run a local tooling preflight to confirm which tools and existing project patterns are available.
 
 ## Required Access Paths
 
@@ -20,18 +20,15 @@ Recommended authentication:
 - Azure CLI token through `AzureCliCredential`.
 - Scope: `https://api.fabric.microsoft.com/.default`.
 
-Optional reference project: if you already maintain your own Fabric
-deployment tooling, point `00_preflight_tools.ps1` at it with
-`-ReferenceProjectPath` (or the `FABRIC_LINEAGE_REFERENCE_PROJECT`
-environment variable) and reuse its REST client, authentication and
-workspace-listing code as reference.
+The discovery scripts accept `-AuthMethod` (`auto`, `azure-cli` or `fabric-cli`). `auto` tries the Azure CLI first and then the Fabric CLI.
+
+Optional reference project: if you already maintain your own Fabric deployment tooling, point `backend/scripts/00_preflight_tools.ps1` at it with `-ReferenceProjectPath` (or the `FABRIC_LINEAGE_REFERENCE_PROJECT` environment variable) and reuse its REST client, authentication and workspace-listing code as reference. The preflight only checks that the path exists.
 
 ### Azure CLI
 
 Needed for:
 - Fabric REST authentication.
-- Azure DevOps Microsoft Entra token.
-- OneLake storage token.
+- OneLake storage tokens used by the upload and publish scripts.
 
 Expected command:
 
@@ -42,29 +39,14 @@ az login --tenant <tenant-id>
 or:
 
 ```powershell
-az login --use-device-code --allow-no-subscriptions
+az login --use-device-code --tenant <tenant-id> --allow-no-subscriptions
 ```
 
-Current local finding:
-- `az.exe` was not found in PATH during initial preflight.
-- Azure CLI was installed later through Python user packages because the MSI requires administrator rights.
-- User-level command path:
-
-```text
-C:\Users\<username>\AppData\Roaming\Python\Python312\Scripts\az.bat
-```
-
-- The user PATH was updated with:
-
-```text
-C:\Users\<username>\AppData\Roaming\Python\Python312\Scripts
-```
-
-New terminals should resolve `az` directly. Existing sessions may need PATH refresh or explicit `az.bat`.
+If you cannot install the Azure CLI MSI because it needs administrator rights, a per-user install through Python (`pip install --user azure-cli`) is an alternative. Make sure the scripts directory of that Python install is on your `PATH`, and open a new terminal after changing it.
 
 ### Fabric CLI
 
-Useful for Fabric-specific actions where REST is not enough.
+Useful for Fabric-specific actions where REST is not enough. The tenant installer in the admin panel uses it.
 
 Expected command:
 
@@ -72,58 +54,28 @@ Expected command:
 fab auth login --tenant <tenant-id>
 ```
 
-Current local finding:
-- `fab.exe` was found at `C:\Users\<username>\AppData\Local\Programs\Python\Python312\Scripts\fab.exe`.
-- `fabric.exe` was not found in PATH.
-- `fab auth status` confirmed an active Fabric CLI session during setup.
-
 Container note:
 - User-mode `fab auth login` uses an interactive browser flow.
-- In the Linux container, that flow failed with `Unsupported method POST`.
-- For Phase 1 read-only discovery inside the container, prefer Azure CLI device-code login and direct Fabric REST:
+- In the Linux container, that flow can fail with `Unsupported method POST`.
+- For read-only discovery inside the container, prefer Azure CLI device-code login and direct Fabric REST:
 
 ```powershell
 az login --use-device-code --tenant <tenant-id> --allow-no-subscriptions
-pwsh -NoLogo -File scripts/01_discover_workspaces.ps1 -AuthMethod azure-cli
+pwsh -NoLogo -File backend/scripts/01_discover_workspaces.ps1 -AuthMethod azure-cli
 ```
 
-- Service principal Fabric CLI login remains possible only after the SPN and its permissions are explicitly approved.
+- A service principal login for the Fabric CLI is possible only after the service principal and its permissions are explicitly approved. See [08](08_container_runtime.md).
 
-### Azure DevOps REST
+### Other evidence sources
 
-Main technical source for repositories, notebooks, pipeline definitions, deployment scripts, and evidence.
-
-Preferred token:
-
-```powershell
-az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv
-```
-
-Fallback:
-- `AZURE_DEVOPS_PAT`, only with minimal scope and never stored in Git.
-
-### SharePoint
-
-Secondary source for documentation, mapping files, architecture notes, and runbooks.
-
-Use connector or Microsoft Graph only after confirming the target site/library.
-
-### Local OneLake
-
-Supporting source for local folder and path evidence when available.
-
-Use it to validate:
-- Lakehouse paths.
-- Tables and files.
-- Shortcuts.
-- Local synced or mounted workspace content.
+Azure DevOps, SharePoint and a locally synced OneLake folder can serve as extra evidence when a lineage question cannot be answered from the Fabric APIs. The shipped scripts do not call Azure DevOps or SharePoint directly. In the lineage build, SharePoint and manual files are only inputs for resolving object types (see the `index/*.example.csv` templates).
 
 ## Preflight Script
 
 Run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\00_preflight_tools.ps1
+pwsh -NoLogo -File backend/scripts/00_preflight_tools.ps1
 ```
 
 Output:
@@ -132,11 +84,11 @@ Output:
 index/tooling_inventory.csv
 ```
 
-The script does not authenticate and does not query external systems.
+The script checks which tools are installed and reports their paths. It does not authenticate and does not query external systems.
 
 ## Safety Rules
 
 - Do not print secrets.
 - Do not read `.env` secret values.
-- Do not call Fabric APIs until the user starts Phase 1.
-- Do not call Azure DevOps or SharePoint until the relevant source step is approved.
+- Do not call Fabric APIs until you intend to run discovery.
+- Authentication for other sources should be approved per source before use.

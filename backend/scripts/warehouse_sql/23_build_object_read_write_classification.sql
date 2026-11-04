@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/23_build_object_read_
--- write_classification.ps1 (Phase 2 migration continuation, 2026-07-21).
+-- write_classification.ps1 (SQL migration).
 -- Reads dbo.bronze_object_impact_index, plus THIS migration's own
 -- already-validated dbo.silver_evidence_hardening_queue (22) and dbo.
 -- silver_ideal_execution_plan (13) instead of their CSVs.

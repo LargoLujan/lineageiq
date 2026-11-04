@@ -1,6 +1,5 @@
 -- Warehouse-native translation of backend/scripts/32_build_d7_
--- orchestration_review_promotion_package.ps1 (Phase 2 migration
--- continuation, 2026-07-21). Reads dbo.silver_orchestration_v2_plan (24,
+-- orchestration_review_promotion_package.ps1 (SQL migration). Reads dbo.silver_orchestration_v2_plan (24,
 -- v2_status='needs_orchestration_review'), dbo.silver_orchestration_v2_
 -- waves (24), dbo.silver_likely_conflict_cleanup_queue (25, phase D7),
 -- dbo.silver_d6_failure_duration_queue (31), dbo.silver_schedule_review_
@@ -13,7 +12,7 @@
 -- to non-governance rows. d7_wave_id is deterministic (wave index itself,
 -- not a sequence). Only deployment_pipelines' multi-value aggregation
 -- order is opaque (no file-row-order available), tie-broken via LOWER().
--- Validated 2026-07-21: 0 new bugs. Wave promotion queue (including all
+-- Validated: 0 new bugs. Wave promotion queue (including all
 -- STRING_AGG aggregates) matched 100% exactly. Remaining diffs are the
 -- already-documented "<sql-server-host>"-class casing collision (8
 -- rows) and the expected opaque-ID mismatch on d6_blocker_id (many rows,

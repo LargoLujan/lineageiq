@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/47_build_deep_
--- evidence_sweep_plan.ps1 (Phase 2 migration continuation, 2026-07-21).
+-- evidence_sweep_plan.ps1 (SQL migration).
 -- Reads dbo.bronze_items, dbo.bronze_dependencies, dbo.silver_object_
 -- read_write_classification (23), dbo.bronze_semantic_model_view_
 -- candidates, dbo.bronze_semantic_model_definition_gaps, dbo.bronze_
@@ -25,7 +25,7 @@
 -- source (built from a plain hashtable's .Keys enumeration order in the
 -- original, never sorted) -- tie-broken by LOWER() here per this
 -- migration's established convention.
--- Real bug found and fixed during validation (2026-07-21): Get-FieldValue
+-- Real bug found and fixed during validation: Get-FieldValue
 -- -Names @("A","B") only falls back to B when A's PROPERTY is missing or
 -- null -- for CSV-sourced rows every column always exists (blank string,
 -- never null), so whenever BOTH A and B are real columns of the SAME
@@ -38,7 +38,7 @@
 -- row with schema_name='' but metadata_schema_name='dbo' matched PS's
 -- blank-schema query key exactly, but my ISNULL/NULLIF version silently
 -- substituted 'dbo' and missed the match). Fixed to plain ISNULL(a,'').
--- Validated 2026-07-21 (post-fix): notebook/semantic/sql-metadata queues
+-- Validated (post-fix): notebook/semantic/sql-metadata queues
 -- all 0 missing/extra vs the fresh local baseline; metadata_status and
 -- existing_metadata_types diffs went to 0 after the fix above. Remaining
 -- diffs are the session's already-documented classes: opaque D1/D3/D8 ID

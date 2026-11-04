@@ -1,5 +1,5 @@
 """Unit tests for backend/scripts/lineage_web/fabric_api.py's
-_fetch_all_tenant_workspaces (added 2026-07-10, alongside the "let a real
+_fetch_all_tenant_workspaces (added alongside the "let a real
 Fabric tenant admin's full scan cover literally everything" change to
 _start_full_scan). Its sibling functions (_fetch_my_workspaces,
 _fetch_lakehouses_in_workspace) are simple single-call wrappers verified

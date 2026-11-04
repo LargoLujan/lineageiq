@@ -1,5 +1,5 @@
 -- Warehouse-native translation of backend/scripts/07_optimize_orchestration.ps1
--- (Phase 2 migration, 2026-07-21). Reads dbo.bronze_dependencies,
+-- (SQL migration). Reads dbo.bronze_dependencies,
 -- dbo.bronze_executions, dbo.bronze_execution_duration_by_item. No
 -- recursion needed -- thresholds, aggregation, and a bounded (top-8 per
 -- workspace) pairwise self-join for parallel candidates. The human-

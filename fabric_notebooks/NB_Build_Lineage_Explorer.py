@@ -1,39 +1,39 @@
 # NB_Build_Lineage_Explorer
 #
-# Fuente para un notebook Python de Fabric -- octavo paso del pipeline de
-# descubrimiento nativo, después de NB_Discover_Executions (ver docs/105_
-# fabric_native_discovery_setup.md). Cada bloque "# %%" es una celda --
-# pégalas en orden.
+# Source for a Fabric Python notebook -- eighth step of the native
+# discovery pipeline, after NB_Discover_Executions (see docs/105_
+# fabric_native_discovery_setup.md). Each "# %%" block is a cell --
+# paste them in order.
 #
-# Puerto de backend/scripts/11_build_lineage_explorer_fast.py: el
-# ALGORITMO completo (construcción de nodos, resolución de tipo de objeto,
-# dedupe, resolución de placeholders {LH_x}/tables/schema/objeto, todo) es
-# EXACTAMENTE el mismo, sin reescribir una sola línea de esa lógica -- lo
-# único que cambia es la capa de E/S: read_csv() ahora consulta una tabla
-# bronze del Warehouse en vez de leer un CSV local (INPUT_TABLE_BY_ARG más
-# abajo), y write_json_atomic() escribe a OneLake (Files/generated/
-# lineage-explorer.json) en vez de al disco local. Ver el propio docstring
-# de esas dos funciones más abajo.
+# Port of backend/scripts/11_build_lineage_explorer_fast.py: the complete
+# ALGORITHM (node construction, object type resolution, dedupe, resolution
+# of {LH_x}/tables/schema/object placeholders, everything) is EXACTLY the
+# same, without rewriting a single line of that logic -- the only thing
+# that changes is the I/O layer: read_csv() now queries a bronze table of
+# the Warehouse instead of reading a local CSV (INPUT_TABLE_BY_ARG further
+# down), and write_json_atomic() writes to OneLake (Files/generated/
+# lineage-explorer.json) instead of local disk. See the docstring of those
+# two functions below.
 #
-# La mayoría de las ~30 entradas que el script original acepta todavía NO
-# tienen una tabla bronze equivalente (linaje de notebooks parseado,
-# overrides manuales, catálogo de columnas, pipelines de despliegue,
-# críticas/failure-hotspots de orquestación...) -- exactamente igual que
-# cuando esos CSV locales faltaban, read_csv() degrada a lista vacía sin
-# romper nada. El grafo se construye igual, sin esa capa de enriquecimiento
-# todavía (fase 2, pendiente). Las 9 tablas bronze que SÍ existen hoy
+# Most of the ~30 inputs the original script accepts do NOT have an
+# equivalent bronze table yet (parsed notebook lineage, manual overrides,
+# column catalog, deployment pipelines, orchestration critiques/
+# failure-hotspots...) -- exactly as when those local CSVs were missing,
+# read_csv() degrades to an empty list without breaking anything. The graph
+# is built the same way, just without that enrichment layer for now
+# (pending). The 9 bronze tables that DO exist today
 # (workspaces, items, dependencies, item_object_lineage_candidates,
 # pipeline_object_lineage_candidates, pipeline_activity_lineage,
 # semantic_model_view_candidates, source_object_type_metadata_evidence/
-# gaps) más bronze_executions (NB_Discover_Executions, el paso anterior)
-# ya cubren el núcleo real del grafo: workspaces, items, dependencias,
-# linaje item->objeto externo, linaje de pipelines, y resolución de tipo
-# de objeto.
+# gaps) plus bronze_executions (NB_Discover_Executions, the previous step)
+# already cover the real core of the graph: workspaces, items, dependencies,
+# item->external object lineage, pipeline lineage, and object type
+# resolution.
 #
-# Self-contained a propósito, mismo criterio que los notebooks anteriores.
+# Self-contained on purpose, same criterion as the previous notebooks.
 
 # %% [markdown]
-# ## Configuración
+# ## Configuration
 
 # %%
 try:
@@ -60,26 +60,26 @@ from pathlib import Path
 
 SP_TENANT_ID = "<tenant-id>"
 SP_CLIENT_ID = "<client-id>"
-WAREHOUSE_SQL_ENDPOINT = "<tu-warehouse>.datawarehouse.fabric.microsoft.com"
-WAREHOUSE_DATABASE_NAME = "<NombreDelWarehouse>"
+WAREHOUSE_SQL_ENDPOINT = "<your-warehouse>.datawarehouse.fabric.microsoft.com"
+WAREHOUSE_DATABASE_NAME = "<WarehouseName>"
 
-# Lakehouse destino de los 5 JSON grandes -- mismo elemento que admin_
+# Target Lakehouse for the 5 large JSON files -- same item as admin_
 # settings.json -> onelake_data.workspace_name / lakehouse_name (backend/
-# scripts/72_publish_web_data_to_onelake.py ya publica ahí desde una
-# máquina local; este notebook publica lo mismo desde dentro de Fabric).
-# Reutilizado también para leer el secreto de la propia cuenta de
-# servicio (SP_SECRET_ONELAKE_PATH más abajo) -- ya no se lee de Key
-# Vault (bloqueado) NI de un parámetro del pipeline (probado 2026-08-12:
-# filtró el valor en texto plano al fallar la conversión de tipo -- nunca
-# más por ahí).
-ONELAKE_WORKSPACE_NAME = "<tu-workspace>"
-ONELAKE_LAKEHOUSE_NAME = "<tu-lakehouse-onelake>"
+# scripts/72_publish_web_data_to_onelake.py already publishes there from a
+# local machine; this notebook publishes the same thing from inside Fabric).
+# Also reused to read the service principal's own secret
+# (SP_SECRET_ONELAKE_PATH further down) -- it is no longer read from Key
+# Vault (blocked) NOR from a pipeline parameter (tested 2026-08-12:
+# it leaked the value in plain text when the type conversion failed -- never
+# again that way).
+ONELAKE_WORKSPACE_NAME = "<your-workspace>"
+ONELAKE_LAKEHOUSE_NAME = "<your-onelake-lakehouse>"
 SP_SECRET_ONELAKE_PATH = "Files/_private/sp-client-secret.txt"
 
-# Nombre de tabla bronze del Warehouse para cada entrada lógica que
-# 11_build_lineage_explorer_fast.py aceptaba como ruta de fichero -- "" =
-# todavía sin tabla equivalente (degrada a lista vacía, igual que un CSV
-# ausente en el script original). Ver el docstring de este notebook.
+# Name of the Warehouse bronze table for each logical input that
+# 11_build_lineage_explorer_fast.py accepted as a file path -- "" =
+# no equivalent table yet (degrades to an empty list, same as a missing
+# CSV in the original script). See this notebook's header comment.
 INPUT_TABLE_BY_ARG = {
     "workspaces_path": "bronze_workspaces",
     "items_path": "bronze_items",
@@ -114,7 +114,7 @@ INPUT_TABLE_BY_ARG = {
 }
 
 # %% [markdown]
-# ## Autenticación, Warehouse y OneLake (mismo patrón que los notebooks anteriores)
+# ## Authentication, Warehouse and OneLake (same pattern as the previous notebooks)
 
 # %%
 def get_client_secret():
@@ -169,13 +169,13 @@ def connect_warehouse():
     return pyodbc.connect(conn_str, attrs_before={1256: token_struct(db_token)}, timeout=30)
 
 
-# Un único connect reutilizado por todas las llamadas a read_csv() más
-# abajo -- exactamente el mismo patrón de "una conexión, muchas queries"
-# que scan_manager.py/warehouse.py ya usan en el lado web.
+# A single connect reused by all the read_csv() calls further
+# down -- exactly the same "one connection, many queries" pattern
+# that scan_manager.py/warehouse.py already use on the web side.
 WAREHOUSE_CONNECTION = connect_warehouse()
 
 # %% [markdown]
-# ## Algoritmo (puerto fiel de 11_build_lineage_explorer_fast.py)
+# ## Algorithm (faithful port of 11_build_lineage_explorer_fast.py)
 
 # %%
 EXACT_OBJECT_TYPES = {"table", "view", "stored_procedure", "file", "shortcut", "query"}
@@ -348,8 +348,8 @@ def read_csv(logical_name):
     below stays byte-for-byte unchanged from the original script), this
     reads a Warehouse bronze table, not a CSV file -- see INPUT_TABLE_BY_
     ARG for the logical-name -> table-name mapping. A table that doesn't
-    exist yet (nothing has populated it -- most of Phase 2's inputs, as of
-    this notebook's first version) degrades to [], exactly like a missing
+    exist yet (nothing has populated it -- most of the optional inputs, as
+    of this notebook's first version) degrades to [], exactly like a missing
     CSV file did in the original local script."""
     table_name = INPUT_TABLE_BY_ARG.get(logical_name, "")
     if not table_name:

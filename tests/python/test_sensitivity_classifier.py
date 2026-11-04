@@ -1,5 +1,5 @@
 """Unit tests for backend/scripts/lineage_web/sensitivity_classifier.py
-(Tanda B, 2026-07-09) -- pure regex logic, no file I/O, no CSV data needed.
+ -- pure regex logic, no file I/O, no CSV data needed.
 
 Run with:
     pytest tests/python/test_sensitivity_classifier.py
@@ -77,7 +77,7 @@ def test_category_label_falls_back_to_key_for_unknown_category():
     assert category_label("not_a_real_category", "es") == "not_a_real_category"
 
 
-# --- Roadmap Fase 2 (2026-08-31): admin-defined custom categories ---
+# --- Admin-defined custom categories ---
 
 def _custom(key="internal_id", patterns=None, **overrides):
     entry = {
@@ -225,7 +225,7 @@ def test_biometric_voice_ai_third_party_special_category_still_classify():
     assert "special_category_belief" in classify_column_name("ReligiousAffiliation")
 
 
-# --- 2026-08-31 (Fase 6): legal-framework tagging on every category ---
+# --- Legal-framework tagging on every category ---
 
 def test_every_built_in_category_declares_at_least_one_framework():
     for key, meta in SENSITIVITY_CATEGORIES.items():
