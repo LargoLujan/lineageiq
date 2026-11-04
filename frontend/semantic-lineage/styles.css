@@ -166,6 +166,18 @@ a:focus-visible {
   width: 1px;
 }
 
+/* The `hidden` attribute must always win. The browser's own
+   `[hidden] { display: none }` lives in the UA stylesheet, so any author
+   `display` rule beats it: the global `button { display: inline-flex }`
+   below and `.graph-map-3d-button { display: flex }` kept every button
+   that app.js hides with `.hidden = true` (Governance, Privacy, Alerts,
+   Full scan) on screen for non-admins and in demo mode. This one rule
+   makes `hidden` reliable everywhere; the older per-class `[hidden]`
+   guards further down stay as they are. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background:

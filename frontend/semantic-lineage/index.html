@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Cache-Control" content="no-store" />
     <title>Fabric Lineage Explorer</title>
-    <link rel="stylesheet" href="./styles.css?v=20261104-demo-mode" />
+    <link rel="stylesheet" href="./styles.css?v=20261104-hidden-attr" />
     <link rel="stylesheet" href="./graph-map.css?v=20260708-theme" />
     <link rel="stylesheet" href="./dag-view.css?v=20260831-dag-view" />
     <script src="./theme-init.js?v=20260817-csp"></script>
@@ -35,12 +35,13 @@
             </svg>
             <span id="graphMapButtonLabel" class="graph-map-3d-button-label">Grafo</span>
           </button>
-          <!-- Roadmap Fase 4 (2026-08-31): built and wired (dag-view.js/
-               dag-view.css), but hidden by explicit request (2026-08-31)
-               pending a design rethink -- do NOT remove dag-view.js/css or
-               the #dagView markup below, just this `hidden` attribute, once
-               that rethink lands. -->
-          <button id="dagViewButton" class="graph-map-3d-button" type="button" hidden aria-pressed="false" aria-controls="dagView" title="Diagrama de linaje (DAG)">
+          <!-- Roadmap Fase 4 (2026-08-31): DAG view, wired in dag-view.js/
+               dag-view.css. It used to carry a `hidden` attribute, but the
+               global `button` display rule in styles.css overrode it, so
+               the button was always on screen, and the README and the demo
+               document this view. Now that styles.css honours `hidden`,
+               the attribute is gone so the button stays visible. -->
+          <button id="dagViewButton" class="graph-map-3d-button" type="button" aria-pressed="false" aria-controls="dagView" title="Diagrama de linaje (DAG)">
             <svg class="dag-view-launch-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
               <path d="M7 12H9.6M15.6 7l2.3-1.9M15.6 17l2.3 1.9" class="dag-view-launch-icon-edge" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
               <rect x="1" y="9" width="6" height="6" rx="1.6" class="dag-view-launch-icon-node" />
