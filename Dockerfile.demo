@@ -46,7 +46,10 @@ COPY frontend/semantic-lineage frontend/semantic-lineage
 
 # Deterministic synthetic tenant: writes index/, analysis/ and
 # frontend/semantic-lineage/data/ inside the image (all git-ignored paths).
+# The admin settings pin every read to those local files: the code defaults
+# try the Warehouse and OneLake first, which this image never has.
 RUN mkdir -p config index analysis frontend/semantic-lineage/data \
+    && printf '%s\n' '{"lakehouse": {"web_read_mode": "local_files"}, "onelake_data": {"mode": "local_files"}}' > config/admin_settings.json \
     && python backend/scripts/generate_demo_data.py
 
 # The server never needs root.

@@ -76,16 +76,28 @@ jobs:
           # The synthetic tenant must be baked in
           curl -fsS -o /dev/null http://127.0.0.1:8765/data/lineage-explorer.json
           curl -fsS -o /dev/null http://127.0.0.1:8765/data/object-impact.json
-          # MCP over stdio must list its tools and answer a read against the demo tenant
-          printf '%s\n' \
-            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
-            '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
-            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
-            '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_items","arguments":{"query":"Sales"}}}' \
-            | timeout 60 docker run -i --rm lineageiq-demo:test python backend/scripts/mcp_server.py > mcp.out 2>/dev/null || true
-          grep -q '"search_items"' mcp.out
-          grep -q 'Contoso-Sales_Prod' mcp.out
-          echo "Smoke test passed."
+          echo "Web UI and demo data OK."
+
+      - name: Smoke test (MCP over stdio)
+        run: |
+          set -e
+          # Keep stdin open for a few seconds so the server answers before EOF.
+          {
+            printf '%s\n' \
+              '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+              '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+              '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+              '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_items","arguments":{"query":"Sales"}}}'
+            sleep 15
+          } | timeout 90 docker run -i --rm lineageiq-demo:test python backend/scripts/mcp_server.py > mcp.out 2> mcp.err || true
+          if grep -q '"search_items"' mcp.out && grep -q 'Contoso-Sales_Prod' mcp.out; then
+            echo "MCP OK: $(grep -o '"name": *"[a-z_]*"' mcp.out | wc -l) tool names listed."
+          else
+            echo "::error::MCP smoke test failed"
+            echo "--- stdout"; head -c 3000 mcp.out || true
+            echo "--- stderr"; tail -n 60 mcp.err || true
+            exit 1
+          fi
 
       - name: Container logs
         if: always()
