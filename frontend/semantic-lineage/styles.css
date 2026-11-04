@@ -1372,6 +1372,14 @@ h2 {
   display: none;
 }
 
+/* Demo mode with no session (LINEAGE_DEMO_MODE=1, see isAnonymousDemo in
+   app.js): the badge reads "Demo data" instead of a person, with an amber
+   avatar so it is not mistaken for a signed-in account. */
+.user-badge.is-demo .user-badge-avatar,
+.profile-menu.is-demo .profile-menu-avatar {
+  background: var(--amber);
+}
+
 .user-badge-name {
   color: var(--ink);
   font-size: 11px;

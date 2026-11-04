@@ -82,6 +82,7 @@ const els = {
   profileMenuHelpLabel: document.getElementById('profileMenuHelpLabel'),
   profileMenuSignOutLabel: document.getElementById('profileMenuSignOutLabel'),
   profileMenuSignOutButton: document.getElementById('profileMenuSignOutButton'),
+  profileMenuSignOutDivider: document.getElementById('profileMenuSignOutDivider'),
   profileMenuProfileButton: document.getElementById('profileMenuProfileButton'),
   profileMenuProfileLabel: document.getElementById('profileMenuProfileLabel'),
   profilePanel: document.getElementById('profilePanel'),
@@ -3258,6 +3259,9 @@ function selectNode(node, remember = true) {
 // admin panel's Analíticas tab: busiest items, usage trend, active users).
 function trackUsageEvent(eventType, qualifiedName, itemType) {
   if (!qualifiedName) return;
+  // The endpoint only records signed-in sessions; skip the request (and
+  // its 401) when browsing anonymously in demo mode.
+  if (!authState.signedIn) return;
   try {
     fetch(`${TRIGGER_SERVER_ORIGIN}/api/analytics/event`, {
       method: 'POST',
@@ -3505,6 +3509,14 @@ function setLanguage(lang) {
   state.lang = lang;
   document.documentElement.lang = lang;
   applyAuthGateLanguage();
+  renderUserBadgeName();
+  // Graph Map Mode (graph-map.js) and the DAG view own their own rendering
+  // entirely; these are the hooks they need so their text (including their
+  // toolbar button labels, visible from page load) stays in sync. Called
+  // before the early return below: switching language on the sign-in gate,
+  // before any data exists, used to leave "Grafo"/"Flujo" in Spanish.
+  if (window.GraphMap) window.GraphMap.onLanguageChange(lang);
+  if (window.DagView) window.DagView.onLanguageChange(lang);
   if (!state.data) return; // gate is still up; nothing else has rendered yet
   render();
   if (els.helpPanel && !els.helpPanel.hidden) renderHelpPanel();
@@ -3521,11 +3533,10 @@ function setLanguage(lang) {
   if (els.impactBreakdownModal && !els.impactBreakdownModal.hidden && impactBreakdownState) {
     renderImpactBreakdownModal(impactBreakdownState.objectKey, impactBreakdownState.category);
   }
-  // Graph Map Mode (graph-map.js) owns its own rendering entirely; this is
-  // the one hook it needs so its text stays in sync while open, matching
-  // every other panel's re-render-if-open call above.
-  if (window.GraphMap) window.GraphMap.onLanguageChange(lang);
-  if (window.DagView) window.DagView.onLanguageChange(lang);
+  if (planningMapState.open) renderPlanningMapLabels();
+  // The "last scan" hint next to the scan controls is fetched text, not a
+  // static label -- rebuild it so it doesn't stay in the old language.
+  updateLocalScanHint();
 }
 
 function setMode(mode) {
@@ -3602,6 +3613,8 @@ function renderLabels() {
   if (els.notificationsButton) els.notificationsButton.title = state.lang === 'es' ? 'Notificaciones' : 'Notifications';
   if (els.governanceButtonLabel) els.governanceButtonLabel.textContent = state.lang === 'es' ? 'Gobernanza' : 'Governance';
   if (els.governanceButton) els.governanceButton.title = state.lang === 'es' ? 'Gobernanza' : 'Governance';
+  if (els.privacyButtonLabel) els.privacyButtonLabel.textContent = state.lang === 'es' ? 'Privacidad' : 'Privacy';
+  if (els.privacyButton) els.privacyButton.title = state.lang === 'es' ? 'Privacidad' : 'Privacy';
   els.searchLabel.textContent = t('search');
   els.searchInput.placeholder = t('searchPlaceholder');
   els.resetButton.title = t('reset');
@@ -10552,12 +10565,48 @@ const authState = {
   signedInAt: '',
   isAdmin: false,
   canFullScan: false,
+  // Only ever what the server reports (/api/auth/me's demo_mode, true when
+  // it runs with LINEAGE_DEMO_MODE=1 for the synthetic demo tenant) --
+  // never inferred client-side. Deliberately separate from signedIn: demo
+  // mode lets init() skip the sign-in gate for the read-only explorer, but
+  // everything keyed on signedIn (comments, favourites, column profiles,
+  // per-user workspaces, scans) stays off, matching the server, which only
+  // widens reads in demo mode.
+  demoMode: false,
 };
 let deviceFlowPollHandle = null;
 
+// Demo mode with nobody signed in. The user badge then doubles as the
+// "Demo data" indicator and stays the way into the language/theme/help
+// menu, which would otherwise be unreachable without a sign-in.
+function isAnonymousDemo() {
+  return authState.demoMode && !authState.signedIn;
+}
+
+const DEMO_BADGE_TEXT = {
+  es: { label: 'Datos de demo', detail: 'Tenant sintético de demo, solo lectura' },
+  en: { label: 'Demo data', detail: 'Synthetic demo tenant, read-only' },
+};
+
+function renderUserBadgeName() {
+  const demoText = DEMO_BADGE_TEXT[state.lang] || DEMO_BADGE_TEXT.es;
+  const anonymousDemo = isAnonymousDemo();
+  if (els.userBadgeName) els.userBadgeName.textContent = anonymousDemo ? demoText.label : (authState.userName || authState.userEmail);
+  if (els.userBadge) els.userBadge.title = anonymousDemo ? demoText.detail : '';
+}
+
 function applyAuthVisibility() {
-  if (els.userBadge) els.userBadge.hidden = !authState.signedIn;
-  if (els.userBadgeName) els.userBadgeName.textContent = authState.userName || authState.userEmail;
+  const anonymousDemo = isAnonymousDemo();
+  if (els.userBadge) {
+    els.userBadge.hidden = !authState.signedIn && !anonymousDemo;
+    els.userBadge.classList.toggle('is-demo', anonymousDemo);
+  }
+  if (els.profileMenu) els.profileMenu.classList.toggle('is-demo', anonymousDemo);
+  renderUserBadgeName();
+  // Nothing to show or sign out of without a session.
+  if (els.profileMenuProfileButton) els.profileMenuProfileButton.hidden = anonymousDemo;
+  if (els.profileMenuSignOutButton) els.profileMenuSignOutButton.hidden = anonymousDemo;
+  if (els.profileMenuSignOutDivider) els.profileMenuSignOutDivider.hidden = anonymousDemo;
   if (els.adminButton) els.adminButton.hidden = !authState.isAdmin;
   if (els.governanceButton) els.governanceButton.hidden = !authState.isAdmin;
   if (els.privacyButton) els.privacyButton.hidden = !authState.isAdmin;
@@ -10606,7 +10655,7 @@ function computeInitials(name, email) {
 }
 
 function applyAvatarInitialsOnly() {
-  const initials = computeInitials(authState.userName, authState.userEmail);
+  const initials = isAnonymousDemo() ? 'D' : computeInitials(authState.userName, authState.userEmail);
   if (els.userBadgeInitials) els.userBadgeInitials.textContent = initials;
   if (els.profileMenuInitials) els.profileMenuInitials.textContent = initials;
 }
@@ -10758,6 +10807,10 @@ async function refreshAuthState() {
   try {
     const response = await fetch(`${TRIGGER_SERVER_ORIGIN}/api/auth/me`);
     if (response.status === 401) {
+      // Still "not signed in" -- the 401 body only adds whether the server
+      // runs in demo mode (see authState.demoMode).
+      const unauthorizedPayload = await response.json().catch(() => ({}));
+      authState.demoMode = Boolean(unauthorizedPayload.demo_mode);
       authState.signedIn = false;
       authState.userEmail = '';
       authState.userName = '';
@@ -10771,6 +10824,7 @@ async function refreshAuthState() {
     }
     if (!response.ok) return;
     const payload = await response.json();
+    authState.demoMode = Boolean(payload.demo_mode);
     authState.signedIn = true;
     authState.userEmail = payload.user_email || '';
     authState.userName = payload.user_name || '';
@@ -10898,8 +10952,14 @@ async function signOut() {
 // markup instead of sitting loose in the toolbar.
 function renderProfileMenu() {
   const es = state.lang === 'es';
-  if (els.profileMenuName) els.profileMenuName.textContent = authState.userName || authState.userEmail;
-  if (els.profileMenuEmail) els.profileMenuEmail.textContent = authState.userName ? authState.userEmail : '';
+  if (isAnonymousDemo()) {
+    const demoText = DEMO_BADGE_TEXT[state.lang] || DEMO_BADGE_TEXT.es;
+    if (els.profileMenuName) els.profileMenuName.textContent = demoText.label;
+    if (els.profileMenuEmail) els.profileMenuEmail.textContent = demoText.detail;
+  } else {
+    if (els.profileMenuName) els.profileMenuName.textContent = authState.userName || authState.userEmail;
+    if (els.profileMenuEmail) els.profileMenuEmail.textContent = authState.userName ? authState.userEmail : '';
+  }
   if (els.profileMenuProfileLabel) els.profileMenuProfileLabel.textContent = es ? 'Perfil' : 'Profile';
   if (els.profileMenuAdminLabel) els.profileMenuAdminLabel.textContent = es ? 'Configuración' : 'Settings';
   if (els.profileMenuHelpLabel) els.profileMenuHelpLabel.textContent = es ? 'Ayuda' : 'Help';
@@ -18209,7 +18269,12 @@ async function loadLineageDataOnMainThread() {
 // mode bar, scan panel, workspace list) is no longer part of that gate
 // (2026-08-24) -- it renders locked from the very first frame instead
 // (see renderLockedShell), so nothing pops into existence and shifts the
-// page around at the moment sign-in completes.
+// page around at the moment sign-in completes. The one exception is a
+// server started with LINEAGE_DEMO_MODE=1 for the synthetic demo tenant
+// (backend/scripts/generate_demo_data.py): /api/auth/me then reports
+// demo_mode, the server already serves reads without a session, and the
+// app boots straight into the read-only explorer with no gate. The
+// server, not this check, is the security boundary either way.
 async function init() {
   // The standalone export (scripts/10_build_semantic_lineage_standalone.ps1)
   // embeds this exact same app.js inline with its data pre-loaded onto
@@ -18219,7 +18284,7 @@ async function init() {
   const isStandalone = Boolean(window.LINEAGE_EXPLORER_DATA || window.SEMANTIC_LINEAGE_DATA);
   renderLockedShell();
   await initAuthArea();
-  if (!isStandalone && !authState.signedIn) {
+  if (!isStandalone && !authState.signedIn && !authState.demoMode) {
     showAuthGate();
     return;
   }
@@ -19316,9 +19381,33 @@ function planningMapZoomCenter(factor) {
   planningMapZoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, factor);
 }
 
+// The popup's static chrome lives in index.html in Spanish; set it from the
+// current language whenever the popup opens or the language changes.
+function renderPlanningMapLabels() {
+  const es = state.lang === 'es';
+  const title = es ? 'Mapa de planificación' : 'Planning map';
+  const titleEl = document.getElementById('planningMapTitle');
+  if (titleEl) titleEl.textContent = title;
+  if (planningMapEls.view) planningMapEls.view.setAttribute('aria-label', title);
+  if (planningMapEls.typeButton) planningMapEls.typeButton.textContent = es ? 'Tipo de objeto ▾' : 'Object type ▾';
+  if (planningMapEls.nameButton) planningMapEls.nameButton.textContent = es ? 'Nombre de objeto ▾' : 'Object name ▾';
+  const titles = [
+    [planningMapEls.zoomOut, 'Alejar', 'Zoom out'],
+    [planningMapEls.zoomIn, 'Acercar', 'Zoom in'],
+    [planningMapEls.fit, 'Encajar', 'Fit'],
+    [planningMapEls.png, 'Descargar PNG', 'Download PNG'],
+    [planningMapEls.excel, 'Descargar Excel', 'Download Excel'],
+    [planningMapEls.close, 'Cerrar', 'Close'],
+  ];
+  titles.forEach(([button, esTitle, enTitle]) => {
+    if (button) button.title = es ? esTitle : enTitle;
+  });
+}
+
 function openPlanningMap() {
   const selected = selectedWorkspaceListForPlanning();
   if (!selected.length) return;
+  renderPlanningMapLabels();
   // For a large combined selection, building the graph + laying out
   // hundreds of cards is real synchronous work (seconds, not milliseconds)
   // -- e.g. every DEV workspace plus a large ingestion workspace. Making the view visible and painting a

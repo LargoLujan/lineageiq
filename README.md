@@ -189,23 +189,23 @@ npm install                                # Playwright, for the visual tests on
 
 ### Quick Start With Demo Data
 
-The commands below run the viewer against a deterministic, synthetic "Contoso" tenant: three workspaces and 18 items covering lakehouses, notebooks, data pipelines, a copy job, semantic models and reports. `backend/scripts/generate_demo_data.py` derives every ID from a fixed namespace, writes the input CSVs and then runs the real build scripts, so the output has exactly the shape the product produces against a real tenant.
+The commands below run the viewer against a deterministic, synthetic "Contoso" tenant: three workspaces and 18 items covering lakehouses, notebooks, data pipelines, a copy job, semantic models and reports. `backend/scripts/generate_demo_data.py` derives every ID from a fixed namespace, writes the input CSVs and then runs the real build scripts (lineage explorer, object impact index, reverse-impact package and Graph Map index), so the output has exactly the shape the product produces against a real tenant. Everything it writes goes to git-ignored folders (`index/`, `analysis/` and `frontend/semantic-lineage/data/`), so the working tree stays clean.
 
 ```bash
 python backend/scripts/generate_demo_data.py
-LINEAGE_DEMO_MODE=1 python backend/scripts/lineage_web_server.py --directory frontend/semantic-lineage
+LINEAGE_DEMO_MODE=1 python backend/scripts/lineage_web_server.py --bind 127.0.0.1 --directory frontend/semantic-lineage
 ```
 
 On Windows PowerShell:
 
 ```powershell
 python backend/scripts/generate_demo_data.py
-$env:LINEAGE_DEMO_MODE = "1"; python backend/scripts/lineage_web_server.py --directory frontend/semantic-lineage
+$env:LINEAGE_DEMO_MODE = "1"; python backend/scripts/lineage_web_server.py --bind 127.0.0.1 --directory frontend/semantic-lineage
 ```
 
-Open `http://localhost:8765`.
+Open `http://127.0.0.1:8765`. The explorer opens directly, with no sign-in screen, and every view (lineage, reverse impact, planning, DAG view and Graph Map) has data. A "Demo data" badge in the top-right corner marks the mode and opens the language, theme and help menu; the UI starts in Spanish, so pick EN there for English. Stop the server with Ctrl+C. In PowerShell the variable stays set for the rest of that session, so run `Remove-Item Env:LINEAGE_DEMO_MODE` before starting the server for real data from the same window.
 
-`LINEAGE_DEMO_MODE=1` is an explicit opt-in that skips sign-in for reads only (see `_read_access_allowed` in `backend/scripts/lineage_web/handler.py`). Scan triggers, admin settings and API key management still require a session or an API key. **Never set it on a deployment pointed at a real tenant's data**: it makes every catalogue and lineage read fully public. Without it (the default), the app requires a signed-in Microsoft account or an admin-issued API key.
+`LINEAGE_DEMO_MODE=1` is an explicit opt-in that skips sign-in for reads only (see `_read_access_allowed` in `backend/scripts/lineage_web/handler.py`). `GET /api/auth/me` still answers `401` without a session but adds `"demo_mode": true`, which is what tells the web UI to open the read-only explorer instead of the sign-in gate. Scan triggers, admin settings, API key management, comments and favourites still require a session (or, where the route accepts one, an API key), so the server refuses them in demo mode. **Never set it on a deployment pointed at a real tenant's data**: it makes every catalogue and lineage read fully public. Without it (the default), the app shows the sign-in gate and requires a signed-in Microsoft account or an admin-issued API key.
 
 ### Pointing It at Your Own Tenant
 
@@ -328,7 +328,7 @@ Main routes (the Auth column uses the values from `backend/scripts/lineage_web/r
 | GET | `/api/history` | public | Scan history; emails and errors blanked without a credential |
 | POST | `/api/auth/device-start` | public | Start an Entra ID device-code sign-in |
 | GET | `/api/auth/device-status` | public | Poll the sign-in; sets the session cookie when done |
-| GET | `/api/auth/me` | session | Current identity and admin and full-scan flags |
+| GET | `/api/auth/me` | session | Current identity and admin and full-scan flags; both this and its `401` carry `demo_mode` |
 | GET | `/api/openapi.json` | public | OpenAPI 3.0 spec generated from the route registry |
 
 The registry also documents the governance routes, which accept an admin session or any valid API key (`/api/admin/access-audit`, `governance-scan`, `sensitivity-overview`, `content-sensitivity-overview`, `data-quality-overview`, `privacy-coverage-map`, `privacy-framework-map`), the admin-only settings, sessions, API key, capacity, notification and connection-test routes, and the session-only comment, favourite and per-user workspace routes. When the live Warehouse read mode is on, the catalogue routes query the Warehouse instead of the local CSV files.
@@ -421,7 +421,7 @@ Secrets are never stored in this file. Fields such as `sp_client_secret_ref` and
 
 | Variable | Read by | Purpose |
 | --- | --- | --- |
-| `LINEAGE_DEMO_MODE` | `lineage_web/handler.py` | `1`, `true` or `yes` allows unauthenticated reads (demo data only) |
+| `LINEAGE_DEMO_MODE` | `lineage_web/handler.py` | `1`, `true` or `yes` allows unauthenticated reads and opens the web UI without the sign-in gate (demo data only) |
 | `PORT` | `lineage_web_server.py` | Default for `--port` (8765 when unset) |
 | `ADMIN_EMAILS`, `FULL_SCAN_EMAILS` | `lineage_web/admin_settings.py` | Comma-separated seeds for empty allowlists; never written back to disk |
 | `FABRIC_LINEAGE_API_BASE_URL` | `mcp_server_remote.py`, `mcp_http_server.py` | REST API base URL (default `http://127.0.0.1:8765`) |
@@ -466,7 +466,7 @@ Sessions live in memory only and expire after 8 hours idle or 24 hours in total;
 python -m pytest tests/python/ -q
 ```
 
-The Python suite collects 388 tests (`pytest --collect-only`) and needs no live Fabric connection.
+The Python suite collects 421 tests (`pytest --collect-only`) and needs no live Fabric connection.
 
 CI (`.github/workflows/ci.yml`) runs on every push and pull request to `main` with three jobs:
 

@@ -11,7 +11,8 @@ under /data/ (the large JSON payloads the frontend loads) -- requires a
 signed-in session OR a valid API key (2026-07-22), OR LINEAGE_DEMO_MODE=1
 in the environment (2026-08-27, see _read_access_allowed) -- opt-in only,
 meant for a synthetic demo tenant (backend/scripts/generate_demo_data.py),
-never for a deployment pointed at real Fabric data. No further permission
+never for a deployment pointed at real Fabric data (/api/auth/me reports
+it as demo_mode so the web UI can skip its sign-in gate). No further permission
 check beyond that beyond "authenticated in the configured tenant": Fabric
 workspace permissions are already enforced separately, at scan time (each
 user's scan runs under their own delegated token), so a signed-in user
@@ -103,6 +104,17 @@ from .utils import _hash_api_key, _now_iso, _tail_log
 # legitimate one (business_glossary/external_sources saved via /api/admin/
 # settings) is still well under this. See _read_request_body().
 MAX_REQUEST_BODY_BYTES = 2 * 1024 * 1024
+
+
+def _demo_mode_enabled():
+    """LINEAGE_DEMO_MODE=1 (or true/yes) in the server's environment -- an
+    explicit opt-in for the synthetic demo tenant written by backend/
+    scripts/generate_demo_data.py, never for real tenant data. Read on every
+    call, so only whoever starts the process can turn it on. Consulted in
+    exactly two places: _read_access_allowed (widens READS only) and
+    /api/auth/me (reports the flag so the web UI skips its sign-in gate).
+    No write route looks at it."""
+    return os.environ.get("LINEAGE_DEMO_MODE", "").strip().lower() in ("1", "true", "yes")
 
 
 def _mask_api_keys(settings):
@@ -437,14 +449,16 @@ class LineageWebHandler(BaseHTTPRequestHandler):
         registration. It only ever widens READS -- every write path (scan
         triggers, admin settings, API key management) still requires the
         exact same session/API-key check as before; this method is never
-        called from any of those. NEVER set this env var on a deployment
-        pointed at a real Fabric tenant's real data -- it makes every
-        catalog/lineage read fully public, with no auth at all."""
+        called from any of those. /api/auth/me reports the same flag
+        (demo_mode) so the web UI opens straight into the read-only
+        explorer instead of the sign-in gate. NEVER set this env var on a
+        deployment pointed at a real Fabric tenant's real data -- it makes
+        every catalog/lineage read fully public, with no auth at all."""
         session = self._current_session()
         api_key = self._api_key_name()
         if session or api_key:
             return True
-        return os.environ.get("LINEAGE_DEMO_MODE", "").strip().lower() in ("1", "true", "yes")
+        return _demo_mode_enabled()
 
     def _require_admin(self):
         """Returns the loaded admin settings if the current session's email
@@ -942,12 +956,21 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/auth/me":
+            # demo_mode rides along on BOTH answers so the frontend learns
+            # it from the call it already makes at boot: with no session
+            # this is still a 401 (nobody is signed in, and every
+            # session-only route still refuses), and app.js's init() only
+            # skips its sign-in gate when the server itself says demo mode
+            # is on. It never grants anything: reads are widened by
+            # _read_access_allowed, writes never look at demo mode at all.
+            demo_mode = _demo_mode_enabled()
             session = self._current_session()
             if not session:
-                self._send_json(401, {"error": "not_signed_in"})
+                self._send_json(401, {"error": "not_signed_in", "demo_mode": demo_mode})
                 return
             settings = _load_admin_settings()
             self._send_json(200, {
+                "demo_mode": demo_mode,
                 "user_email": session["user_email"],
                 "user_name": session["user_name"],
                 "object_id": session.get("object_id", ""),

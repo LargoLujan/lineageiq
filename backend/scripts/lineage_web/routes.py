@@ -104,7 +104,7 @@ ROUTES = (
      "description": "Full item-level diff for one past scan run (?path=).",
      "params": [{"name": "path", "in": "query", "required": True, "type": "string", "description": "A diff_path value returned by /api/history."}]},
     {"method": "GET", "path": "/api/auth/me", "auth": "session",
-     "description": "The current session's identity and admin/full-scan flags."},
+     "description": "The current session's identity and admin/full-scan flags. Both this 200 and the 401 returned without a session carry demo_mode (true when the server runs with LINEAGE_DEMO_MODE=1), which the web UI uses to open the read-only explorer without its sign-in gate."},
     {"method": "GET", "path": "/api/node-comments", "auth": "session",
      "description": "Comments left on one catalog node, oldest first (?qualified_name=).",
      "params": [{"name": "qualified_name", "in": "query", "required": True, "type": "string", "description": "Exact qualified_name of the node."}]},

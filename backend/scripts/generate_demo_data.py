@@ -9,11 +9,17 @@ Uso:
     python backend/scripts/generate_demo_data.py
 
 Escribe los CSV de entrada mínimos que backend/scripts/11_build_lineage_
-explorer_fast.py, 17_build_object_impact_index_fast.py y build_graph_map_
-index.py necesitan, y a continuación invoca esos tres scripts para producir
-los JSON finales que lee el frontend (frontend/semantic-lineage/data/*.json)
--- así el esquema de salida es exactamente el mismo código que usa el
-producto real contra un tenant real, no una recreación a mano.
+explorer_fast.py, 17_build_object_impact_index_fast.py, 21_build_reverse_
+impact_package_fast.py y build_graph_map_index.py necesitan, y a
+continuación invoca esos cuatro scripts para producir los JSON finales que
+lee el frontend (frontend/semantic-lineage/data/*.json: lineage-explorer,
+object-impact y los dos índices del Graph Map) -- así el esquema de salida
+es exactamente el mismo código que usa el producto real contra un tenant
+real, no una recreación a mano. Todo lo que escribe queda en rutas
+ignoradas por git (index/, analysis/, frontend/**/data/).
+
+Después, para abrir el visor sin iniciar sesión (solo lectura):
+    LINEAGE_DEMO_MODE=1 python backend/scripts/lineage_web_server.py --bind 127.0.0.1 --directory frontend/semantic-lineage
 """
 
 import csv
@@ -317,7 +323,16 @@ def build_executions_csv():
     write_csv(REPO_ROOT / "index/executions.csv", fieldnames, rows)
 
 
+# Los informes Markdown que escriben 17 y 21 van a analysis/ (ignorado por
+# git), no a docs/ como en el pipeline real: así el quick start del README
+# no deja ficheros sin seguimiento en el repositorio.
+DEMO_REPORTS_DIR = REPO_ROOT / "analysis/demo_reports"
+
+
 def run_build_scripts():
+    # Mismo orden que 99_refresh_lineage_project.ps1: 11 (explorer) -> 17
+    # (índice de impacto) -> 21 (object-impact.json, la vista Impacto) ->
+    # índice del Graph Map, que también lee object-impact.json.
     scripts = [
         [sys.executable, str(REPO_ROOT / "backend/scripts/11_build_lineage_explorer_fast.py")],
         [
@@ -328,7 +343,11 @@ def run_build_scripts():
             "--output-impact-summary-path", str(REPO_ROOT / "analysis/object_impact_summary.csv"),
             "--output-coverage-path", str(REPO_ROOT / "analysis/object_level_lineage_coverage.csv"),
             "--output-coverage-summary-path", str(REPO_ROOT / "analysis/object_level_lineage_summary.csv"),
-            "--output-doc-path", str(REPO_ROOT / "docs/16_object_level_lineage_and_impact.md"),
+            "--output-doc-path", str(DEMO_REPORTS_DIR / "16_object_level_lineage_and_impact.md"),
+        ],
+        [
+            sys.executable, str(REPO_ROOT / "backend/scripts/21_build_reverse_impact_package_fast.py"),
+            "--output-doc-path", str(DEMO_REPORTS_DIR / "18_reverse_impact_search.md"),
         ],
         [sys.executable, str(REPO_ROOT / "backend/scripts/build_graph_map_index.py")],
     ]

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Cache-Control" content="no-store" />
     <title>Fabric Lineage Explorer</title>
-    <link rel="stylesheet" href="./styles.css?v=20260901-privacy-panel-layout" />
+    <link rel="stylesheet" href="./styles.css?v=20261104-demo-mode" />
     <link rel="stylesheet" href="./graph-map.css?v=20260708-theme" />
     <link rel="stylesheet" href="./dag-view.css?v=20260831-dag-view" />
     <script src="./theme-init.js?v=20260817-csp"></script>
@@ -107,7 +107,7 @@
                 <svg class="profile-menu-item-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 9.3a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2.9-1.2 1.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor"/></svg>
                 <span id="profileMenuHelpLabel">Ayuda</span>
               </button>
-              <div class="profile-menu-divider"></div>
+              <div id="profileMenuSignOutDivider" class="profile-menu-divider"></div>
               <button id="profileMenuSignOutButton" class="profile-menu-item profile-menu-item-danger" type="button">
                 <svg class="profile-menu-item-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M15 17l5-5-5-5M20 12H9M12 19H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 <span id="profileMenuSignOutLabel">Cerrar sesión</span>
@@ -404,8 +404,12 @@
                it's scoped to just this area (absolute against
                .graph-surface, same anchor .diagram-legend already uses)
                instead of the whole viewport. See showAuthGate/hideAuthGate
-               and applyAuthLockState in app.js. -->
-          <div id="authGate" class="auth-gate">
+               and applyAuthLockState in app.js. Starts hidden: init()
+               shows it once /api/auth/me confirms there is no session and
+               the server is not in demo mode (LINEAGE_DEMO_MODE=1), so a
+               demo or signed-in visitor never sees it flash on load. No
+               lineage data is fetched before that check either way. -->
+          <div id="authGate" class="auth-gate" hidden>
             <div class="auth-gate-card">
               <div class="auth-gate-lang language-switch" aria-label="Language">
                 <button id="authGateLangEsButton" class="icon-button active" type="button" title="Español">ES</button>
@@ -544,7 +548,7 @@
     </main>
 
     <script src="./vendor/dagre.min.js"></script>
-    <script src="./app.js?v=20260901-privacy-panel-layout"></script>
+    <script src="./app.js?v=20261104-demo-mode"></script>
     <script src="./vendor/3d-force-graph.min.js"></script>
     <!-- three.module.min.js (Tanda 8 deferred item: distinct 3D shapes per
          node type) is a native ES module -- 3d-force-graph.min.js bundles
