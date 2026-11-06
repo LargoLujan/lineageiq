@@ -10,4 +10,4 @@
 # setup once one exists.
 #
 # Install with: pip install -r requirements-mcp.txt
-mcp[cli]==1.28.1
+mcp[cli]==1.30.0
