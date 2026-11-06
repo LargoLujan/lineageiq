@@ -7,19 +7,19 @@
 # (see docs/102_admin_panel_and_user_auth.md).
 #
 # Install with: pip install -r requirements-web.txt
-msal==1.36.0
+msal==1.39.0
 # lineage_web/warehouse.py's live-Warehouse read path (the default,
 # lakehouse.web_read_mode = "warehouse"; it falls back to local files when
 # no Warehouse is configured). Also needs the Microsoft
 # ODBC Driver for SQL Server installed on this machine -- same driver
 # 70_extract_control_framework_lineage.py already requires; not needed at
 # all if web_read_mode is set to "local_files".
-pyodbc==5.1.0
+pyodbc==5.3.0
 # lineage_web/onelake_data.py's live-OneLake read path for the big
 # generated JSON payloads (the default, onelake_data.mode = "onelake"; it
 # falls back to local files when OneLake is not configured). Same packages,
 # same pinned versions, as requirements-lakehouse.txt
 # (64_upload_bronze_to_onelake.py's equivalent local upload direction) --
 # not needed at all if onelake_data.mode is set to "local_files".
-azure-identity==1.25.3
-azure-storage-file-datalake==12.25.0
+azure-identity==1.27.0
+azure-storage-file-datalake==12.26.1
