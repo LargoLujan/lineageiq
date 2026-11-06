@@ -12,7 +12,7 @@
 ![Microsoft Fabric](https://img.shields.io/badge/Microsoft%20Fabric-REST%20API-117865)
 ![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=black)
 ![Three.js](https://img.shields.io/badge/Three.js-WebGL-000000?logo=threedotjs&logoColor=white)
-![MCP](https://img.shields.io/badge/MCP-Python%20SDK%201.28.1-6E56CF)
+![MCP](https://img.shields.io/badge/MCP-Python%20SDK%201.30.0-6E56CF)
 ![Playwright](https://img.shields.io/badge/Playwright-tests-2EAD33?logo=playwright&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
@@ -128,7 +128,7 @@ flowchart LR
 | Storage | CSV and JSON artefacts, Fabric Warehouse (`dbo.bronze_*` tables, T-SQL stored procedures), OneLake Files through `azure-storage-file-datalake` |
 | Web server | Python 3.12 standard library `http.server`, `msal` for Entra ID device-code sign-in, `pyodbc` with the Microsoft ODBC Driver for SQL Server, `azure-identity` |
 | Frontend | Vanilla JavaScript, HTML and CSS, `3d-force-graph` and Three.js (WebGL), dagre, a Web Worker for data loading, Microsoft Fabric SVG icons |
-| AI agents | MCP Python SDK (`mcp[cli]==1.28.1`, FastMCP) over stdio and Streamable HTTP (uvicorn) |
+| AI agents | MCP Python SDK (`mcp[cli]==1.30.0`, FastMCP) over stdio and Streamable HTTP (uvicorn) |
 | Testing | pytest, Playwright (`@playwright/test`), Pester |
 | CI and runtime | GitHub Actions, Docker and Docker Compose, VS Code Dev Container, optional Cloudflare quick tunnel |
 
