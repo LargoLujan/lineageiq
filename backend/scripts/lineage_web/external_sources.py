@@ -4,6 +4,7 @@ Split out of lineage_web_server.py -- pure code motion,
 no logic changed from the original.
 """
 import json
+import re
 import subprocess
 
 from .admin_settings import _load_admin_settings, _reserved_secret_env_var_name, _write_admin_settings
@@ -22,6 +23,32 @@ FABRIC_INTERNAL_SOURCE_TYPES = {
     "FabricSqlEndpointMetadata", "CapacityMetricsCES", "UsageMetricsDataConnector",
 }
 
+# The connection tests below hand admin-entered values to pwsh as named-
+# parameter arguments. They go as a list (no shell), so there is no shell
+# injection, but a value starting with '-' could still be bound by PowerShell
+# as another parameter, and a NUL or line break has no place in a host,
+# database or user name. Secret references must be plain environment
+# variable names.
+_ENV_VAR_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,127}")
+
+
+class _UnsafeArgument(ValueError):
+    pass
+
+
+def _safe_arg(value, field):
+    text = str(value if value is not None else "")
+    if text.startswith("-") or any(ch in text for ch in ("\x00", "\r", "\n")):
+        raise _UnsafeArgument(f"'{field}' can't start with '-' or contain line breaks.")
+    return text
+
+
+def _safe_env_var_name(value, field):
+    text = str(value or "").strip()
+    if text and not _ENV_VAR_NAME_RE.fullmatch(text):
+        raise _UnsafeArgument(f"'{field}' must be an environment variable name: letters, digits and '_' only.")
+    return text
+
 
 def _test_external_source(source, session=None):
     # Checked before even resolving pwsh, both so this doesn't depend on
@@ -36,37 +63,33 @@ def _test_external_source(source, session=None):
             "message": f"'{password_ref}' is reserved for the Warehouse service-principal secret and can't be used as a data-source password reference.",
         }
 
+    try:
+        params = [
+            "-EngineType", _safe_arg(source.get("type") or "sql_server", "type"),
+            "-SourceHost", _safe_arg(source.get("host") or "", "host"),
+            "-AuthMode", _safe_arg(source.get("auth_mode") or "sql_auth", "auth_mode"),
+            "-User", _safe_arg(source.get("user") or "", "user"),
+            "-PasswordEnvVar", _safe_env_var_name(password_ref, "password_ref"),
+            # Same default already used everywhere else this pipeline connects
+            # to an external/on-prem SQL Server (see 20_extract_source_object_
+            # type_metadata.ps1, 34_extract_sql_endpoint_object_catalog.ps1):
+            # these servers commonly present an internally-issued certificate
+            # the client machine doesn't have in its trust store, which would
+            # otherwise fail every test with a TLS trust error before even
+            # reaching real credential validation.
+            "-TrustServerCertificate",
+        ]
+        for key, flag in (("port", "-Port"), ("database", "-Database"), ("service_name", "-ServiceName"), ("file_path", "-FilePath"), ("site_url", "-SiteUrl")):
+            if source.get(key):
+                params += [flag, _safe_arg(source[key], key)]
+    except _UnsafeArgument as exc:
+        return {"ok": False, "message": str(exc)}
+
     pwsh_path = _resolve_pwsh_command()
     if not pwsh_path:
         return {"ok": False, "message": "PowerShell ('pwsh') was not found on PATH."}
 
-    args = [
-        pwsh_path, "-NoLogo", "-File", str(TEST_EXTERNAL_SOURCE_SCRIPT_PATH),
-        "-EngineType", str(source.get("type") or "sql_server"),
-        "-SourceHost", str(source.get("host") or ""),
-        "-AuthMode", str(source.get("auth_mode") or "sql_auth"),
-        "-User", str(source.get("user") or ""),
-        "-PasswordEnvVar", str(source.get("password_ref") or ""),
-        # Same default already used everywhere else this pipeline connects
-        # to an external/on-prem SQL Server (see 20_extract_source_object_
-        # type_metadata.ps1, 34_extract_sql_endpoint_object_catalog.ps1):
-        # these servers commonly present an internally-issued certificate
-        # the client machine doesn't have in its trust store, which would
-        # otherwise fail every test with a TLS trust error before even
-        # reaching real credential validation.
-        "-TrustServerCertificate",
-    ]
-    if source.get("port"):
-        args += ["-Port", str(source["port"])]
-    if source.get("database"):
-        args += ["-Database", str(source["database"])]
-    if source.get("service_name"):
-        args += ["-ServiceName", str(source["service_name"])]
-    if source.get("file_path"):
-        args += ["-FilePath", str(source["file_path"])]
-    if source.get("site_url"):
-        args += ["-SiteUrl", str(source["site_url"])]
-
+    args = [pwsh_path, "-NoLogo", "-File", str(TEST_EXTERNAL_SOURCE_SCRIPT_PATH)] + params
     try:
         result = subprocess.run(args, cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=30, env=_test_subprocess_env(session))
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -237,25 +260,28 @@ def _test_lakehouse_connection(lakehouse, session=None):
     if not lakehouse.get("sql_endpoint_connection_string") or not lakehouse.get("lakehouse_name"):
         return {"ok": False, "message": "Fill in 'Workspace', 'Lakehouse' and 'SQL endpoint' before testing the connection."}
 
-    args = [
-        pwsh_path, "-NoLogo", "-File", str(TEST_EXTERNAL_SOURCE_SCRIPT_PATH),
-        "-EngineType", "azure_sql",
-        "-SourceHost", str(lakehouse["sql_endpoint_connection_string"]),
-        "-Database", str(lakehouse["lakehouse_name"]),
-        "-AuthMode", "aad_token",
-        "-TrustServerCertificate",
-    ]
-    # Service-principal (permanent) auth mode, set from the admin panel's
-    # write-target tab -- test with the SAME credential the real upload will
-    # use, not the signed-in admin's own session, so "Probar conexion"
-    # actually verifies what matters once auto_upload_after_scan starts
-    # running unattended.
-    if lakehouse.get("auth_mode") == "service_principal":
-        args += [
-            "-SpTenantId", str(lakehouse.get("sp_tenant_id") or ""),
-            "-SpClientId", str(lakehouse.get("sp_client_id") or ""),
-            "-SpClientSecretEnvVar", str(lakehouse.get("sp_client_secret_ref") or ""),
+    try:
+        args = [
+            pwsh_path, "-NoLogo", "-File", str(TEST_EXTERNAL_SOURCE_SCRIPT_PATH),
+            "-EngineType", "azure_sql",
+            "-SourceHost", _safe_arg(lakehouse["sql_endpoint_connection_string"], "sql_endpoint_connection_string"),
+            "-Database", _safe_arg(lakehouse["lakehouse_name"], "lakehouse_name"),
+            "-AuthMode", "aad_token",
+            "-TrustServerCertificate",
         ]
+        # Service-principal (permanent) auth mode, set from the admin panel's
+        # write-target tab -- test with the SAME credential the real upload will
+        # use, not the signed-in admin's own session, so "Probar conexion"
+        # actually verifies what matters once auto_upload_after_scan starts
+        # running unattended.
+        if lakehouse.get("auth_mode") == "service_principal":
+            args += [
+                "-SpTenantId", _safe_arg(lakehouse.get("sp_tenant_id") or "", "sp_tenant_id"),
+                "-SpClientId", _safe_arg(lakehouse.get("sp_client_id") or "", "sp_client_id"),
+                "-SpClientSecretEnvVar", _safe_env_var_name(lakehouse.get("sp_client_secret_ref"), "sp_client_secret_ref"),
+            ]
+    except _UnsafeArgument as exc:
+        return {"ok": False, "message": str(exc)}
     try:
         result = subprocess.run(args, cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=30, env=_test_subprocess_env(session))
     except (OSError, subprocess.TimeoutExpired) as exc:
