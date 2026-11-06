@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://github.com/LargoLujan/lineageiq/discussions/categories/q-a
+    about: Ask how to set up or use LineageIQ in Discussions, Q&A.
+  - name: Report a security vulnerability
+    url: https://github.com/LargoLujan/lineageiq/security/policy
+    about: Do not open a public issue. Follow the security policy to report it privately.

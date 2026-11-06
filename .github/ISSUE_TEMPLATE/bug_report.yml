@@ -1,0 +1,78 @@
+name: Bug report
+description: Something in LineageIQ does not work as documented.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        - Security problems: do **not** use this form. Follow the [security policy](https://github.com/LargoLujan/lineageiq/security/policy) instead.
+        - Questions: ask in [Discussions, Q&A](https://github.com/LargoLujan/lineageiq/discussions/categories/q-a).
+        - Do not paste real tenant data, tokens, API keys or personal data. Replace names and IDs with placeholders such as `<workspace name>`.
+  - type: input
+    id: version
+    attributes:
+      label: Version or image tag
+      description: The release (for example `v0.2.0`), the image tag (for example `ghcr.io/largolujan/lineageiq:0.2.0`) or the commit you are running.
+      placeholder: v0.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How do you run it?
+      options:
+        - Demo image (ghcr.io/largolujan/lineageiq)
+        - Local web server with demo data
+        - Local web server with my own tenant (local discovery scripts)
+        - Fabric notebooks in a Data Pipeline
+        - Docker Compose or Dev Container
+        - Dockerfile.render on a hosting platform
+        - MCP server only
+        - Other
+      multiple: true
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, Python version, browser, and MCP client if relevant.
+      placeholder: Windows 11, Python 3.12, Edge; Claude Code
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands, clicks or requests. If you can, reproduce it with the demo data.
+      placeholder: |
+        1. Run `docker run --rm -p 8765:8765 ghcr.io/largolujan/lineageiq:latest`
+        2. Open http://localhost:8765
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: What happened instead, including any error message shown in the UI or returned by the API.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Server output, browser console or script output. Redact names, IDs, hostnames and emails first. This is rendered as code.
+      render: shell
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots (from demo data if possible), links to related issues, or ideas about the cause.

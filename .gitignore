@@ -141,5 +141,4 @@ docs/investigations/**
 !docs/investigations/.gitkeep
 
 # Local AI-assistant working files (never published)
-AGENTS.md
 .claude/
