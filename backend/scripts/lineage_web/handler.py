@@ -202,6 +202,20 @@ def _parse_analytics_days(query, default=30, maximum=365):
     return max(1, min(value, maximum))
 
 
+def _resolve_history_diff_path(diff_path, repo_root=REPO_ROOT, diff_dir=DIFF_DIR):
+    """The absolute path of a scan diff named by /api/history/diff's ?path=
+    (relative to the repo, as history.csv stores it), or None. Only an
+    existing .json file strictly inside the diffs folder qualifies, after
+    symlinks and '..' are resolved."""
+    base = os.path.realpath(diff_dir)
+    candidate = os.path.realpath(os.path.join(repo_root, str(diff_path)))
+    if not candidate.startswith(base + os.sep):
+        return None
+    if not candidate.endswith(".json") or not os.path.isfile(candidate):
+        return None
+    return candidate
+
+
 class LineageWebHandler(BaseHTTPRequestHandler):
     server_version = "LineageWebServer/2.0"
     # Default HTTP/1.0 closes the TCP connection after every response. For
@@ -956,8 +970,8 @@ class LineageWebHandler(BaseHTTPRequestHandler):
             if not diff_path:
                 self._send_json(400, {"error": "missing_path", "message": "?path= is required."})
                 return
-            resolved = (REPO_ROOT / diff_path).resolve()
-            if DIFF_DIR.resolve() not in resolved.parents or not resolved.exists():
+            resolved = _resolve_history_diff_path(diff_path)
+            if resolved is None:
                 self._send_json(404, {"error": "diff_not_found", "message": "No diff file at that path."})
                 return
             with open(resolved, "r", encoding="utf-8") as handle:
