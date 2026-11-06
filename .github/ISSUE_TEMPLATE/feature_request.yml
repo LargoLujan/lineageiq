@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest an improvement or a new capability for LineageIQ.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Before you open a request, check the [roadmap](https://github.com/LargoLujan/lineageiq/wiki/Roadmap) and the [open issues](https://github.com/LargoLujan/lineageiq/issues). For an early idea you want to discuss first, use [Discussions, Ideas](https://github.com/LargoLujan/lineageiq/discussions/categories/ideas).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way today? Describe the question you cannot answer or the step that is too manual.
+      placeholder: I need to know which reports break when a table in a Lakehouse is renamed, but...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should LineageIQ do? Mention where it would show up (web UI, REST API, MCP tool, discovery script, notebook).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways to solve it, including native Fabric or Purview features, and why they do not work for you.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Links, examples using Contoso-style placeholder names, or whether you would like to work on it yourself.
