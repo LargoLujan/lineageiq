@@ -1,0 +1,53 @@
+# Dependabot version updates. Security updates are configured separately in
+# the repository settings and are not limited by this schedule.
+version: 2
+updates:
+  # requirements-web.txt, requirements-mcp.txt and requirements-lakehouse.txt
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      pip-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # package.json and package-lock.json (Playwright, visual tests only)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Dockerfile, Dockerfile.demo and Dockerfile.render (python base images).
+  # A new Python minor version here should go together with python-version
+  # in .github/workflows/ci.yml, which tests on Python 3.12.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      docker-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # .github/workflows/ci.yml and .github/workflows/demo-image.yml
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
