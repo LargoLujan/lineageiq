@@ -5,6 +5,6 @@
 # project instead of relying on that coincidence.
 #
 # Install with: pip install -r requirements-lakehouse.txt
-azure-identity==1.25.3
-azure-storage-file-datalake==12.25.0
+azure-identity==1.27.0
+azure-storage-file-datalake==12.26.1
 pandas==2.2.3
